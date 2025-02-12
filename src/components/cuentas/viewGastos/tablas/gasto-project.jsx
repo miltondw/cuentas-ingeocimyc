@@ -1,5 +1,4 @@
-// Dependencies
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -9,8 +8,6 @@ import {
   TableRow,
   Paper,
   TextField,
-  InputAdornment,
-  Grid2,
   Button,
   Typography,
   IconButton,
@@ -20,64 +17,192 @@ import {
   DialogContentText,
   DialogTitle,
   Pagination,
+  Grid2,
 } from "@mui/material";
 import { Link } from "react-router-dom";
-import PropTypes from "prop-types";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
-import {
-  calculateSaldo,
-  calculateTotalGastos,
-  calculateUtilidadNeta,
-  colorEstadoCuenta,
-  filteredProjects,
-  formatNumber,
-  getEstadoCuenta,
-  isNumeric,
-  tableRowInputs,
-  tableTextField,
-} from "../../utils";
+import api from "../../../../api";
 
-const GastosProject = ({ listProjects }) => {
-  useEffect(() => {
-    setProjects(listProjects);
-  }, [listProjects]);
+// Cabeceras para columnas calculadas e inputs de gastos
+const tableRowInputs = [
+  "Acciones",
+  "Fecha",
+  "Solicitante",
+  "Nombre Proyecto",
+  "Costo Servicio",
+  "Abonado",
+  "Total Gastos",
+  "Saldo",
+  "Estado Cuenta",
+  "Utilidad Neta",
+];
+const tableTextField = [
+  "camioneta",
+  "campo",
+  "obreros",
+  "comidas",
+  "transporte",
+  "otros",
+  "peajes",
+  "combustible",
+  "hospedaje",
+];
 
-  const [projects, setProjects] = useState(listProjects);
+// Función para formatear números
+const formatNumber = (number) => {
+  const n = Number(number) || 0;
+  const options = Number.isInteger(n)
+    ? { minimumFractionDigits: 0, maximumFractionDigits: 0 }
+    : { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+  return new Intl.NumberFormat("es", options).format(n);
+};
+
+// Formatea la fecha en un formato legible
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("es");
+};
+
+const isNumeric = (value) => !isNaN(value) && value !== "" && value !== null;
+
+const getGastos = (project) =>
+  project.gastos && project.gastos.length > 0 ? project.gastos[0] : {};
+
+const calculateTotalGastos = (project) => {
+  const gastos = getGastos(project);
+  return tableTextField.reduce(
+    (sum, field) => sum + (parseFloat(gastos[field]) || 0),
+    0
+  );
+};
+
+const calculateSaldo = (project) => {
+  const costo = parseFloat(project.costo_servicio) || 0;
+  const abono = parseFloat(project.abono) || 0;
+  return costo > abono ? costo - abono : 0;
+};
+
+const getEstadoCuenta = (project) => {
+  const costo = parseFloat(project.costo_servicio) || 0;
+  const abono = parseFloat(project.abono) || 0;
+  if (abono === 0) return "Pendiente";
+  if (abono === costo) return "Pagado";
+  if (abono < costo) return "Abonado";
+};
+
+const colorEstadoCuenta = (estado) => {
+  switch (estado) {
+    case "Pendiente":
+      return "#f44336";
+    case "Pagado":
+      return "#4caf50";
+    case "Abonado":
+      return "#ff9800";
+    default:
+      return "transparent";
+  }
+};
+
+const calculateUtilidadNeta = (project) => {
+  const costo = parseFloat(project.costo_servicio) || 0;
+  return costo - calculateTotalGastos(project);
+};
+
+const GastosProject = () => {
+  const [projects, setProjects] = useState([]);
+  const [total, setTotal] = useState(0);
   const [search, setSearch] = useState({
     solicitante: "",
     proyecto: "",
     fechaInicio: "",
     fechaFin: "",
   });
-
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false); // Modal para abonar
   const [selectedProject, setSelectedProject] = useState(null);
   const [abono, setAbono] = useState("");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-
-  // Paginación
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 5;
 
-  const handlePageChange = (event, page) => {
-    setCurrentPage(page);
-  };
+  // Actualiza la página al cambiar algún filtro
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
 
-  const paginatedProjects = filteredProjects(projects, search).slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
-  );
+  // Función memoizada para obtener proyectos, evitando recrearla en cada render
+  const fetchProjects = useCallback(async () => {
+    const params = {
+      page: currentPage,
+      limit: rowsPerPage,
+      ...(search.solicitante && { solicitante: search.solicitante }),
+      ...(search.proyecto && { proyecto: search.proyecto }),
+      ...(search.fechaInicio && { fechaInicio: search.fechaInicio }),
+      ...(search.fechaFin && { fechaFin: search.fechaFin }),
+    };
 
+    try {
+      const response = await api.get("/projects", { params });
+      if (response.data && response.data.data) {
+        setProjects(response.data.data.proyectos);
+        setTotal(response.data.data.total);
+      } else {
+        console.error("Respuesta inválida de la API", response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    }
+  }, [currentPage, search]); // Se actualiza solo cuando currentPage o search cambian
+
+  // Ejecuta fetchProjects cuando fetchProjects (y por ende currentPage o search) cambian
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  // Handlers para eliminación
   const handleOpenDeleteModal = (project) => {
     setSelectedProject(project);
     setDeleteModalOpen(true);
   };
 
-  const handleInputChange = (index, field, value) => {
-    const updatedProjects = [...projects];
-    updatedProjects[index][field] = value ? parseFloat(value) : 0;
-    setProjects(updatedProjects);
+  const handleDelete = async (proyecto_id) => {
+    try {
+      await api.delete(`/projects/${proyecto_id}`);
+      setProjects((prev) =>
+        prev.filter((project) => project.proyecto_id !== proyecto_id)
+      );
+      setDeleteModalOpen(false);
+      setSelectedProject(null);
+    } catch (error) {
+      console.error("Error eliminando el proyecto:", error);
+    }
+  };
+
+  // Handlers para abonar
+  const handleOpenAbonarModal = (project) => {
+    setSelectedProject(project);
+    setOpen(true);
+  };
+
+  const handleCloseAbonarModal = () => {
+    setOpen(false);
+    setSelectedProject(null);
+    setAbono("");
+  };
+
+  const handleAbonar = async () => {
+    if (!selectedProject) return;
+    try {
+      const projectId = selectedProject.proyecto_id;
+      const additionalAbono = parseFloat(abono) || 0;
+      await api.patch(`/projects/${projectId}/abonar`, {
+        abono: additionalAbono,
+      });
+      await fetchProjects(); // Se usa la función memorizada para actualizar la lista
+      handleCloseAbonarModal();
+    } catch (error) {
+      console.error("Error actualizando el abono:", error);
+    }
   };
 
   const handleClearFilters = () => {
@@ -89,232 +214,192 @@ const GastosProject = ({ listProjects }) => {
     });
   };
 
-  const handleDelete = (id) => {
-    const updatedProjects = projects.filter((project) => project.id !== id);
-    setProjects(updatedProjects);
-    localStorage.setItem("formData", JSON.stringify(updatedProjects));
-    handleCloseDeleteModal();
-  };
-
-  const handleOpenModal = (project) => {
-    setSelectedProject(project);
-    setOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setOpen(false);
-    setSelectedProject(null);
-    setAbono("");
-  };
-
-  const handleCloseDeleteModal = () => {
-    setDeleteModalOpen(false);
-    setSelectedProject(null);
-  };
-
-  const handleAbonar = () => {
-    const updatedProjects = projects.map((project) => {
-      if (project.id === selectedProject.id) {
-        return {
-          ...project,
-          abono: project.abono + parseFloat(abono),
-        };
-      }
-      return project;
-    });
-    setProjects(updatedProjects);
-    localStorage.setItem("formData", JSON.stringify(updatedProjects));
-    handleCloseModal();
-  };
+  // Array para generar los filtros de búsqueda de forma dinámica
+  const filterFields = [
+    { label: "Buscar Solicitante", key: "solicitante", type: "text" },
+    { label: "Buscar Proyecto", key: "proyecto", type: "text" },
+    { label: "Fecha Inicio", key: "fechaInicio", type: "date" },
+    { label: "Fecha Fin", key: "fechaFin", type: "date" },
+  ];
+  /*   const cabezeraTitles = [
+    "Acciones",
+    "Fecha",
+    "Solicitante",
+    "Nombre Proyecto",
+    "Costo Servicio",
+    "Abonado",
+  ]; */
 
   return (
     <>
       <TableContainer
-        style={{ maxWidth: "90vw", position: "relative", margin: "3rem auto" }}
         component={Paper}
+        sx={{ width: "90vw", margin: "3rem auto", p: 2 }}
       >
-        <Typography variant="h2" gutterBottom color="#000">
+        <Typography variant="h4" align="center" gutterBottom>
           Lista de Proyectos
         </Typography>
-        <Grid2
-          container
-          spacing={2}
-          width="100%"
-          style={{ placeContent: "center" }}
-        >
-          <TextField
-            label="Buscar Solicitante"
-            variant="filled"
-            type="text"
-            margin="normal"
-            value={search.solicitante ?? ""}
-            onChange={(e) =>
-              setSearch({ ...search, solicitante: e.target.value })
-            }
-          />
-          <TextField
-            label="Buscar Proyecto"
-            variant="filled"
-            type="text"
-            margin="normal"
-            value={search.proyecto ?? ""}
-            onChange={(e) => setSearch({ ...search, proyecto: e.target.value })}
-          />
-          <TextField
-            label="Fecha Inicio"
-            variant="filled"
-            type="date"
-            margin="normal"
-            value={search.fechaInicio}
-            slotProps={{
-              inputLabel: {
-                shrink: true,
-              },
-            }}
-            onChange={(e) =>
-              setSearch({ ...search, fechaInicio: e.target.value })
-            }
-          />
-          <TextField
-            label="Fecha Fin"
-            variant="filled"
-            type="date"
-            margin="normal"
-            value={search.fechaFin ?? ""}
-            slotProps={{
-              inputLabel: {
-                shrink: true,
-              },
-            }}
-            onChange={(e) => setSearch({ ...search, fechaFin: e.target.value })}
-          />
-          <Button
-            variant="contained"
-            style={{ height: "fit-content", placeSelf: "center" }}
-            color="error"
-            onClick={handleClearFilters}
-          >
-            Limpiar
-          </Button>
+        <Grid2 container spacing={2} justifyContent="center" sx={{ mb: 2 }}>
+          {filterFields.map(({ label, key, type }) => (
+            <Grid2 xs="auto" key={key}>
+              <TextField
+                label={label}
+                variant="filled"
+                type={type}
+                value={search[key]}
+                onChange={(e) =>
+                  setSearch((prev) => ({ ...prev, [key]: e.target.value }))
+                }
+                {...(type === "date" && { InputLabelProps: { shrink: true } })}
+              />
+            </Grid2>
+          ))}
+          <Grid2 xs="auto">
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleClearFilters}
+              sx={{ mt: 1 }}
+            >
+              Limpiar
+            </Button>
+          </Grid2>
         </Grid2>
-        <Table sx={{ minWidth: 650 }} aria-label="simple table">
+
+        <Table sx={{ width: "90vw", minWidth: 650 }}>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ minWidth: 100, fontWeight: "bold" }}>
-                Acciones
-              </TableCell>
-              {tableRowInputs.map((cell, index) => (
+              {tableRowInputs.map((header) => (
                 <TableCell
-                  key={index}
-                  sx={{ minWidth: 100, fontWeight: "bold" }}
+                  key={header}
+                  sx={{ fontWeight: "bold", whiteSpace: "nowrap" }}
                 >
-                  {cell}
+                  {header}
+                </TableCell>
+              ))}
+              {tableTextField.map((field) => (
+                <TableCell
+                  key={field}
+                  sx={{
+                    fontWeight: "bold",
+                    textTransform: "capitalize",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {field}
                 </TableCell>
               ))}
             </TableRow>
           </TableHead>
           <TableBody>
-            {paginatedProjects.map((project, index) => (
-              <TableRow key={index}>
-                <TableCell sx={{ minWidth: 100 }}>
-                  <Link to={`/${project.id}`}>Ver Detalles</Link>
-                  <IconButton
-                    color="error"
-                    onClick={() => handleOpenDeleteModal(project)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                  <IconButton
-                    color="primary"
-                    onClick={() => handleOpenModal(project)}
-                  >
-                    <AddIcon />
-                  </IconButton>
-                </TableCell>
-                <TableCell sx={{ minWidth: 100 }}>
-                  {`$ ${formatNumber(calculateTotalGastos(project))}`}
-                </TableCell>
-                <TableCell sx={{ minWidth: 100 }}>
-                  {getEstadoCuenta(project) === "Pagado"
-                    ? "$ 0"
-                    : `$ ${formatNumber(calculateSaldo(project))}`}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    minWidth: 100,
-                    backgroundColor: colorEstadoCuenta(
-                      getEstadoCuenta(project)
-                    ),
-                    color: "#fff",
-                    fontWeight: "bold",
-                    textTransform: "uppercase",
-                    textAlign: "center",
-                  }}
-                >
-                  {getEstadoCuenta(project)}
-                </TableCell>
-                <TableCell sx={{ minWidth: 100 }}>
-                  {`$ ${formatNumber(calculateUtilidadNeta(project))}`}
-                </TableCell>
-                {tableTextField.map((cell, index) => (
-                  <TableCell key={index} sx={{ minWidth: 200 }}>
-                    <TextField
-                      value={
-                        isNumeric(project[cell])
-                          ? formatNumber(project[cell]) ?? ""
-                          : project[cell] ?? ""
-                      }
-                      slotProps={{
-                        input: {
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              {isNumeric(project[cell]) ? "$" : ""}
-                            </InputAdornment>
-                          ),
-                        },
-                      }}
-                      onChange={(e) =>
-                        handleInputChange(index, cell, e.target.value)
-                      }
-                      variant="standard"
-                      type={cell === "fecha" ? "date" : "text"}
-                    />
+            {projects.map((project) => {
+              const totalGastos = calculateTotalGastos(project);
+              const saldo = calculateSaldo(project);
+              const estadoCuenta = getEstadoCuenta(project);
+              const utilidadNeta = calculateUtilidadNeta(project);
+              const gastos = getGastos(project);
+
+              return (
+                <TableRow key={project.proyecto_id}>
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>
+                    <Link to={`/crear-proyecto/${project.proyecto_id}`}>
+                      Ver Detalles
+                    </Link>
+                    <IconButton
+                      color="error"
+                      onClick={() => handleOpenDeleteModal(project)}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                    <IconButton
+                      color="primary"
+                      onClick={() => handleOpenAbonarModal(project)}
+                    >
+                      <AddIcon />
+                    </IconButton>
                   </TableCell>
-                ))}
-              </TableRow>
-            ))}
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>
+                    {formatDate(project.fecha)}
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>
+                    {project.solicitante}
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>
+                    {project.nombre_proyecto}
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>{`$ ${formatNumber(
+                    project.costo_servicio
+                  )}`}</TableCell>
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>{`$ ${formatNumber(
+                    project.abono
+                  )}`}</TableCell>
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>{`$ ${formatNumber(
+                    totalGastos
+                  )}`}</TableCell>
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>
+                    {`$ ${
+                      estadoCuenta === "Pagado"
+                        ? formatNumber(0)
+                        : formatNumber(saldo)
+                    }`}
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      backgroundColor: colorEstadoCuenta(estadoCuenta),
+                      color: "#fff",
+                      fontWeight: "bold",
+                      textTransform: "uppercase",
+                      textAlign: "center",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {estadoCuenta}
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>
+                    {`$ ${formatNumber(utilidadNeta)}`}
+                  </TableCell>
+                  {tableTextField.map((field) => (
+                    <TableCell key={field} sx={{ whiteSpace: "nowrap" }}>
+                      {isNumeric(gastos[field])
+                        ? `$ ${formatNumber(parseFloat(gastos[field]))}`
+                        : gastos[field]}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
+
+        <Pagination
+          count={Math.ceil(total / rowsPerPage)}
+          page={currentPage}
+          onChange={(event, page) => setCurrentPage(page)}
+          sx={{ mt: 2, display: "flex", justifyContent: "center" }}
+        />
       </TableContainer>
 
-      <Pagination
-        count={Math.ceil(
-          filteredProjects(projects, search).length / rowsPerPage
-        )}
-        page={currentPage}
-        onChange={handlePageChange}
-        style={{
-          margin: "1rem auto",
-          display: "flex",
-          justifyContent: "center",
-        }}
-      />
-
-      {/* Dialogs para abonar y eliminar */}
-      <Dialog open={open} onClose={handleCloseModal}>
+      {/* Modal para Abonar */}
+      <Dialog open={open} onClose={handleCloseAbonarModal}>
         <DialogTitle>Abonar Proyecto</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Costo del Servicio: ${formatNumber(selectedProject?.costoServicio)}
+            Costo del Servicio: $
+            {selectedProject
+              ? formatNumber(parseFloat(selectedProject.costo_servicio))
+              : ""}
           </DialogContentText>
           <DialogContentText>
             Saldo pendiente: $
-            {formatNumber(
-              selectedProject?.costoServicio - selectedProject?.abono
-            )}
+            {selectedProject
+              ? formatNumber(calculateSaldo(selectedProject))
+              : ""}
           </DialogContentText>
           <DialogContentText>
-            Abonado: ${formatNumber(selectedProject?.abono)}
+            Abonado: $
+            {selectedProject
+              ? formatNumber(parseFloat(selectedProject.abono))
+              : ""}
           </DialogContentText>
           <TextField
             autoFocus
@@ -322,12 +407,12 @@ const GastosProject = ({ listProjects }) => {
             label="Valor a Abonar"
             type="number"
             fullWidth
-            value={abono ?? ""}
+            value={abono}
             onChange={(e) => setAbono(e.target.value)}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseModal} color="primary">
+          <Button onClick={handleCloseAbonarModal} color="primary">
             Cancelar
           </Button>
           <Button onClick={handleAbonar} color="primary">
@@ -335,20 +420,23 @@ const GastosProject = ({ listProjects }) => {
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={deleteModalOpen} onClose={handleCloseDeleteModal}>
+
+      {/* Modal de eliminación */}
+      <Dialog open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
         <DialogTitle>Confirmar Eliminación</DialogTitle>
         <DialogContent>
           <DialogContentText>
             ¿Estás seguro de que deseas eliminar el proyecto{" "}
-            {selectedProject?.nombreProyecto}? Esta acción no se puede deshacer.
+            {selectedProject?.nombre_proyecto}? Esta acción no se puede
+            deshacer.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDeleteModal} color="primary">
+          <Button onClick={() => setDeleteModalOpen(false)} color="primary">
             Cancelar
           </Button>
           <Button
-            onClick={() => handleDelete(selectedProject.id)}
+            onClick={() => handleDelete(selectedProject.proyecto_id)}
             color="error"
           >
             Eliminar
@@ -357,10 +445,6 @@ const GastosProject = ({ listProjects }) => {
       </Dialog>
     </>
   );
-};
-
-GastosProject.propTypes = {
-  listProjects: PropTypes.array.isRequired,
 };
 
 export default GastosProject;

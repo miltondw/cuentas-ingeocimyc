@@ -56,30 +56,39 @@ const initialProjects = [
 ];
 
 const calculateTotalGastos = (project) => {
+  const gastosKeys = [
+    "gastoCamioneta",
+    "gastosCampo",
+    "pagoObreros",
+    "comidas",
+    "transporte",
+    "gastosVarios",
+    "peajes",
+    "combustible",
+    "hospedaje",
+  ];
+
+  return gastosKeys.reduce((total, key) => {
+    return total + (parseFloat(project[key]) || 0);
+  }, 0);
+};
+
+/* const calculateSaldo = (project) => {
+  const costoServicio = parseFloat(project.costoServicio) || 0;
+  const abono = parseFloat(project.abono) || 0;
+  console.log(costoServicio, abono);
+  return costoServicio - abono;
+}; */
+const calculateUtilidadNeta = (project) => {
   return (
-    (project.gastoCamioneta || 0) +
-    (project.gastosCampo || 0) +
-    (project.pagoObreros || 0) +
-    (project.comidas || 0) +
-    (project.transporte || 0) +
-    (project.gastosVarios || 0) +
-    (project.peajes || 0) +
-    (project.combustible || 0) +
-    (project.hospedaje || 0)
+    (parseFloat(project.costoServicio) || 0) - calculateTotalGastos(project)
   );
 };
 
-const calculateSaldo = (project) => {
-  return (project.costoServicio || 0) - (project.abono || 0);
-};
-
-const calculateUtilidadNeta = (project) => {
-  return (project.costoServicio || 0) - calculateTotalGastos(project);
-};
-
 const getEstadoCuenta = (project) => {
-  const saldo = calculateSaldo(project);
-  if (saldo < 0 || saldo === project.costoServicio)
+  //const saldo = calculateSaldo(project);
+  const saldo = parseFloat(project.costoServicio) - parseFloat(project.abono);
+  if (saldo < 0 || saldo === parseFloat(project.costoServicio))
     return "Pendiente por Pagar";
   if (saldo > 0) return "Abonado";
   return "Pagado";
@@ -140,11 +149,11 @@ const tableRowInputs = [
   "Saldo",
   "Estado Cuenta",
   "Utilidad Neta",
+  "Costo Del Servicio",
   "Fecha",
   "Solicitante",
   "Nombre Proyecto",
   "Obrero De Campo",
-  "Costo Del Proyecto",
   "Abono",
   "Gasto De Camioneta",
   "Gastos En Campo",
@@ -158,11 +167,11 @@ const tableRowInputs = [
 ];
 
 const tableTextField = [
+  "costoServicio",
   "fecha",
   "solicitante",
   "nombreProyecto",
   "obrero",
-  "costoServicio",
   "abono",
   "gastoCamioneta",
   "gastosCampo",
@@ -178,7 +187,7 @@ const tableTextField = [
 export {
   initialProjects,
   calculateTotalGastos,
-  calculateSaldo,
+  // calculateSaldo,
   calculateUtilidadNeta,
   getEstadoCuenta,
   formatNumber,

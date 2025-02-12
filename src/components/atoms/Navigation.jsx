@@ -14,8 +14,8 @@ import MenuItem from "@mui/material/MenuItem";
 import { Link } from "react-router-dom";
 
 const pages = [
-  { title: "Crear Cuenta", link: "" },
-  { title: "Lista de Cuentas", link: "view" },
+  { title: "Crear Proyecto", link: "/crear-proyecto" },
+  { title: "Proyectos", link: "proyectos" },
 ];
 const settings = ["Profile", "Account", "Dashboard", "Logout"];
 

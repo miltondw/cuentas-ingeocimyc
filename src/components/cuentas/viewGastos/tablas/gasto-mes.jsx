@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -11,150 +12,120 @@ import {
   Pagination,
 } from "@mui/material";
 import { Link } from "react-router-dom";
-import { useState } from "react";
-
-// Función para obtener los datos de localStorage
-const getGastosEmpresaFromLocalStorage = () => {
-  const data = JSON.parse(localStorage.getItem("data-months")) || [];
-  return data.map((monthData) => {
-    const mes =
-      monthData.fields.find((field) => field.name === "mes-de-gastos")?.value ||
-      "Mes Desconocido";
-    const gastos = monthData.fields
-      .filter((field) => field.name !== "mes-de-gastos")
-      .map((field) => ({
-        name: field.name.replace(/-/g, " ").toUpperCase(),
-        value: parseFloat(field.value) || 0,
-      }));
-    const mesDeGastos = (mes) => {
-      const nameMonths = [
-        "Enero",
-        "Febrero",
-        "Marzo",
-        "Abril",
-        "Mayo",
-        "Junio",
-        "Julio",
-        "Agosto",
-        "Septiembre",
-        "Octubre",
-        "Noviembre",
-        "Diciembre",
-      ];
-      return `Gasto de ${nameMonths[Number(mes.split("-")[1]) - 1]} ${
-        mes.split("-")[0]
-      }`;
-    };
-    const mesDeGasto = mesDeGastos(mes);
-    return { mesDeGasto, gastos, id: monthData.id, mesOriginal: mes };
-  });
-};
+import api from "../../../../api";
 
 const TablaGastosEmpresa = () => {
-  const gastosPorMes = getGastosEmpresaFromLocalStorage();
-  const [currentPage, setCurrentPage] = useState(1); // Estado para la paginación
-  const [selectedDate, setSelectedDate] = useState(""); // Estado para el filtro por fecha
+  const [gastos, setGastos] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [totalPages, setTotalPages] = useState(1);
+  const rowsPerPage = 10;
 
-  const rowsPerPage = 2; // Cantidad de filas por página
+  useEffect(() => {
+    const fetchGastos = async () => {
+      try {
+        const response = await api.get("/gastos-mes/", {
+          params: {
+            page: currentPage,
+            limit: rowsPerPage,
+          },
+        });
+        setGastos(response.data.data.gastos);
+        setTotalPages(Math.ceil(response.data.data.total / rowsPerPage));
+      } catch (err) {
+        console.error("Error al obtener los gastos:", err);
+      }
+    };
+    fetchGastos();
+  }, [currentPage]);
 
-  // Filtrar los datos por mes y año de la fecha seleccionada
+  const transformData = (data) => {
+    return data.map((item) => {
+      const date = new Date(item.mes);
+      const formattedMonth = date.toLocaleString("es-ES", {
+        month: "long",
+        year: "numeric",
+      });
+
+      const gastos = Object.keys(item)
+        .filter((key) => key !== "gasto_empresa_id" && key !== "mes")
+        .map((key) => ({
+          name: key.replace(/_/g, " ").toUpperCase(),
+          value: parseFloat(item[key]),
+        }));
+
+      return {
+        id: item.gasto_empresa_id,
+        mesDeGasto: `Gasto de ${formattedMonth}`,
+        gastos,
+        originalDate: item.mes,
+      };
+    });
+  };
+
+  const gastosPorMes = transformData(gastos);
   const filteredData = selectedDate
     ? gastosPorMes.filter((mesData) => {
-        const [selectedYear, selectedMonth] = selectedDate.split("-");
-        const [dataYear, dataMonth] = mesData.mesOriginal.split("-");
+        const date = new Date(mesData.originalDate);
+        const selected = new Date(selectedDate);
         return (
-          selectedYear === dataYear &&
-          Number(selectedMonth) === Number(dataMonth)
+          date.getFullYear() === selected.getFullYear() &&
+          date.getMonth() === selected.getMonth()
         );
       })
     : gastosPorMes;
 
-  // Pagination: calcular los datos visibles
-  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-  const paginatedData = filteredData.slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
-  );
-
   return (
     <TableContainer
       component={Paper}
-      style={{
-        maxWidth: "90vw",
-        margin: "3rem auto",
-        padding: "20px",
-        boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)",
-      }}
+      style={{ maxWidth: "90vw", margin: "3rem auto", padding: "20px" }}
     >
-      <Typography variant="h2" gutterBottom color="#000">
+      <Typography variant="h2" gutterBottom>
         Gastos de la Empresa por Mes
       </Typography>
-
-      {/* Filtro por fecha */}
       <TextField
-        type="date"
+        type="month"
         label="Filtrar por Mes"
         value={selectedDate}
         onChange={(e) => {
           setSelectedDate(e.target.value);
-          setCurrentPage(1); // Reiniciar a la primera página al filtrar
+          setCurrentPage(1);
         }}
+        InputLabelProps={{ shrink: true }}
         margin="normal"
-        slotProps={{
-          inputLabel: {
-            shrink: true,
-          },
-        }}
       />
-
-      {/* Tabla con datos paginados */}
-      {paginatedData.map((mesData, index) => (
-        <div key={index} style={{ marginBottom: "2rem" }}>
+      {filteredData.map((mesData) => (
+        <div key={mesData.id} style={{ marginBottom: "2rem" }}>
           <Typography variant="h4" gutterBottom>
-            {mesData.mesDeGasto}{" "}
-            <Link to={`/${mesData.id}`} style={{ color: "blue" }}>
-              Ver Detalles
-            </Link>
+            {mesData.mesDeGasto} <Link to={`/${mesData.id}`}>Ver Detalles</Link>
           </Typography>
-          <Table sx={{ minWidth: 650 }} aria-label="gastos empresa table">
+          <Table sx={{ minWidth: 650 }}>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ minWidth: 100, fontWeight: "bold" }}>
-                  Concepto
-                </TableCell>
-                <TableCell sx={{ minWidth: 100, fontWeight: "bold" }}>
-                  Valor Mensual
-                </TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Concepto</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Valor Mensual</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {mesData.gastos.map((gasto, idx) => (
                 <TableRow key={idx}>
-                  <TableCell sx={{ minWidth: 100 }}>{gasto.name}</TableCell>
-                  <TableCell sx={{ minWidth: 100 }}>
-                    {`$ ${formatNumber(gasto.value)}`}
-                  </TableCell>
+                  <TableCell>{gasto.name}</TableCell>
+                  <TableCell>{`$ ${formatNumber(gasto.value)}`}</TableCell>
                 </TableRow>
               ))}
               <TableRow>
-                <TableCell sx={{ minWidth: 100, fontWeight: "bold" }}>
-                  Total Gastos
-                </TableCell>
-                <TableCell sx={{ minWidth: 100, fontWeight: "bold" }}>
-                  {`$ ${formatNumber(
-                    mesData.gastos.reduce(
-                      (total, gasto) => total + gasto.value,
-                      0
-                    )
-                  )}`}
-                </TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Total Gastos</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>{`$ ${formatNumber(
+                  mesData.gastos.reduce(
+                    (total, gasto) => total + gasto.value,
+                    0
+                  )
+                )}`}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
         </div>
       ))}
-
-      {/* Paginación */}
       <Pagination
         count={totalPages}
         page={currentPage}
@@ -166,17 +137,8 @@ const TablaGastosEmpresa = () => {
   );
 };
 
-// Función para formatear números
 const formatNumber = (value) => {
-  if (!value) return "";
-  const stringValue = value.toString();
-  const reversedString = stringValue.split("").reverse().join("");
-  const formattedReversed = reversedString.replace(
-    /\d{3}(?=\d)/g,
-    (match) => match + "."
-  );
-  const formattedString = formattedReversed.split("").reverse().join("");
-  return formattedString;
+  return new Intl.NumberFormat("es-ES").format(value);
 };
 
 export default TablaGastosEmpresa;
