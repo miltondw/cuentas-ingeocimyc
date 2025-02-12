@@ -18,7 +18,7 @@ const Login = () => {
       });
       console.log(response, "response");
       localStorage.setItem("token", response.data.token);
-      navigate("/view");
+      navigate("/proyectos");
     } catch (err) {
       console.error(err, "login error");
       setError("Credenciales incorrectas");

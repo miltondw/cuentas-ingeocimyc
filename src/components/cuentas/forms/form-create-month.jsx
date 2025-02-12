@@ -1,164 +1,173 @@
 import { useEffect, useState } from "react";
-import {
-  TextField,
-  Button,
-  Container,
-  Typography,
-  Box,
-  IconButton,
-} from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
-import PropTypes from "prop-types";
-import { v4 as uuidv4 } from "uuid";
-import { useNavigate } from "react-router-dom";
+import { TextField, Button, Container, Typography, Box } from "@mui/material";
+import { useNavigate, useParams } from "react-router-dom";
+import api from "../../../api";
 
-const fieldsDefault = [
-  { name: "MES DE GASTOS", value: "" },
-  { name: "PAGO DE SALARIOS", value: "1680000" },
-  { name: "PAGO DE LUZ", value: "29000" },
-  { name: "PAGO DE ARRIENDO", value: "540000" },
-  { name: "PAGO DE INTERNET", value: "85000" },
-  { name: "PAGO DE SALUD", value: "480000" },
-];
+const defaultData = {
+  mes: "",
+  salarios: "1680000",
+  luz: "29000",
+  agua: "29000",
+  arriendo: "540000",
+  internet: "85000",
+  salud: "480000",
+};
 
-const FormCreateMonth = ({ id }) => {
-  const [fields, setFields] = useState(fieldsDefault);
+const FormCreateMonth = () => {
+  const [formData, setFormData] = useState(defaultData);
   const navigate = useNavigate();
+  const { id } = useParams();
+  // Si se pasa un id, se asume que se está actualizando un registro existente,
+  // por lo que se hace la consulta a la API para obtener los datos.
   useEffect(() => {
     if (id) {
-      const data = JSON.parse(localStorage.getItem("data-months")) || [];
-      const projectMonths = data.find((item) => item.id === id);
-      if (projectMonths) {
-        setFields(projectMonths.fields);
-      }
+      const fetchData = async () => {
+        try {
+          const response = await api.get(`/gastos-mes/${id}`);
+          if (response.data) {
+            const { mes, salarios, luz, agua, arriendo, internet, salud } =
+              response.data;
+            // Convertir el valor de "mes" a formato YYYY-MM-DD para el input tipo date
+            console.log(response.data, mes);
+            const formattedMes = mes
+              ? new Date(mes).toISOString().substring(0, 10)
+              : "";
+            setFormData({
+              mes: formattedMes,
+              salarios: salarios?.toString() || "",
+              luz: luz?.toString() || "",
+              agua: agua?.toString() || "",
+              arriendo: arriendo?.toString() || "",
+              internet: internet?.toString() || "",
+              salud: salud?.toString() || "",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching month data:", error);
+        }
+      };
+      fetchData();
     }
   }, [id]);
 
-  const handleChange = (index, event) => {
-    const { name, value } = event.target;
-    const newFields = [...fields];
-    newFields[index][name] = value;
-    setFields(newFields);
+  // Maneja el cambio de cualquier campo del formulario
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleAddField = () => {
-    setFields([...fields, { name: "", value: "" }]);
-  };
-
-  const handleRemoveField = (index) => {
-    const newFields = fields.filter((_, i) => i !== index);
-    setFields(newFields);
-  };
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-
-    const data = JSON.parse(localStorage.getItem("data-months")) || [];
-    const newFields = fields.map((field) => ({
-      name: field.name.toLowerCase().split(" ").join("-"),
-      value: field.value,
-    }));
-
-    if (id) {
-      const updatedData = data.map((item) =>
-        item.id === id ? { ...item, fields: newFields } : item
-      );
-      localStorage.setItem("data-months", JSON.stringify(updatedData));
-    } else {
-      const newData = { id: uuidv4(), fields: newFields };
-      data.push(newData);
-      localStorage.setItem("data-months", JSON.stringify(data));
+  // Al enviar el formulario, se decide si se crea o actualiza según la presencia de id.
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (id) {
+        // Actualiza el registro
+        await api.put(`/gastos-mes/${id}`, formData);
+      } else {
+        // Crea un nuevo registro
+        await api.post("/gastos-mes", formData);
+      }
+      navigate("/gastos");
+    } catch (error) {
+      console.error("Error submitting month data:", error);
     }
-    navigate("/view");
   };
 
   return (
     <Container
-      style={{
-        boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)",
-        padding: "20px",
-        borderRadius: "10px",
-        margin: "20px auto",
+      sx={{
+        boxShadow: 3,
+        p: 3,
+        borderRadius: 2,
+        my: 3,
       }}
     >
-      <Typography variant="h3" gutterBottom color="#000">
-        {id ? "Actualizar" : "Crear "} Gastos de costos fijos Mensuales
+      <Typography variant="h3" gutterBottom color="primary">
+        {id ? "Actualizar" : "Crear"} Gastos de Costos Fijos Mensuales
       </Typography>
-      <form
-        style={{
-          width: "80%",
-          display: "grid",
-          gridTemplateColumns: "repeat(3,1fr)",
-          margin: "1rem auto",
-        }}
+      <Box
+        component="form"
         onSubmit={handleSubmit}
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" },
+          gap: 2,
+          width: "80%",
+          mx: "auto",
+        }}
       >
-        {fields.map((field, index) => (
-          <Box key={index} display="flex" alignItems="center" mb={2}>
-            {index < fieldsDefault.length ? (
-              <>
-                <TextField
-                  label={field.name.toUpperCase().split("-").join(" ")}
-                  name="value"
-                  value={field.value ?? ""}
-                  onChange={(event) => handleChange(index, event)}
-                  margin="normal"
-                  variant="outlined"
-                  type={index === 0 ? "date" : "number"}
-                  slotProps={{
-                    inputLabel: {
-                      shrink: true,
-                    },
-                  }}
-                />
-              </>
-            ) : (
-              <>
-                <TextField
-                  label="Nombre"
-                  name="name"
-                  value={field.name ?? ""}
-                  onChange={(event) => handleChange(index, event)}
-                  margin="normal"
-                  variant="outlined"
-                  style={{ marginRight: "1rem" }}
-                />
-                <TextField
-                  label="Valor"
-                  name="value"
-                  value={field.value ?? ""}
-                  onChange={(event) => handleChange(index, event)}
-                  margin="normal"
-                  variant="outlined"
-                  type="number"
-                />
-                <IconButton onClick={() => handleRemoveField(index)}>
-                  <DeleteIcon />
-                </IconButton>
-              </>
-            )}
-          </Box>
-        ))}
-        <Box style={{ display: "flex", justifyContent: "space-between" }}>
-          <Button
-            type="button"
-            onClick={handleAddField}
-            variant="contained"
-            color="primary"
-          >
-            Añadir Campo
-          </Button>
+        <TextField
+          label="Mes de Gastos"
+          name="mes"
+          type="date"
+          value={formData.mes}
+          onChange={handleChange}
+          slotProps={{ inputLabel: { shrink: true } }}
+          fullWidth
+        />
+        <TextField
+          label="Pago de Salarios"
+          name="salarios"
+          type="number"
+          value={formData.salarios}
+          onChange={handleChange}
+          fullWidth
+        />
+        <TextField
+          label="Pago de Luz"
+          name="luz"
+          type="number"
+          value={formData.luz}
+          onChange={handleChange}
+          fullWidth
+        />
+        <TextField
+          label="Pago de Agua"
+          name="agua"
+          type="number"
+          value={formData.agua}
+          onChange={handleChange}
+          fullWidth
+        />
+        <TextField
+          label="Pago de Arriendo"
+          name="arriendo"
+          type="number"
+          value={formData.arriendo}
+          onChange={handleChange}
+          fullWidth
+        />
+        <TextField
+          label="Pago de Internet"
+          name="internet"
+          type="number"
+          value={formData.internet}
+          onChange={handleChange}
+          fullWidth
+        />
+        <TextField
+          label="Pago de Salud"
+          name="salud"
+          type="number"
+          value={formData.salud}
+          onChange={handleChange}
+          fullWidth
+        />
+        <Box
+          sx={{
+            gridColumn: "span 3",
+            display: "flex",
+            justifyContent: "flex-end",
+            mt: 2,
+          }}
+        >
           <Button type="submit" variant="contained" color="secondary">
             {id ? "Actualizar" : "Crear"}
           </Button>
         </Box>
-      </form>
+      </Box>
     </Container>
   );
-};
-
-FormCreateMonth.propTypes = {
-  id: PropTypes.string,
 };
 
 export default FormCreateMonth;

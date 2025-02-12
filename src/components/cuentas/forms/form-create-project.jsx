@@ -1,5 +1,4 @@
-import { useState } from "react";
-import PropTypes from "prop-types";
+import { useState, useEffect } from "react";
 import {
   Grid2,
   TextField,
@@ -8,8 +7,8 @@ import {
   Paper,
   Alert,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
-import api from "../../../api"; // Ajusta la ruta según tu proyecto
+import { useNavigate, useParams } from "react-router-dom";
+import api from "../../../api";
 
 // Estado por defecto para un proyecto nuevo
 const defaultProject = {
@@ -18,7 +17,7 @@ const defaultProject = {
   nombre_proyecto: "",
   costo_servicio: "",
   abono: "",
-  // Se usará un objeto para el formulario; al enviar se encapsula en un array.
+  // Para este formulario se maneja un único objeto de gastos
   gastos: {
     camioneta: "",
     campo: "",
@@ -32,30 +31,59 @@ const defaultProject = {
   },
 };
 
-const ProjectForm = ({ initialData, onSuccess }) => {
+const FormCreateProject = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
-
-  // Si se recibe initialData, pre-cargamos el formulario
-  const [project, setProject] = useState(
-    initialData
-      ? {
-          fecha: initialData.fecha || "",
-          solicitante: initialData.solicitante || "",
-          nombre_proyecto: initialData.nombre_proyecto || "",
-          costo_servicio: initialData.costo_servicio || "",
-          abono: initialData.abono || "",
-          // Suponemos que initialData.gastos es un array y usamos el primero.
-          gastos:
-            initialData.gastos && initialData.gastos.length > 0
-              ? initialData.gastos[0]
-              : { ...defaultProject.gastos },
-        }
-      : defaultProject
-  );
+  const [project, setProject] = useState(defaultProject);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Maneja los cambios de los campos de nivel superior
+  // Si se recibe un id, se carga el proyecto para actualizarlo
+  useEffect(() => {
+    if (id) {
+      const fetchProject = async () => {
+        try {
+          const response = await api.get(`/projects/${id}`);
+          if (response.data.success) {
+            const data = response.data.data;
+            // Formatear la fecha para el input (YYYY-MM-DD)
+            const formattedFecha = data.fecha
+              ? new Date(data.fecha).toISOString().substring(0, 10)
+              : "";
+            // Usamos el primer objeto de gastos, si existe; de lo contrario, mantenemos el default
+            const gastosData =
+              data.gastos && data.gastos.length > 0
+                ? data.gastos[0]
+                : defaultProject.gastos;
+            setProject({
+              ...data,
+              fecha: formattedFecha,
+              solicitante: data.solicitante || "",
+              nombre_proyecto: data.nombre_proyecto || "",
+              costo_servicio: data.costo_servicio || "",
+              abono: data.abono || "",
+              gastos: {
+                camioneta: gastosData.camioneta || "",
+                campo: gastosData.campo || "",
+                obreros: gastosData.obreros || "",
+                comidas: gastosData.comidas || "",
+                transporte: gastosData.transporte || "",
+                otros: gastosData.otros || "",
+                peajes: gastosData.peajes || "",
+                combustible: gastosData.combustible || "",
+                hospedaje: gastosData.hospedaje || "",
+              },
+            });
+          }
+        } catch (err) {
+          setError("Error al cargar el proyecto", err);
+        }
+      };
+      fetchProject();
+    }
+  }, [id]);
+
+  // Maneja el cambio de los campos de nivel superior
   const handleChange = (e) => {
     const { name, value } = e.target;
     setProject((prev) => ({
@@ -64,7 +92,7 @@ const ProjectForm = ({ initialData, onSuccess }) => {
     }));
   };
 
-  // Maneja los cambios de los campos de "gastos"
+  // Maneja el cambio de los campos de "gastos"
   const handleGastosChange = (e) => {
     const { name, value } = e.target;
     setProject((prev) => ({
@@ -82,11 +110,12 @@ const ProjectForm = ({ initialData, onSuccess }) => {
     setLoading(true);
     setError("");
 
-    // Armamos el payload; convertimos los campos numéricos a Number y encapsulamos "gastos" en un array
+    // Armamos el payload; convertimos a Number los campos numéricos
     const payload = {
       ...project,
       costo_servicio: Number(project.costo_servicio),
       abono: Number(project.abono),
+      // Encapsulamos los gastos en un array
       gastos: [
         {
           camioneta: Number(project.gastos.camioneta),
@@ -103,20 +132,14 @@ const ProjectForm = ({ initialData, onSuccess }) => {
     };
 
     try {
-      if (initialData) {
-        // Actualización: se espera que initialData tenga la propiedad "proyecto_id"
-        const response = await api.put(
-          `/projects/${initialData.proyecto_id}`,
-          payload
-        );
-        if (onSuccess) onSuccess(response.data);
-        else navigate(-1); // Vuelve a la página anterior
+      if (id) {
+        // Actualización: se utiliza el proyecto_id devuelto en el GET
+        await api.put(`/projects/${project.proyecto_id}`, payload);
       } else {
         // Creación
-        const response = await api.post("/projects", payload);
-        if (onSuccess) onSuccess(response.data);
-        else navigate(-1);
+        await api.post("/projects", payload);
       }
+      navigate(-1);
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -131,7 +154,7 @@ const ProjectForm = ({ initialData, onSuccess }) => {
   return (
     <Paper sx={{ p: 4, maxWidth: "800px", margin: "2rem auto" }}>
       <Typography variant="h4" gutterBottom>
-        {initialData ? "Actualizar Proyecto" : "Crear Proyecto"}
+        {id ? "Actualizar Proyecto" : "Crear Proyecto"}
       </Typography>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -149,7 +172,7 @@ const ProjectForm = ({ initialData, onSuccess }) => {
               value={project.fecha}
               onChange={handleChange}
               fullWidth
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
             />
           </Grid2>
           {/* Solicitante */}
@@ -195,10 +218,9 @@ const ProjectForm = ({ initialData, onSuccess }) => {
             />
           </Grid2>
         </Grid2>
-        <Typography variant="h4" style={{}}>
+        <Typography variant="h4" sx={{ mt: 3, mb: 2 }}>
           Gastos
         </Typography>
-
         <Grid2 container spacing={2}>
           {/* Camioneta */}
           <Grid2 item xs={12} sm={4}>
@@ -306,7 +328,7 @@ const ProjectForm = ({ initialData, onSuccess }) => {
               color="primary"
               disabled={loading}
             >
-              {initialData ? "Actualizar Proyecto" : "Crear Proyecto"}
+              {id ? "Actualizar Proyecto" : "Crear Proyecto"}
             </Button>
           </Grid2>
         </Grid2>
@@ -314,29 +336,5 @@ const ProjectForm = ({ initialData, onSuccess }) => {
     </Paper>
   );
 };
-ProjectForm.propTypes = {
-  initialData: PropTypes.shape({
-    fecha: PropTypes.string,
-    proyecto_id: PropTypes.string,
-    solicitante: PropTypes.string,
-    nombre_proyecto: PropTypes.string,
-    costo_servicio: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    abono: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    gastos: PropTypes.arrayOf(
-      PropTypes.shape({
-        camioneta: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-        campo: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-        obreros: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-        comidas: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-        transporte: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-        otros: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-        peajes: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-        combustible: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-        hospedaje: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-      })
-    ),
-  }),
-  onSuccess: PropTypes.func,
-};
 
-export default ProjectForm;
+export default FormCreateProject;

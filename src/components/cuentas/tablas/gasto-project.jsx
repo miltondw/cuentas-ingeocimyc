@@ -22,7 +22,7 @@ import {
 import { Link } from "react-router-dom";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
-import api from "../../../../api";
+import api from "../../../api";
 
 // Cabeceras para columnas calculadas e inputs de gastos
 const tableRowInputs = [
@@ -250,7 +250,9 @@ const GastosProject = () => {
                 onChange={(e) =>
                   setSearch((prev) => ({ ...prev, [key]: e.target.value }))
                 }
-                {...(type === "date" && { InputLabelProps: { shrink: true } })}
+                {...(type === "date" && {
+                  slotProps: { inputLabel: { shrink: true } },
+                })}
               />
             </Grid2>
           ))}
