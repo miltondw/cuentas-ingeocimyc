@@ -98,7 +98,7 @@ const TablaGastosEmpresa = () => {
         Gastos de la Empresa por Mes
       </Typography>
       <TextField
-        type="month"
+        type="date"
         label="Filtrar por Mes"
         value={selectedDate}
         onChange={(e) => {
