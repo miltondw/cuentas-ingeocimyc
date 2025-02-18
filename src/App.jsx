@@ -7,6 +7,7 @@ import TablaGastosEmpresa from "./components/cuentas/tablas/gasto-mes";
 import FormCreateMonth from "./components/cuentas/forms/form-create-month";
 import FormCreateProject from "./components/cuentas/forms/form-create-project";
 import TablaUtilidades from "./components/cuentas/tablas/TablaUtilidades";
+import PrivateRoute from "./api/PrivateRoute";
 
 function App() {
   return (
@@ -15,15 +16,64 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         {/* Rutas para creación y actualización de proyectos */}
-        <Route path="/crear-proyecto" element={<FormCreateProject />} />
-        <Route path="/crear-proyecto/:id" element={<FormCreateProject />} />
+        <Route
+          path="/crear-proyecto"
+          element={
+            <PrivateRoute>
+              <FormCreateProject />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/crear-proyecto/:id"
+          element={
+            <PrivateRoute>
+              <FormCreateProject />
+            </PrivateRoute>
+          }
+        />
         {/* Rutas para creación y actualización de gastos mensuales */}
-        <Route path="/crear-gasto-mes" element={<FormCreateMonth />} />
-        <Route path="/crear-gasto-mes/:id" element={<FormCreateMonth />} />
+        <Route
+          path="/crear-gasto-mes"
+          element={
+            <PrivateRoute>
+              <FormCreateMonth />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/crear-gasto-mes/:id"
+          element={
+            <PrivateRoute>
+              <FormCreateMonth />
+            </PrivateRoute>
+          }
+        />
         {/* Rutas para visualización de Tablas */}
-        <Route path="/proyectos" element={<GastosProject />} />
-        <Route path="/gastos" element={<TablaGastosEmpresa />} />
-        <Route path="/utilidades" element={<TablaUtilidades />} />
+        <Route
+          path="/proyectos"
+          element={
+            <PrivateRoute>
+              <GastosProject />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/gastos"
+          element={
+            <PrivateRoute>
+              <TablaGastosEmpresa />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/utilidades"
+          element={
+            <PrivateRoute>
+              <TablaUtilidades />
+            </PrivateRoute>
+          }
+        />
       </Routes>
     </Router>
   );

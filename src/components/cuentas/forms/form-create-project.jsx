@@ -1,34 +1,45 @@
 import { useState, useEffect } from "react";
 import {
-  Grid2,
   TextField,
   Button,
   Typography,
   Paper,
   Alert,
+  Checkbox,
+  FormControlLabel,
+  IconButton,
 } from "@mui/material";
+import Grid2 from "@mui/material/Grid2"; // Versión estable de Grid2
+import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../../api";
 
-// Estado por defecto para un proyecto nuevo
+// Objeto de gasto por defecto con un array para campos extras.
+const defaultGasto = {
+  camioneta: "",
+  campo: "",
+  obreros: "",
+  comidas: "",
+  transporte: "",
+  otros: "",
+  peajes: "",
+  combustible: "",
+  hospedaje: "",
+  extras: [], // Cada extra será un objeto { field: "", value: "" }
+};
+
+// Estado por defecto para un proyecto nuevo, con una única fila de gastos.
 const defaultProject = {
   fecha: "",
   solicitante: "",
   nombre_proyecto: "",
   costo_servicio: "",
   abono: "",
-  // Para este formulario se maneja un único objeto de gastos
-  gastos: {
-    camioneta: "",
-    campo: "",
-    obreros: "",
-    comidas: "",
-    transporte: "",
-    otros: "",
-    peajes: "",
-    combustible: "",
-    hospedaje: "",
-  },
+  factura: "",
+  metodo_de_pago: "", // Se reemplazará por un select
+  valor_iva: "",
+  retencionIva: false,
+  gastos: [defaultGasto],
 };
 
 const FormCreateProject = () => {
@@ -38,7 +49,7 @@ const FormCreateProject = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Si se recibe un id, se carga el proyecto para actualizarlo
+  // Cargar el proyecto para actualizarlo, si se recibe un id
   useEffect(() => {
     if (id) {
       const fetchProject = async () => {
@@ -46,15 +57,9 @@ const FormCreateProject = () => {
           const response = await api.get(`/projects/${id}`);
           if (response.data.success) {
             const data = response.data.data;
-            // Formatear la fecha para el input (YYYY-MM-DD)
             const formattedFecha = data.fecha
               ? new Date(data.fecha).toISOString().substring(0, 10)
               : "";
-            // Usamos el primer objeto de gastos, si existe; de lo contrario, mantenemos el default
-            const gastosData =
-              data.gastos && data.gastos.length > 0
-                ? data.gastos[0]
-                : defaultProject.gastos;
             setProject({
               ...data,
               fecha: formattedFecha,
@@ -62,17 +67,15 @@ const FormCreateProject = () => {
               nombre_proyecto: data.nombre_proyecto || "",
               costo_servicio: data.costo_servicio || "",
               abono: data.abono || "",
-              gastos: {
-                camioneta: gastosData.camioneta || "",
-                campo: gastosData.campo || "",
-                obreros: gastosData.obreros || "",
-                comidas: gastosData.comidas || "",
-                transporte: gastosData.transporte || "",
-                otros: gastosData.otros || "",
-                peajes: gastosData.peajes || "",
-                combustible: gastosData.combustible || "",
-                hospedaje: gastosData.hospedaje || "",
-              },
+              factura: data.factura || "",
+              metodo_de_pago: data.metodo_de_pago || "",
+              valor_iva: data.valor_iva || "",
+              retencionIva: data.valor_iva ? true : false,
+              // Se usa la primera fila de gastos; si no existe, se usa el default.
+              gastos:
+                data.gastos && data.gastos.length > 0
+                  ? data.gastos
+                  : [defaultGasto],
             });
           }
         } catch (err) {
@@ -83,7 +86,7 @@ const FormCreateProject = () => {
     }
   }, [id]);
 
-  // Maneja el cambio de los campos de nivel superior
+  // Actualiza los campos principales del proyecto
   const handleChange = (e) => {
     const { name, value } = e.target;
     setProject((prev) => ({
@@ -92,51 +95,99 @@ const FormCreateProject = () => {
     }));
   };
 
-  // Maneja el cambio de los campos de "gastos"
-  const handleGastosChange = (e) => {
+  // Actualiza los campos fijos del único gasto (índice 0)
+  const handleGastoChange = (e) => {
     const { name, value } = e.target;
+    setProject((prev) => {
+      const newGasto = { ...prev.gastos[0], [name]: value };
+      return { ...prev, gastos: [newGasto] };
+    });
+  };
+
+  // Actualiza un campo extra (del array extras) para la única fila de gasto
+  const handleExtraChange = (extraIndex, e) => {
+    const { name, value } = e.target; // name será "field" o "value"
+    setProject((prev) => {
+      const currentExtras = prev.gastos[0].extras || [];
+      const newExtras = currentExtras.map((extra, i) =>
+        i === extraIndex ? { ...extra, [name]: value } : extra
+      );
+      const newGasto = { ...prev.gastos[0], extras: newExtras };
+      return { ...prev, gastos: [newGasto] };
+    });
+  };
+
+  // Agrega un nuevo campo extra a la única fila de gasto
+  const handleAddExtra = () => {
+    setProject((prev) => {
+      const currentExtras = prev.gastos[0].extras || [];
+      const newExtras = [...currentExtras, { field: "", value: "" }];
+      const newGasto = { ...prev.gastos[0], extras: newExtras };
+      return { ...prev, gastos: [newGasto] };
+    });
+  };
+
+  // Elimina un campo extra de la única fila de gasto
+  const handleRemoveExtra = (extraIndex) => {
+    setProject((prev) => {
+      const currentExtras = prev.gastos[0].extras || [];
+      const newExtras = currentExtras.filter((_, i) => i !== extraIndex);
+      const newGasto = { ...prev.gastos[0], extras: newExtras };
+      return { ...prev, gastos: [newGasto] };
+    });
+  };
+
+  // Maneja el checkbox para retención de IVA
+  const handleCheckboxChange = (e) => {
+    const { checked } = e.target;
     setProject((prev) => ({
       ...prev,
-      gastos: {
-        ...prev.gastos,
-        [name]: value,
-      },
+      retencionIva: checked,
+      // Si se desmarca, limpiamos el valor de IVA
+      valor_iva: checked ? prev.valor_iva : "",
     }));
   };
 
-  // Al enviar el formulario se arma el payload y se llama al endpoint correspondiente
+  // Al enviar el formulario, se arma el payload. Se fusionan los campos fijos y los extras del único gasto.
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    // Armamos el payload; convertimos a Number los campos numéricos
+    const gasto = project.gastos[0];
+    const fixed = {
+      camioneta: Number(gasto.camioneta),
+      campo: Number(gasto.campo),
+      obreros: Number(gasto.obreros),
+      comidas: Number(gasto.comidas),
+      transporte: Number(gasto.transporte),
+      otros: Number(gasto.otros),
+      peajes: Number(gasto.peajes),
+      combustible: Number(gasto.combustible),
+      hospedaje: Number(gasto.hospedaje),
+    };
+    const extras = (gasto.extras || []).reduce((acc, extra) => {
+      if (extra.field.trim() !== "") {
+        acc[extra.field.trim()] = Number(extra.value);
+      }
+      return acc;
+    }, {});
+    const gastoPayload = { ...fixed, ...extras };
+
     const payload = {
       ...project,
       costo_servicio: Number(project.costo_servicio),
       abono: Number(project.abono),
-      // Encapsulamos los gastos en un array
-      gastos: [
-        {
-          camioneta: Number(project.gastos.camioneta),
-          campo: Number(project.gastos.campo),
-          obreros: Number(project.gastos.obreros),
-          comidas: Number(project.gastos.comidas),
-          transporte: Number(project.gastos.transporte),
-          otros: Number(project.gastos.otros),
-          peajes: Number(project.gastos.peajes),
-          combustible: Number(project.gastos.combustible),
-          hospedaje: Number(project.gastos.hospedaje),
-        },
-      ],
+      factura: project.factura,
+      metodo_de_pago: project.metodo_de_pago,
+      valor_iva: project.retencionIva ? Number(project.valor_iva) : 0,
+      gastos: [gastoPayload],
     };
 
     try {
       if (id) {
-        // Actualización: se utiliza el proyecto_id devuelto en el GET
         await api.put(`/projects/${project.proyecto_id}`, payload);
       } else {
-        // Creación
         await api.post("/projects", payload);
       }
       navigate(-1);
@@ -163,7 +214,7 @@ const FormCreateProject = () => {
       )}
       <form onSubmit={handleSubmit}>
         <Grid2 container spacing={2}>
-          {/* Fecha */}
+          {/* Campos principales */}
           <Grid2 item xs={12} sm={6}>
             <TextField
               label="Fecha"
@@ -172,10 +223,9 @@ const FormCreateProject = () => {
               value={project.fecha}
               onChange={handleChange}
               fullWidth
-              slotProps={{ inputLabel: { shrink: true } }}
+              InputLabelProps={{ shrink: true }}
             />
           </Grid2>
-          {/* Solicitante */}
           <Grid2 item xs={12} sm={6}>
             <TextField
               label="Solicitante"
@@ -185,7 +235,6 @@ const FormCreateProject = () => {
               fullWidth
             />
           </Grid2>
-          {/* Nombre del Proyecto */}
           <Grid2 item xs={12}>
             <TextField
               label="Nombre del Proyecto"
@@ -195,7 +244,6 @@ const FormCreateProject = () => {
               fullWidth
             />
           </Grid2>
-          {/* Costo del Servicio */}
           <Grid2 item xs={12} sm={6}>
             <TextField
               label="Costo del Servicio"
@@ -206,7 +254,6 @@ const FormCreateProject = () => {
               fullWidth
             />
           </Grid2>
-          {/* Abono */}
           <Grid2 item xs={12} sm={6}>
             <TextField
               label="Abono"
@@ -217,110 +264,200 @@ const FormCreateProject = () => {
               fullWidth
             />
           </Grid2>
+          <Grid2 item xs={12} sm={6}>
+            <TextField
+              label="Factura"
+              name="factura"
+              value={project.factura}
+              onChange={handleChange}
+              fullWidth
+            />
+          </Grid2>
+          <Grid2 item xs={12} sm={6}>
+            <TextField
+              select
+              label="Método de Pago"
+              name="metodo_de_pago"
+              value={project.metodo_de_pago}
+              onChange={handleChange}
+              fullWidth
+              slotProps={{
+                select: { native: true },
+                inputLabel: { shrink: true },
+              }}
+            >
+              <option value="">Seleccione</option>
+              <option value="efectivo">Efectivo</option>
+              <option value="transferencia">Transferencia</option>
+            </TextField>
+          </Grid2>
+          <Grid2 item xs={12}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={project.retencionIva}
+                  onChange={handleCheckboxChange}
+                />
+              }
+              label="¿Aplica retención de IVA?"
+            />
+          </Grid2>
+          {project.retencionIva && (
+            <Grid2 item xs={12} sm={6}>
+              <TextField
+                label="Valor IVA"
+                type="number"
+                name="valor_iva"
+                value={project.valor_iva}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Grid2>
+          )}
         </Grid2>
         <Typography variant="h4" sx={{ mt: 3, mb: 2 }}>
           Gastos
         </Typography>
-        <Grid2 container spacing={2}>
-          {/* Camioneta */}
-          <Grid2 item xs={12} sm={4}>
+        <Grid2
+          container
+          spacing={2}
+          sx={{ mb: 2, border: "1px solid #ccc", p: 2, borderRadius: 1 }}
+        >
+          <Typography variant="h6" sx={{ width: "100%" }}>
+            Gastos
+          </Typography>
+          {/* Campos fijos del gasto (se usa el primer objeto del arreglo) */}
+          <Grid2 item xs={12} sm={3}>
             <TextField
               label="Camioneta"
               type="number"
               name="camioneta"
-              value={project.gastos.camioneta}
-              onChange={handleGastosChange}
+              value={project.gastos[0]?.camioneta || ""}
+              onChange={handleGastoChange}
               fullWidth
             />
           </Grid2>
-          {/* Campo */}
-          <Grid2 item xs={12} sm={4}>
+          <Grid2 item xs={12} sm={3}>
             <TextField
               label="Campo"
               type="number"
               name="campo"
-              value={project.gastos.campo}
-              onChange={handleGastosChange}
+              value={project.gastos[0]?.campo || ""}
+              onChange={handleGastoChange}
               fullWidth
             />
           </Grid2>
-          {/* Obreros */}
-          <Grid2 item xs={12} sm={4}>
+          <Grid2 item xs={12} sm={3}>
             <TextField
               label="Obreros"
               type="number"
               name="obreros"
-              value={project.gastos.obreros}
-              onChange={handleGastosChange}
+              value={project.gastos[0]?.obreros || ""}
+              onChange={handleGastoChange}
               fullWidth
             />
           </Grid2>
-          {/* Comidas */}
-          <Grid2 item xs={12} sm={4}>
+          <Grid2 item xs={12} sm={3}>
             <TextField
               label="Comidas"
               type="number"
               name="comidas"
-              value={project.gastos.comidas}
-              onChange={handleGastosChange}
+              value={project.gastos[0]?.comidas || ""}
+              onChange={handleGastoChange}
               fullWidth
             />
           </Grid2>
-          {/* Transporte */}
-          <Grid2 item xs={12} sm={4}>
+          <Grid2 item xs={12} sm={3}>
             <TextField
               label="Transporte"
               type="number"
               name="transporte"
-              value={project.gastos.transporte}
-              onChange={handleGastosChange}
+              value={project.gastos[0]?.transporte || ""}
+              onChange={handleGastoChange}
               fullWidth
             />
           </Grid2>
-          {/* Otros */}
-          <Grid2 item xs={12} sm={4}>
+          <Grid2 item xs={12} sm={3}>
             <TextField
               label="Otros"
               type="number"
               name="otros"
-              value={project.gastos.otros}
-              onChange={handleGastosChange}
+              value={project.gastos[0]?.otros || ""}
+              onChange={handleGastoChange}
               fullWidth
             />
           </Grid2>
-          {/* Peajes */}
-          <Grid2 item xs={12} sm={4}>
+          <Grid2 item xs={12} sm={3}>
             <TextField
               label="Peajes"
               type="number"
               name="peajes"
-              value={project.gastos.peajes}
-              onChange={handleGastosChange}
+              value={project.gastos[0]?.peajes || ""}
+              onChange={handleGastoChange}
               fullWidth
             />
           </Grid2>
-          {/* Combustible */}
-          <Grid2 item xs={12} sm={4}>
+          <Grid2 item xs={12} sm={3}>
             <TextField
               label="Combustible"
               type="number"
               name="combustible"
-              value={project.gastos.combustible}
-              onChange={handleGastosChange}
+              value={project.gastos[0]?.combustible || ""}
+              onChange={handleGastoChange}
               fullWidth
             />
           </Grid2>
-          {/* Hospedaje */}
-          <Grid2 item xs={12} sm={4}>
+          <Grid2 item xs={12} sm={3}>
             <TextField
               label="Hospedaje"
               type="number"
               name="hospedaje"
-              value={project.gastos.hospedaje}
-              onChange={handleGastosChange}
+              value={project.gastos[0]?.hospedaje || ""}
+              onChange={handleGastoChange}
               fullWidth
             />
           </Grid2>
+          {/* Renderizamos los campos extras existentes */}
+          {project.gastos[0]?.extras?.map((extra, extraIndex) => (
+            <Grid2
+              container
+              spacing={1}
+              key={extraIndex}
+              sx={{ mb: 1, pl: 1, borderLeft: "2px solid #ccc" }}
+            >
+              <Grid2 item xs={5}>
+                <TextField
+                  label="Nombre del Campo"
+                  name="field"
+                  value={extra.field}
+                  onChange={(e) => handleExtraChange(extraIndex, e)}
+                  fullWidth
+                />
+              </Grid2>
+              <Grid2 item xs={5}>
+                <TextField
+                  label="Valor"
+                  type="number"
+                  name="value"
+                  value={extra.value}
+                  onChange={(e) => handleExtraChange(extraIndex, e)}
+                  fullWidth
+                />
+              </Grid2>
+              <Grid2 item xs={2}>
+                <IconButton onClick={() => handleRemoveExtra(extraIndex)}>
+                  <DeleteIcon />
+                </IconButton>
+              </Grid2>
+            </Grid2>
+          ))}
+          <Grid2 item xs={12}>
+            <Button variant="outlined" onClick={handleAddExtra}>
+              Agregar campo extra
+            </Button>
+          </Grid2>
+        </Grid2>
+        <Grid2 container spacing={2}>
           <Grid2 item xs={12}>
             <Button
               type="submit"

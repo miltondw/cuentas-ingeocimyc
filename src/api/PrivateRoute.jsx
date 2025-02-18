@@ -1,20 +1,13 @@
-import { Route, redirect } from "react-router-dom";
+// PrivateRoute.jsx
+import { Navigate } from "react-router-dom";
 import PropTypes from "prop-types";
 
-const PrivateRoute = ({ component: Component, ...rest }) => {
+const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem("token");
-
-  return (
-    <Route
-      {...rest}
-      element={(props) =>
-        token ? <Component {...props} /> : redirect("/login")
-      }
-    />
-  );
+  return token ? children : <Navigate to="/login" />;
 };
 PrivateRoute.propTypes = {
-  component: PropTypes.elementType.isRequired,
+  children: PropTypes.node.isRequired,
 };
 
 export default PrivateRoute;

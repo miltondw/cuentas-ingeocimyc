@@ -16,7 +16,6 @@ const Login = () => {
         email,
         password,
       });
-      console.log(response, "response");
       localStorage.setItem("token", response.data.token);
       navigate("/proyectos");
     } catch (err) {
