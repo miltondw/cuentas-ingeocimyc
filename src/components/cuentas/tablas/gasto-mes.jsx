@@ -28,13 +28,27 @@ const transformData = (data) => {
       year: "numeric",
       timeZone: "UTC",
     });
+
     // Obtenemos los campos de gasto, excluyendo "gasto_empresa_id" y "mes"
     const gastos = Object.keys(item)
-      .filter((key) => key !== "gasto_empresa_id" && key !== "mes")
+      .filter((key) => key !== "gasto_empresa_id" && key !== "mes" && item[key] !== null)
       .map((key) => ({
         name: key.replace(/_/g, " ").toUpperCase(),
         value: parseFloat(item[key]),
       }));
+
+    // Si hay otros_campos, los agregamos a la lista de gastos
+    if (item.otros_campos && Array.isArray(item.otros_campos)) {
+      item.otros_campos.forEach((campo) => {
+        if (campo && campo.nombre && campo.monto) {
+          gastos.push({
+            name: campo.nombre.replace(/_/g, " ").toUpperCase(),
+            value: parseFloat(campo.monto),
+          });
+        }
+      });
+    }
+
     return {
       id: item.gasto_empresa_id,
       mesDeGasto: `Gasto de ${formattedMonth}`,
@@ -105,10 +119,8 @@ const TablaGastosEmpresa = () => {
           setSelectedDate(e.target.value);
           setCurrentPage(1);
         }}
-        slotProps={{
-          inputLabel: {
-            shrink: true,
-          },
+        InputLabelProps={{
+          shrink: true,
         }}
         margin="normal"
       />

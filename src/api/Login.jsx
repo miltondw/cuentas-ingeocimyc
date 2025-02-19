@@ -1,16 +1,20 @@
-import { useState } from "react";
-import { TextField, Button, Typography, Container } from "@mui/material";
+import React, { useState } from "react";
+import { TextField, Button, Typography, Container, CircularProgress } from "@mui/material";
 import api from "./index";
 import { useNavigate } from "react-router-dom";
+
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false); // Nuevo estado para el loading
 
   const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setLoading(true);
+    setError("");
     try {
       const response = await api.post("/auth/login", {
         email,
@@ -21,6 +25,8 @@ const Login = () => {
     } catch (err) {
       console.error(err, "login error");
       setError("Credenciales incorrectas");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -44,8 +50,14 @@ const Login = () => {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        <Button variant="contained" color="primary" fullWidth type="submit">
-          Iniciar sesión
+        <Button 
+          variant="contained" 
+          color="primary" 
+          fullWidth 
+          type="submit"
+          disabled={loading} // Deshabilita el botón mientras se carga
+        >
+          {loading ? <CircularProgress size={24} /> : 'Iniciar sesión'}
         </Button>
       </form>
     </Container>

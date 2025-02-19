@@ -3,7 +3,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Paper,
@@ -13,6 +12,7 @@ import {
   CircularProgress,
   Alert,
   TableSortLabel,
+  TableContainer,
 } from "@mui/material";
 import api from "../../../api";
 
@@ -27,12 +27,10 @@ const formatDate = (dateStr) => {
   return new Date(dateStr).toLocaleDateString("es-ES", options);
 };
 
-// Función para sumar los valores de otros_campos
 const sumOtrosCampos = (otrosCampos) => {
   if (!otrosCampos) return 0;
   try {
-    const valores = Object.values(otrosCampos);
-    return valores.reduce((acc, val) => acc + Number(val), 0);
+    return Object.values(otrosCampos).reduce((acc, val) => acc + Number(val), 0);
   } catch {
     return 0;
   }
@@ -49,23 +47,20 @@ const TablaResumen = () => {
   });
   const rowsPerPage = 5;
 
-  // Procesamiento de datos
   const processData = (gastosEmpresa, proyectos) => {
     const monthlyData = {};
 
     // Procesar gastos de empresa
     gastosEmpresa.forEach((gasto) => {
-      const mes = formatDate(gasto.mes, "yyyy-MM-01");
-      if (!monthlyData[mes]) {
-        monthlyData[mes] = {
-          mes,
-          GastosEmpresa: 0,
-          GastosProyectos: 0,
-          CostoServicio: 0,
-        };
-      }
-
-      monthlyData[mes].GastosEmpresa +=
+      const mes = formatDate(gasto.mes);
+      monthlyData[mes] = monthlyData[mes] || {
+        mes,
+        GastosEmpresa: 0,
+        GastosProyectos: 0,
+        CostoServicio: 0,
+        Ingresos: 0,
+      };
+      monthlyData[mes].GastosEmpresa += 
         Number(gasto.salarios) +
         Number(gasto.luz) +
         Number(gasto.agua) +
@@ -77,19 +72,19 @@ const TablaResumen = () => {
 
     // Procesar proyectos y sus gastos
     proyectos.forEach((proyecto) => {
-      const mes = formatDate(proyecto.fecha, "yyyy-MM-01");
-      if (!monthlyData[mes]) {
-        monthlyData[mes] = {
-          mes,
-          GastosEmpresa: 0,
-          GastosProyectos: 0,
-          CostoServicio: 0,
-        };
-      }
+      const mes = formatDate(proyecto.fecha);
+      monthlyData[mes] = monthlyData[mes] || {
+        mes,
+        GastosEmpresa: 0,
+        GastosProyectos: 0,
+        CostoServicio: 0,
+        Ingresos: 0,
+      };
 
+      monthlyData[mes].Ingresos += Number(proyecto.costo_servicio);
       monthlyData[mes].CostoServicio += Number(proyecto.costo_servicio);
       proyecto.gastos.forEach((gasto) => {
-        monthlyData[mes].GastosProyectos +=
+        monthlyData[mes].GastosProyectos += 
           Number(gasto.camioneta) +
           Number(gasto.campo) +
           Number(gasto.obreros) +
@@ -105,9 +100,8 @@ const TablaResumen = () => {
 
     return Object.values(monthlyData).map((item) => ({
       ...item,
-      TotalGastos: item.GastosProyectos + item.GastosEmpresa,
-      UtilidadNeta:
-        item.CostoServicio - (item.GastosProyectos + item.GastosEmpresa),
+      TotalGastos: Number(item.GastosProyectos) + Number(item.GastosEmpresa),
+      
     }));
   };
 
@@ -115,7 +109,6 @@ const TablaResumen = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-
         const [empresaRes, proyectosRes] = await Promise.all([
           api.get("/gastos-mes"),
           api.get("/projects"),
@@ -126,6 +119,8 @@ const TablaResumen = () => {
           proyectosRes.data.data.proyectos
         );
 
+        // Añadir log para verificar datos procesados
+        console.log('Processed Data:', processedData);
         setResumen(processedData);
       } catch (err) {
         setError("Error al cargar los datos");
@@ -160,8 +155,7 @@ const TablaResumen = () => {
     currentPage * rowsPerPage
   );
 
-  if (loading)
-    return <CircularProgress sx={{ display: "block", margin: "2rem auto" }} />;
+  if (loading) return <CircularProgress sx={{ display: "block", margin: "2rem auto" }} />;
   if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
@@ -185,7 +179,7 @@ const TablaResumen = () => {
               { key: "GastosProyectos", label: "Gastos Proyectos" },
               { key: "GastosEmpresa", label: "Gastos Empresa" },
               { key: "TotalGastos", label: "Total Gastos" },
-               { key: "Ingresos", label: "Total De Ingresos" },
+              { key: "Ingresos", label: "Total De Ingresos" },
               { key: "UtilidadNeta", label: "Utilidad Neta" },
             ].map((header) => (
               <TableCell key={header.key} sx={{ fontWeight: "bold" }}>
@@ -208,14 +202,14 @@ const TablaResumen = () => {
               <TableCell>{`$ ${formatNumber(item.GastosProyectos)}`}</TableCell>
               <TableCell>{`$ ${formatNumber(item.GastosEmpresa)}`}</TableCell>
               <TableCell>{`$ ${formatNumber(item.TotalGastos)}`}</TableCell>
-               <TableCell>{`$ ${formatNumber(item.Ingresos)}`}</TableCell>
+              <TableCell>{`$ ${formatNumber(item.Ingresos)}`}</TableCell>
               <TableCell
                 sx={{
-                  color: item.UtilidadNeta < 0 ? "error.main" : "success.main",
+                  color: item.Ingresos-item.TotalGastos < 0 ? "error.main" : "success.main",
                   fontWeight: 600,
                 }}
               >
-                {`$ ${formatNumber(item.UtilidadNeta)}`}
+                {`$ ${formatNumber(item.Ingresos-item.TotalGastos)}`}
               </TableCell>
             </TableRow>
           ))}
