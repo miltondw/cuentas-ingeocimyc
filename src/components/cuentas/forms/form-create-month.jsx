@@ -21,103 +21,81 @@ const FormCreateMonth = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  // Si se pasa un id, se asume que se está actualizando un registro existente,
-  // por lo que se hace la consulta a la API para obtener los datos.
   useEffect(() => {
-    if (id) {
-      const fetchData = async () => {
-        try {
-          const response = await api.get(`/gastos-mes/${id}`);
-          if (response.data) {
-            const { mes, salarios, luz, agua, arriendo, internet, salud, otros_campos } =
-              response.data;
+    if (!id) return;
 
-            // Convertir el valor de "mes" a formato YYYY-MM-DD para el input tipo date
-            const formattedMes = mes
-              ? new Date(mes).toISOString().split("T")[0] // Formato YYYY-MM-DD
-              : "";
-console.log(mes,formattedMes)
-            setFormData({
-              mes: formattedMes,
-              salarios: salarios?.toString() || "",
-              luz: luz?.toString() || "",
-              agua: agua?.toString() || "",
-              arriendo: arriendo?.toString() || "",
-              internet: internet?.toString() || "",
-              salud: salud?.toString() || "",
-              otros_campos: otros_campos || [],
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching month data:", error);
-        }
-      };
-      fetchData();
-    }
+    const fetchData = async () => {
+      try {
+        const res= await api.get(`/gastos-mes/${id}`);
+        const data=res.data.data
+        
+        const formattedData = {
+          ...data,
+          mes: data.mes ? new Date(data.mes).toISOString().split("T")[0] : "",
+          otros_campos: data.otros_campos || []
+        };
+        setFormData(formattedData);
+      } catch (error) {
+        console.error("Error fetching month data:", error);
+      }
+    };
+    
+    fetchData();
   }, [id]);
 
-  // Maneja el cambio de cualquier campo del formulario
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Maneja el cambio de los campos extras
-  const handleExtraFieldChange = (index, field, value) => {
-    const updatedExtras = [...formData.otros_campos];
-    updatedExtras[index][field] = value;
-    setFormData((prev) => ({ ...prev, otros_campos: updatedExtras }));
+  const handleExtraField = (index, field, value) => {
+    const nuevosCampos = formData.otros_campos.map((campo, i) => 
+      i === index ? { ...campo, [field]: value } : campo
+    );
+    setFormData(prev => ({ ...prev, otros_campos: nuevosCampos }));
   };
 
-  // Agrega un nuevo campo extra
   const addExtraField = () => {
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
-      otros_campos: [...prev.otros_campos, { nombre: "", monto: "" }],
+      otros_campos: [...prev.otros_campos, { nombre: "", monto: "" }]
     }));
   };
 
-  // Elimina un campo extra
   const removeExtraField = (index) => {
-    const updatedExtras = formData.otros_campos.filter((_, i) => i !== index);
-    setFormData((prev) => ({ ...prev, otros_campos: updatedExtras }));
+    const nuevosCampos = formData.otros_campos.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, otros_campos: nuevosCampos }));
   };
 
-  // Al enviar el formulario, se decide si se crea o actualiza según la presencia de id.
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const payload = {
-        ...formData,
-        otros_campos: formData.otros_campos.filter(
-          (campo) => campo.nombre && campo.monto
-        ),
-      };
-      if (id) {
-        // Actualiza el registro
-        await api.put(`/gastos-mes/${id}`, payload);
-      } else {
-        // Crea un nuevo registro
-        await api.post("/gastos-mes", payload);
-      }
-      navigate("/gastos");
-    } catch (error) {
-      console.error("Error submitting month data:", error);
-    }
-  };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    // Transformar los extras correctamente
+    const otrosCampos = formData.otros_campos
+      .filter(item => item.nombre && item.monto)
+      .map(item => ({ [item.nombre]: Number(item.monto) }));
+
+    const payload = {
+      ...formData,
+      mes: `${formData.mes}-01`, // Forzar formato YYYY-MM-DD
+      otros_campos: otrosCampos.length > 0 ? otrosCampos : null
+    };
+
+    const endpoint = id ? `/gastos-mes/${id}` : "/gastos-mes";
+    await api[id ? "put" : "post"](endpoint, payload);
+    
+    navigate("/gastos");
+  } catch (error) {
+    console.error("Error submitting data:", error);
+  }
+};
 
   return (
-    <Container
-      sx={{
-        boxShadow: 3,
-        p: 3,
-        borderRadius: 2,
-        my: 3,
-      }}
-    >
+    <Container sx={{ boxShadow: 3, p: 3, borderRadius: 2, my: 3 }}>
       <Typography variant="h3" gutterBottom color="primary">
-        {id ? "Actualizar" : "Crear"} Gastos de Costos Fijos Mensuales
+        {id ? "Actualizar" : "Crear"} Gastos Mensuales
       </Typography>
+      
       <Box
         component="form"
         onSubmit={handleSubmit}
@@ -125,69 +103,25 @@ console.log(mes,formattedMes)
           display: "grid",
           gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" },
           gap: 2,
-          width: "80%",
-          mx: "auto",
+          maxWidth: "800px",
+          mx: "auto"
         }}
       >
-        <TextField
-          label="Mes de Gastos"
-          name="mes"
-          type="date"
-          value={formData.mes}
-          onChange={handleChange}
-          InputLabelProps={{ shrink: true }}
-          fullWidth
-        />
-        <TextField
-          label="Pago de Salarios"
-          name="salarios"
-          type="number"
-          value={formData.salarios}
-          onChange={handleChange}
-          fullWidth
-        />
-        <TextField
-          label="Pago de Luz"
-          name="luz"
-          type="number"
-          value={formData.luz}
-          onChange={handleChange}
-          fullWidth
-        />
-        <TextField
-          label="Pago de Agua"
-          name="agua"
-          type="number"
-          value={formData.agua}
-          onChange={handleChange}
-          fullWidth
-        />
-        <TextField
-          label="Pago de Arriendo"
-          name="arriendo"
-          type="number"
-          value={formData.arriendo}
-          onChange={handleChange}
-          fullWidth
-        />
-        <TextField
-          label="Pago de Internet"
-          name="internet"
-          type="number"
-          value={formData.internet}
-          onChange={handleChange}
-          fullWidth
-        />
-        <TextField
-          label="Pago de Salud"
-          name="salud"
-          type="number"
-          value={formData.salud}
-          onChange={handleChange}
-          fullWidth
-        />
+        {Object.keys(defaultData)
+          .filter(key => key !== "otros_campos")
+          .map((key) => (
+            <TextField
+              key={key}
+              label={key.replace(/_/g, " ").toUpperCase()}
+              name={key}
+              type={key === "mes" ? "date" : "number"}
+              value={formData[key]}
+              onChange={handleChange}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+            />
+          ))}
 
-        {/* Campos extras dinámicos */}
         {formData.otros_campos.map((campo, index) => (
           <Box
             key={index}
@@ -195,64 +129,48 @@ console.log(mes,formattedMes)
               gridColumn: "span 3",
               display: "flex",
               gap: 2,
-              alignItems: "center",
+              alignItems: "center"
             }}
           >
             <TextField
-              label="Nombre del Gasto Extra"
+              label="Nombre del gasto"
               value={campo.nombre}
-              onChange={(e) =>
-                handleExtraFieldChange(index, "nombre", e.target.value)
-              }
+              onChange={(e) => handleExtraField(index, "nombre", e.target.value)}
               fullWidth
             />
             <TextField
-              label="Monto del Gasto Extra"
+              label="Monto"
               type="number"
               value={campo.monto}
-              onChange={(e) =>
-                handleExtraFieldChange(index, "monto", e.target.value)
-              }
+              onChange={(e) => handleExtraField(index, "monto", e.target.value)}
               fullWidth
             />
             <IconButton
               onClick={() => removeExtraField(index)}
               color="error"
+              sx={{ height: "fit-content" }}
             >
               <RemoveCircleOutlineIcon />
             </IconButton>
           </Box>
         ))}
 
-        {/* Botón para agregar campos extras */}
-        <Box
-          sx={{
-            gridColumn: "span 3",
-            display: "flex",
-            justifyContent: "flex-start",
-          }}
-        >
+        <Box sx={{ gridColumn: "span 3", display: "flex", gap: 2 }}>
           <Button
-            type="button"
             variant="outlined"
             startIcon={<AddCircleOutlineIcon />}
             onClick={addExtraField}
           >
-            Agregar Gasto Extra
+            Agregar gasto
           </Button>
-        </Box>
-
-        {/* Botón de envío */}
-        <Box
-          sx={{
-            gridColumn: "span 3",
-            display: "flex",
-            justifyContent: "flex-end",
-            mt: 2,
-          }}
-        >
-          <Button type="submit" variant="contained" color="secondary">
-            {id ? "Actualizar" : "Crear"}
+          
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            sx={{ ml: "auto" }}
+          >
+            {id ? "Actualizar" : "Guardar"}
           </Button>
         </Box>
       </Box>

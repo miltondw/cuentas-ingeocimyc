@@ -14,7 +14,8 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import { Link } from "react-router-dom";
-
+import api from '../../api';
+import { useNavigate } from 'react-router-dom';
 const pages = {
   create: [
     { title: "Proyecto", link: "crear-proyecto" },
@@ -27,9 +28,10 @@ const pages = {
   ],
 };
 
-const settings = ["perfil", "cerrar sesión"];
+const settings = ["perfil", ];
 
 function ResponsiveAppBar() {
+  const navigate = useNavigate();
   const [anchorElNav, setAnchorElNav] = React.useState(null);
   const [currentSubMenu, setCurrentSubMenu] = React.useState(null);
   const [anchorElUser, setAnchorElUser] = React.useState(null);
@@ -52,6 +54,16 @@ function ResponsiveAppBar() {
     setCurrentSubMenu(null);
     setDesktopSubMenuAnchor({ create: null, tables: null });
   };
+      const logoutUser = async () => {
+      try {
+        await api.post("/auth/logout");
+      } finally {
+        localStorage.removeItem("userData");
+        navigate("/login");
+      }
+    };
+
+
 
   return (
     <AppBar position="relative">
@@ -191,6 +203,10 @@ function ResponsiveAppBar() {
                   {setting}
                 </MenuItem>
               ))}
+               <MenuItem onClick={logoutUser}>
+                  cerrar sesión
+                </MenuItem>
+              
             </Menu>
           </Box>
         </Toolbar>

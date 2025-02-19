@@ -10,15 +10,23 @@ const api = axios.create({
 
 // Response interceptor para manejar errores 401
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      // Aquí puedes redirigir al login o mostrar un mensaje
-      // No es necesario borrar el token de localStorage, pues ya no se usa
-      window.location.href = "/login";
+  response => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        await api.post("/auth/refresh"); // Intenta refrescar el token
+        return api(originalRequest); // Reintenta la petición original
+      } catch (refreshError) {
+        localStorage.removeItem("userData");
+        window.location.href = "/login";
+      }
     }
+    
     return Promise.reject(error);
   }
 );
-
 export default api;

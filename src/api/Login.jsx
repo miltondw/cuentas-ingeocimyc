@@ -16,12 +16,10 @@ const Login = () => {
     setLoading(true);
     setError("");
     try {
-      const response = await api.post("/auth/login", {
-        email,
-        password,
-      });
-      localStorage.setItem("token", response.data.token);
-      navigate("/proyectos");
+   const response = await api.post("/auth/login", { email, password });
+  // Guardar solo datos públicos en localStorage
+  localStorage.setItem("userData", JSON.stringify(response.data.user));
+  navigate("/proyectos");
     } catch (err) {
       console.error(err, "login error");
       setError("Credenciales incorrectas");
@@ -29,6 +27,7 @@ const Login = () => {
       setLoading(false);
     }
   };
+  
 
   return (
     <Container maxWidth="xs">

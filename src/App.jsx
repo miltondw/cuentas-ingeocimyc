@@ -17,6 +17,14 @@ function App() {
         <Route path="/login" element={<Login />} />
         {/* Rutas para creación y actualización de proyectos */}
         <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <FormCreateProject />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/crear-proyecto"
           element={
             <PrivateRoute>

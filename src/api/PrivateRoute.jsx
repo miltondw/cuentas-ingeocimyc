@@ -1,13 +1,26 @@
-// PrivateRoute.jsx
+// PrivateRoute.jsx (Versión mejorada)
+import { useEffect, useState } from 'react';
 import { Navigate } from "react-router-dom";
 import PropTypes from "prop-types";
+import api from "./index.js";
 
 const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem("token");
-  return token ? children : <Navigate to="/login" />;
-};
-PrivateRoute.propTypes = {
-  children: PropTypes.node.isRequired,
-};
+  const [isValid, setIsValid] = useState(null);
 
-export default PrivateRoute;
+  useEffect(() => {
+    const verifyAuth = async () => {
+      try {
+        await api.get("/auth/verify"); // Endpoint nuevo en backend
+        setIsValid(true);
+      } catch (error) {
+        setIsValid(false);
+      }
+    };
+    
+    verifyAuth();
+  }, []);
+
+  if (isValid === null) return <div>Cargando...</div>;
+  return isValid ? children : <Navigate to="/login" />;
+};
+export default PrivateRoute

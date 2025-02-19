@@ -23,17 +23,21 @@ const formatNumber = (value) =>
 
 const formatDate = (dateStr) => {
   if (!dateStr) return "";
-  const options = { month: "long", year: "numeric", timeZone: "UTC" };
-  return new Date(dateStr).toLocaleDateString("es-ES", options);
+  const date = new Date(dateStr);
+  if (isNaN(date)) return "Fecha inválida"; // Manejar fechas inválidas
+  return date.toLocaleDateString("es-ES", { 
+    month: "long", 
+    year: "numeric", 
+    timeZone: "UTC" 
+  });
 };
 
 const sumOtrosCampos = (otrosCampos) => {
-  if (!otrosCampos) return 0;
-  try {
-    return Object.values(otrosCampos).reduce((acc, val) => acc + Number(val), 0);
-  } catch {
-    return 0;
-  }
+  if (!otrosCampos || typeof otrosCampos !== 'object') return 0;
+  return Object.values(otrosCampos).reduce((acc, val) => {
+    const num = Number(val);
+    return !isNaN(num) ? acc + num : acc;
+  }, 0);
 };
 
 const TablaResumen = () => {
@@ -83,19 +87,16 @@ const TablaResumen = () => {
 
       monthlyData[mes].Ingresos += Number(proyecto.costo_servicio);
       monthlyData[mes].CostoServicio += Number(proyecto.costo_servicio);
+
       proyecto.gastos.forEach((gasto) => {
-        monthlyData[mes].GastosProyectos += 
-          Number(gasto.camioneta) +
-          Number(gasto.campo) +
-          Number(gasto.obreros) +
-          Number(gasto.comidas) +
-          Number(gasto.transporte) +
-          Number(gasto.otros) +
-          Number(gasto.peajes) +
-          Number(gasto.combustible) +
-          Number(gasto.hospedaje) +
-          sumOtrosCampos(gasto.otros_campos);
+        const gastoProyecto = [
+          'camioneta', 'campo', 'obreros', 'comidas', 
+          'transporte', 'otros', 'peajes', 'combustible', 'hospedaje'
+        ].reduce((acc, key) => acc + (Number(gasto[key]) || 0), 0);
+        
+        monthlyData[mes].GastosProyectos += gastoProyecto + sumOtrosCampos(gasto.otros_campos);
       });
+
     });
 
     return Object.values(monthlyData).map((item) => ({
@@ -120,7 +121,6 @@ const TablaResumen = () => {
         );
 
         // Añadir log para verificar datos procesados
-        console.log('Processed Data:', processedData);
         setResumen(processedData);
       } catch (err) {
         setError("Error al cargar los datos");
@@ -149,6 +149,7 @@ const TablaResumen = () => {
     }
     return 0;
   });
+  
 
   const paginatedData = sortedData.slice(
     (currentPage - 1) * rowsPerPage,
