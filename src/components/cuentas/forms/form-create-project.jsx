@@ -189,6 +189,20 @@ const handleSubmit = async (e) => {
               />
             </Grid2>
           ))}
+                    <Grid2 item xs={12} sm={6}>
+            <TextField
+              select
+              label="Método de Pago"
+              name="metodo_de_pago"
+              value={project.metodo_de_pago}
+              onChange={handleChange}
+              fullWidth
+            >
+             <MenuItem value="">otro</MenuItem>
+              <MenuItem value="transferencia">Transferencia</MenuItem>
+              <MenuItem value="efectivo">Efectivo</MenuItem>
+            </TextField>
+          </Grid2>
            <Grid2 item xs={12} sm={6}>
               <TextField
                 label="COSTO DEL SERVICIO"
