@@ -173,6 +173,15 @@ const FormCreateProject = () => {
               />
             </Grid2>
           ))}
+           <Grid2 item xs={12} sm={6} key={index}>
+              <TextField
+                label="ABONO"
+                name="abono"
+                value={formatNumber(project.abono)}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Grid2>
           <Grid2 item xs={12}>
             <FormControlLabel
               control={<Checkbox checked={project.retencionIva} onChange={handleCheckboxChange} />}
