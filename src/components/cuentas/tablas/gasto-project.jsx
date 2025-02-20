@@ -51,7 +51,6 @@ const fixedGastoFields = [
   "campo",
   "obreros",
   "comidas",
-  "transporte",
   "otros",
   "peajes",
   "combustible",

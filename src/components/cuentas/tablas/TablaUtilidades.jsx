@@ -91,7 +91,7 @@ const TablaResumen = () => {
       proyecto.gastos.forEach((gasto) => {
         const gastoProyecto = [
           'camioneta', 'campo', 'obreros', 'comidas', 
-          'transporte', 'otros', 'peajes', 'combustible', 'hospedaje'
+           'otros', 'peajes', 'combustible', 'hospedaje'
         ].reduce((acc, key) => acc + (Number(gasto[key]) || 0), 0);
         
         monthlyData[mes].GastosProyectos += gastoProyecto + sumOtrosCampos(gasto.otros_campos);

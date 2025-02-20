@@ -20,7 +20,6 @@ const defaultGasto = {
   campo: "",
   obreros: "",
   comidas: "",
-  transporte: "",
   otros: "",
   peajes: "",
   combustible: "",
@@ -160,7 +159,6 @@ const FormCreateProject = () => {
       campo: Number(gasto.campo),
       obreros: Number(gasto.obreros),
       comidas: Number(gasto.comidas),
-      transporte: Number(gasto.transporte),
       otros: Number(gasto.otros),
       peajes: Number(gasto.peajes),
       combustible: Number(gasto.combustible),
@@ -363,16 +361,6 @@ const FormCreateProject = () => {
               type="number"
               name="comidas"
               value={project.gastos[0]?.comidas || ""}
-              onChange={handleGastoChange}
-              fullWidth
-            />
-          </Grid2>
-          <Grid2 item xs={12} sm={3}>
-            <TextField
-              label="Transporte"
-              type="number"
-              name="transporte"
-              value={project.gastos[0]?.transporte || ""}
               onChange={handleGastoChange}
               fullWidth
             />
