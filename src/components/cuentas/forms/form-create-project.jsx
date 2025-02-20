@@ -61,7 +61,7 @@ const FormCreateProject = () => {
               ...data,
               fecha: data.fecha ? new Date(data.fecha).toISOString().substring(0, 10) : "",
               retencionIva: Boolean(data.valor_iva),
-              gastos: data.gastos?.length ? data.gastos : [defaultGasto],
+              gastos: data.gastos?.length ? data.gastos[0] : [defaultGasto],
             });
           }
         } catch (err) {
