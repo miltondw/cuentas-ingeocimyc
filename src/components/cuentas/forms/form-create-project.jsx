@@ -24,6 +24,7 @@ const defaultProject = {
   fecha: "",
   solicitante: "",
   nombre_proyecto: "",
+  obrero:"",
   costo_servicio: "",
   abono: "",
   factura: "",
@@ -162,7 +163,7 @@ const FormCreateProject = () => {
               InputLabelProps={{ shrink: true }}
             />
           </Grid2>
-          {["solicitante", "nombre_proyecto", "factura"].map((field, index) => (
+          {["solicitante", "nombre_proyecto", "factura","obrero"].map((field, index) => (
             <Grid2 item xs={12} sm={6} key={index}>
               <TextField
                 label={field.replace(/_/g, " ").toUpperCase()}
