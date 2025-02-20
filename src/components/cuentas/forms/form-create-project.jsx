@@ -47,9 +47,27 @@ const FormCreateProject = () => {
   const [project, setProject] = useState(defaultProject);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+//filds
+  const filds1=[
+    ["Solicitante","solicitante"],
+    ["Nombre del Proyecto","nombre_proyecto"],
+    ["Abono","abono"],["Factura","factura"]
+  ]
+  const fildsGastos=[
+    "Camioneta",
+    "Campo",
+    "Obreros",
+    "Comidas",
+    "Otros",
+    "Peajes",
+    "Combustible",
+    "Hospedaje"
+  ]
+
   // Función para formatear un número con separadores de miles
   const formatNumber = (value) => {
-    return value.toString().replace(/\B(?=(\d{3})+(?!\d)/g, ",");
+    return Number(value).toLocaleString("en-US");
   };
 
   // Función para eliminar los separadores de miles y convertir a número
@@ -234,53 +252,20 @@ const handleGastoChange = (e) => {
               InputLabelProps={{ shrink: true }}
             />
           </Grid2>
-          <Grid2 item xs={12} sm={6}>
-            <TextField
-              label="Solicitante"
-              name="solicitante"
-              value={project.solicitante}
-              onChange={handleChange}
-              fullWidth
-            />
-          </Grid2>
-          <Grid2 item xs={12}>
-            <TextField
-              label="Nombre del Proyecto"
-              name="nombre_proyecto"
-              value={project.nombre_proyecto}
-              onChange={handleChange}
-              fullWidth
-            />
-          </Grid2>
-          <Grid2 item xs={12} sm={6}>
-            <TextField
-              label="Costo del Servicio"
-              type="number"
-              name="costo_servicio"
-              value={formatNumber(project.costo_servicio)}
-              onChange={handleChange}
-              fullWidth
-            />
-          </Grid2>
-          <Grid2 item xs={12} sm={6}>
-            <TextField
-              label="Abono"
-              type="number"
-              name="abono"
-              value={formatNumber(project.abono)}
-              onChange={handleChange}
-              fullWidth
-            />
-          </Grid2>
-          <Grid2 item xs={12} sm={6}>
-            <TextField
-              label="Factura"
-              name="factura"
-              value={project.factura}
-              onChange={handleChange}
-              fullWidth
-            />
-          </Grid2>
+
+          {
+            filds1.map((fild,i)=>(
+                    <Grid2 item xs={12} sm={6}>
+                      <TextField
+                        label={fild[0]}
+                        name={fild[1]}
+                        value={project[1]}
+                        onChange={handleChange}
+                        fullWidth
+                      />
+                    </Grid2>
+              ))
+          }
           <Grid2 item xs={12} sm={6}>
             <TextField
               select
@@ -314,7 +299,6 @@ const handleGastoChange = (e) => {
             <Grid2 item xs={12} sm={6}>
               <TextField
                 label="Valor IVA"
-
                 type="number"
                 name="valor_iva"
                 value={formatNumber(project.valor_iva)}
@@ -336,86 +320,21 @@ const handleGastoChange = (e) => {
             Gastos
           </Typography>
           {/* Campos fijos del gasto (se usa el primer objeto del arreglo) */}
+
+          {
+            fildsGastos.map((fild,i)=>(
           <Grid2 item xs={12} sm={3}>
             <TextField
-              label="Camioneta"
+              label={fild}
               type="number"
-              name="camioneta"
-              value={formatNumber(project.gastos[0]?.camioneta) || ""}
+              name={fild.toLowerCase()}
+              value={formatNumber(project.gastos[0][fild.toLowerCase()]) || ""}
               onChange={handleGastoChange}
               fullWidth
             />
           </Grid2>
-          <Grid2 item xs={12} sm={3}>
-            <TextField
-              label="Campo"
-              type="number"
-              name="campo"
-              value={formatNumber(project.gastos[0]?.campo) || ""}
-              onChange={handleGastoChange}
-              fullWidth
-            />
-          </Grid2>
-          <Grid2 item xs={12} sm={3}>
-            <TextField
-              label="Obreros"
-              type="number"
-              name="obreros"
-              value={formatNumber(project.gastos[0]?.obreros) || ""}
-              onChange={handleGastoChange}
-              fullWidth
-            />
-          </Grid2>
-          <Grid2 item xs={12} sm={3}>
-            <TextField
-              label="Comidas"
-              type="number"
-              name="comidas"
-              value={formatNumber(project.gastos[0]?.comidas) || ""}
-              onChange={handleGastoChange}
-              fullWidth
-            />
-          </Grid2>
-          <Grid2 item xs={12} sm={3}>
-            <TextField
-              label="Otros"
-              type="number"
-              name="otros"
-              value={formatNumber(project.gastos[0]?.otros) || ""}
-              onChange={handleGastoChange}
-              fullWidth
-            />
-          </Grid2>
-          <Grid2 item xs={12} sm={3}>
-            <TextField
-              label="Peajes"
-              type="number"
-              name="peajes"
-              value={formatNumber(project.gastos[0]?.peajes) || ""}
-              onChange={handleGastoChange}
-              fullWidth
-            />
-          </Grid2>
-          <Grid2 item xs={12} sm={3}>
-            <TextField
-              label="Combustible"
-              type="number"
-              name="combustible"
-              value={formatNumber(project.gastos[0]?.combustible) || ""}
-              onChange={handleGastoChange}
-              fullWidth
-            />
-          </Grid2>
-          <Grid2 item xs={12} sm={3}>
-            <TextField
-              label="Hospedaje"
-              type="number"
-              name="hospedaje"
-              value={formatNumber(project.gastos[0]?.hospedaje) || ""}
-              onChange={handleGastoChange}
-              fullWidth
-            />
-          </Grid2>
+              ))
+          }
           {/* Renderizamos los campos extras existentes */}
           {project.gastos[0]?.extras?.map((extra, extraIndex) => (
             <Grid2
@@ -436,7 +355,6 @@ const handleGastoChange = (e) => {
               <Grid2 item xs={5}>
                 <TextField
                   label="Valor"
-  
                   type="number"
                   name="value"
                   value={formatNumber(extra.value)}
