@@ -175,6 +175,15 @@ const FormCreateProject = () => {
           ))}
            <Grid2 item xs={12} sm={6}>
               <TextField
+                label="COSTO DEL SERVICIO"
+                name="costo_servicio"
+                value={formatNumber(project.costo_servicio)}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Grid2>
+           <Grid2 item xs={12} sm={6}>
+              <TextField
                 label="ABONO"
                 name="abono"
                 value={formatNumber(project.abono)}
