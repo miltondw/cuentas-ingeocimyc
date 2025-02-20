@@ -171,7 +171,7 @@ const TablaGastosEmpresa = () => {
               {mesData.mesDeGasto}
             </Typography>
             <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-              <Link to={`/gastos-mes/${mesData.id}`} style={{ textDecoration: "none" }}>
+              <Link to={`/crear-gasto-mes/${mesData.id}`} style={{ textDecoration: "none" }}>
                 <Typography color="primary">Ver Detalles</Typography>
               </Link>
               <IconButton 
