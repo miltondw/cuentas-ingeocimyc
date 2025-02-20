@@ -141,12 +141,14 @@ const handleSubmit = async (e) => {
     gastos: [
       {
         ...project.gastos[0],
-        otros_campos: Object.keys(otrosCampos).length > 0 ? otrosCampos : null, // Solo envía si hay datos
+        otros_campos: Object.keys(otrosCampos).length > 0 ? otrosCampos : null,
+         // Solo envía si hay datos
       },
     ],
   };
 
   try {
+    delete payload.extras
     id ? await api.put(`/projects/${id}`, payload) : await api.post("/projects", payload);
     navigate(-1);
   } catch (err) {
