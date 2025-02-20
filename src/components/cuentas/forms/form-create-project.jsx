@@ -162,7 +162,7 @@ const FormCreateProject = () => {
               InputLabelProps={{ shrink: true }}
             />
           </Grid2>
-          {["solicitante", "nombre_proyecto", "abono", "factura"].map((field, index) => (
+          {["solicitante", "nombre_proyecto", "factura"].map((field, index) => (
             <Grid2 item xs={12} sm={6} key={index}>
               <TextField
                 label={field.replace(/_/g, " ").toUpperCase()}
@@ -173,7 +173,7 @@ const FormCreateProject = () => {
               />
             </Grid2>
           ))}
-           <Grid2 item xs={12} sm={6} key={index}>
+           <Grid2 item xs={12} sm={6}>
               <TextField
                 label="ABONO"
                 name="abono"
