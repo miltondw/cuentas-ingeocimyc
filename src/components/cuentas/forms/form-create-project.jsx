@@ -1,8 +1,14 @@
 import { useState, useEffect } from "react";
 import {
-  TextField, Button, Typography, Paper, Alert, Checkbox,
-  FormControlLabel, IconButton,
-  MenuItem
+  TextField,
+  Button,
+  Typography,
+  Paper,
+  Alert,
+  Checkbox,
+  FormControlLabel,
+  IconButton,
+  MenuItem,
 } from "@mui/material";
 import Grid2 from "@mui/material/Grid2";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -51,31 +57,44 @@ const FormCreateProject = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (id) {
-      const fetchProject = async () => {
-        try {
-          const response = await api.get(`/projects/${id}`);
-          if (response.data.success) {
-            const data = response.data.data;
-            setProject({
-              ...data,
-              fecha: data.fecha ? new Date(data.fecha).toISOString().substring(0, 10) : "",
-              retencionIva: Boolean(data.valor_iva),
-              gastos: data.gastos?.length ? data.gastos[0] : [defaultGasto],
-            });
+useEffect(() => {
+  if (id) {
+    const fetchProject = async () => {
+      try {
+        const response = await api.get(`/projects/${id}`);
+        if (response.data.success) {
+          const data = response.data.data;
+          if (data.gastos && data.gastos.length > 0) {
+            const gastoFromApi = data.gastos[0];
+            let extras = [];
+            if (gastoFromApi.otros_campos) {
+              extras = Object.entries(gastoFromApi.otros_campos).map(
+                ([key, value]) => ({ field: key, value: value.toString() })
+              );
+              delete gastoFromApi.otros_campos; // ¡Adiós, otros_campos!
+            }
+            gastoFromApi.extras = extras;
           }
-        } catch (err) {
-          setError("Error al cargar el proyecto", err);
+          setProject({
+            ...data,
+            fecha: data.fecha ? new Date(data.fecha).toISOString().substring(0, 10) : "",
+            retencionIva: Boolean(data.valor_iva),
+            gastos: data.gastos && data.gastos.length ? data.gastos : [defaultGasto],
+          });
         }
-      };
-      fetchProject();
-    }
-  }, [id]);
+      } catch (err) {
+        console.error(err);
+        setError("Error al cargar el proyecto");
+      }
+    };
+    fetchProject();
+  }
+}, [id]);
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const unformattedValue = name === "valor_iva" || name === "abono" || name === "costo_servicio"
+    const unformattedValue = ["valor_iva", "abono", "costo_servicio"].includes(name)
       ? unformatNumber(value)
       : value;
     setProject((prev) => ({ ...prev, [name]: unformattedValue }));
@@ -95,7 +114,10 @@ const FormCreateProject = () => {
     const { name, value } = e.target;
     setProject((prev) => {
       const updatedExtras = [...prev.gastos[0].extras];
-      updatedExtras[index] = { ...updatedExtras[index], [name]: name === "value" ? unformatNumber(value) : value };
+      updatedExtras[index] = {
+        ...updatedExtras[index],
+        [name]: name === "value" ? unformatNumber(value) : value,
+      };
       return { ...prev, gastos: [{ ...prev.gastos[0], extras: updatedExtras }] };
     });
   };
@@ -128,11 +150,15 @@ const FormCreateProject = () => {
     setLoading(true);
     setError("");
 
-    // Transformamos el array de extras a un objeto { key: value }
-    const otrosCampos = project.gastos[0].extras.reduce((acc, item) => {
+    // Convertir el arreglo de extras a un objeto { key: value }
+    const extrasArray = project.gastos[0].extras || [];
+    const otrosCampos = extrasArray.reduce((acc, item) => {
       if (item.field && item.value) acc[item.field] = Number(item.value);
       return acc;
     }, {});
+
+    // Extraer la propiedad "extras" para no enviarla al backend
+    const { extras, ...gastoSinExtras } = project.gastos[0];
 
     const payload = {
       ...project,
@@ -141,24 +167,26 @@ const FormCreateProject = () => {
       valor_iva: project.retencionIva ? Number(project.valor_iva) : 0,
       gastos: [
         {
-          ...project.gastos[0],
+          ...gastoSinExtras,
           otros_campos: Object.keys(otrosCampos).length > 0 ? otrosCampos : null,
-          // Solo envía si hay datos
         },
       ],
     };
 
     try {
-      delete payload.extras
-      id ? await api.put(`/projects/${id}`, payload) : await api.post("/projects", payload);
+      if (id) {
+        await api.put(`/projects/${id}`, payload);
+      } else {
+        await api.post("/projects", payload);
+      }
       navigate(-1);
     } catch (err) {
+      console.error(err);
       setError(err.response?.data?.message || "Error al enviar el formulario");
     } finally {
       setLoading(false);
     }
   };
-
 
   return (
     <Paper sx={{ p: 4, maxWidth: 800, margin: "2rem auto" }}>
@@ -284,7 +312,9 @@ const FormCreateProject = () => {
           ))}
 
           <Grid2 item xs={12}>
-            <Button variant="outlined" onClick={handleAddExtra}>Agregar campo extra</Button>
+            <Button variant="outlined" onClick={handleAddExtra}>
+              Agregar campo extra
+            </Button>
           </Grid2>
         </Grid2>
 
