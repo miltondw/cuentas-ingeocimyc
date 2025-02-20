@@ -47,7 +47,15 @@ const FormCreateProject = () => {
   const [project, setProject] = useState(defaultProject);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // Función para formatear un número con separadores de miles
+  const formatNumber = (value) => {
+    return value.toString().replace(/\B(?=(\d{3})+(?!\d)/g, ",");
+  };
 
+  // Función para eliminar los separadores de miles y convertir a número
+  const unformatNumber = (value) => {
+    return Number(value.replace(/,/g, ""));
+  };
   // Cargar el proyecto para actualizarlo, si se recibe un id
   useEffect(() => {
     if (id) {
@@ -86,22 +94,24 @@ const FormCreateProject = () => {
   }, [id]);
 
   // Actualiza los campos principales del proyecto
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProject((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+const handleChange = (e) => {
+  const { name, value } = e.target;
+  const unformattedValue = unformatNumber(value); // Elimina las comas
+  setProject((prev) => ({
+    ...prev,
+    [name]: unformattedValue, // Guarda el valor sin comas
+  }));
+};
 
   // Actualiza los campos fijos del único gasto (índice 0)
-  const handleGastoChange = (e) => {
-    const { name, value } = e.target;
-    setProject((prev) => {
-      const newGasto = { ...prev.gastos[0], [name]: value };
-      return { ...prev, gastos: [newGasto] };
-    });
-  };
+const handleGastoChange = (e) => {
+  const { name, value } = e.target;
+  const unformattedValue = unformatNumber(value); // Elimina las comas
+  setProject((prev) => {
+    const newGasto = { ...prev.gastos[0], [name]: unformattedValue }; // Guarda el valor sin comas
+    return { ...prev, gastos: [newGasto] };
+  });
+};
 
   // Actualiza un campo extra (del array extras) para la única fila de gasto
   const handleExtraChange = (extraIndex, e) => {
@@ -247,7 +257,7 @@ const FormCreateProject = () => {
               label="Costo del Servicio"
               type="number"
               name="costo_servicio"
-              value={project.costo_servicio}
+              value={formatNumber(project.costo_servicio)}
               onChange={handleChange}
               fullWidth
             />
@@ -257,7 +267,7 @@ const FormCreateProject = () => {
               label="Abono"
               type="number"
               name="abono"
-              value={project.abono}
+              value={formatNumber(project.abono)}
               onChange={handleChange}
               fullWidth
             />
@@ -304,9 +314,10 @@ const FormCreateProject = () => {
             <Grid2 item xs={12} sm={6}>
               <TextField
                 label="Valor IVA"
+
                 type="number"
                 name="valor_iva"
-                value={project.valor_iva}
+                value={formatNumber(project.valor_iva)}
                 onChange={handleChange}
                 fullWidth
               />
@@ -330,7 +341,7 @@ const FormCreateProject = () => {
               label="Camioneta"
               type="number"
               name="camioneta"
-              value={project.gastos[0]?.camioneta || ""}
+              value={formatNumber(project.gastos[0]?.camioneta) || ""}
               onChange={handleGastoChange}
               fullWidth
             />
@@ -340,7 +351,7 @@ const FormCreateProject = () => {
               label="Campo"
               type="number"
               name="campo"
-              value={project.gastos[0]?.campo || ""}
+              value={formatNumber(project.gastos[0]?.campo) || ""}
               onChange={handleGastoChange}
               fullWidth
             />
@@ -350,7 +361,7 @@ const FormCreateProject = () => {
               label="Obreros"
               type="number"
               name="obreros"
-              value={project.gastos[0]?.obreros || ""}
+              value={formatNumber(project.gastos[0]?.obreros) || ""}
               onChange={handleGastoChange}
               fullWidth
             />
@@ -360,7 +371,7 @@ const FormCreateProject = () => {
               label="Comidas"
               type="number"
               name="comidas"
-              value={project.gastos[0]?.comidas || ""}
+              value={formatNumber(project.gastos[0]?.comidas) || ""}
               onChange={handleGastoChange}
               fullWidth
             />
@@ -370,7 +381,7 @@ const FormCreateProject = () => {
               label="Otros"
               type="number"
               name="otros"
-              value={project.gastos[0]?.otros || ""}
+              value={formatNumber(project.gastos[0]?.otros) || ""}
               onChange={handleGastoChange}
               fullWidth
             />
@@ -380,7 +391,7 @@ const FormCreateProject = () => {
               label="Peajes"
               type="number"
               name="peajes"
-              value={project.gastos[0]?.peajes || ""}
+              value={formatNumber(project.gastos[0]?.peajes) || ""}
               onChange={handleGastoChange}
               fullWidth
             />
@@ -390,7 +401,7 @@ const FormCreateProject = () => {
               label="Combustible"
               type="number"
               name="combustible"
-              value={project.gastos[0]?.combustible || ""}
+              value={formatNumber(project.gastos[0]?.combustible) || ""}
               onChange={handleGastoChange}
               fullWidth
             />
@@ -400,7 +411,7 @@ const FormCreateProject = () => {
               label="Hospedaje"
               type="number"
               name="hospedaje"
-              value={project.gastos[0]?.hospedaje || ""}
+              value={formatNumber(project.gastos[0]?.hospedaje) || ""}
               onChange={handleGastoChange}
               fullWidth
             />
@@ -425,9 +436,10 @@ const FormCreateProject = () => {
               <Grid2 item xs={5}>
                 <TextField
                   label="Valor"
+  
                   type="number"
                   name="value"
-                  value={extra.value}
+                  value={formatNumber(extra.value)}
                   onChange={(e) => handleExtraChange(extraIndex, e)}
                   fullWidth
                 />
