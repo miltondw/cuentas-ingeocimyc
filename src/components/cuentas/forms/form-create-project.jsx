@@ -122,27 +122,40 @@ const FormCreateProject = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
 
-    const payload = {
-      ...project,
-      costo_servicio: Number(project.costo_servicio),
-      abono: Number(project.abono),
-      valor_iva: project.retencionIva ? Number(project.valor_iva) : 0,
-    };
+  // Transformamos el array de extras a un objeto { key: value }
+  const otrosCampos = project.gastos[0].extras.reduce((acc, item) => {
+    if (item.field && item.value) acc[item.field] = Number(item.value);
+    return acc;
+  }, {});
 
-    try {
-      id ? await api.put(`/projects/${id}`, payload) : await api.post("/projects", payload);
-      navigate(-1);
-    } catch (err) {
-      setError(err.response?.data?.message || "Error al enviar el formulario");
-    } finally {
-      setLoading(false);
-    }
+  const payload = {
+    ...project,
+    costo_servicio: Number(project.costo_servicio),
+    abono: Number(project.abono),
+    valor_iva: project.retencionIva ? Number(project.valor_iva) : 0,
+    gastos: [
+      {
+        ...project.gastos[0],
+        otros_campos: Object.keys(otrosCampos).length > 0 ? otrosCampos : null, // Solo envía si hay datos
+      },
+    ],
   };
+
+  try {
+    id ? await api.put(`/projects/${id}`, payload) : await api.post("/projects", payload);
+    navigate(-1);
+  } catch (err) {
+    setError(err.response?.data?.message || "Error al enviar el formulario");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <Paper sx={{ p: 4, maxWidth: 800, margin: "2rem auto" }}>
