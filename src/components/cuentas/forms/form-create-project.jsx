@@ -167,7 +167,7 @@ const FormCreateProject = () => {
               <TextField
                 label={field.replace(/_/g, " ").toUpperCase()}
                 name={field}
-                value={formatNumber(project[field])}
+                value={project[field]}
                 onChange={handleChange}
                 fullWidth
               />
