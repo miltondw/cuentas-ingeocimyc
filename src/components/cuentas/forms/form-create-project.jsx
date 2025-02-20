@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import {
   TextField, Button, Typography, Paper, Alert, Checkbox,
-  FormControlLabel, IconButton
+  FormControlLabel, IconButton,
+  MenuItem
 } from "@mui/material";
 import Grid2 from "@mui/material/Grid2";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -24,7 +25,7 @@ const defaultProject = {
   fecha: "",
   solicitante: "",
   nombre_proyecto: "",
-  obrero:"",
+  obrero: "",
   costo_servicio: "",
   abono: "",
   factura: "",
@@ -65,7 +66,7 @@ const FormCreateProject = () => {
             });
           }
         } catch (err) {
-          setError("Error al cargar el proyecto");
+          setError("Error al cargar el proyecto", err);
         }
       };
       fetchProject();
@@ -122,41 +123,41 @@ const FormCreateProject = () => {
     }));
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setError("");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
-  // Transformamos el array de extras a un objeto { key: value }
-  const otrosCampos = project.gastos[0].extras.reduce((acc, item) => {
-    if (item.field && item.value) acc[item.field] = Number(item.value);
-    return acc;
-  }, {});
+    // Transformamos el array de extras a un objeto { key: value }
+    const otrosCampos = project.gastos[0].extras.reduce((acc, item) => {
+      if (item.field && item.value) acc[item.field] = Number(item.value);
+      return acc;
+    }, {});
 
-  const payload = {
-    ...project,
-    costo_servicio: Number(project.costo_servicio),
-    abono: Number(project.abono),
-    valor_iva: project.retencionIva ? Number(project.valor_iva) : 0,
-    gastos: [
-      {
-        ...project.gastos[0],
-        otros_campos: Object.keys(otrosCampos).length > 0 ? otrosCampos : null,
-         // Solo envía si hay datos
-      },
-    ],
+    const payload = {
+      ...project,
+      costo_servicio: Number(project.costo_servicio),
+      abono: Number(project.abono),
+      valor_iva: project.retencionIva ? Number(project.valor_iva) : 0,
+      gastos: [
+        {
+          ...project.gastos[0],
+          otros_campos: Object.keys(otrosCampos).length > 0 ? otrosCampos : null,
+          // Solo envía si hay datos
+        },
+      ],
+    };
+
+    try {
+      delete payload.extras
+      id ? await api.put(`/projects/${id}`, payload) : await api.post("/projects", payload);
+      navigate(-1);
+    } catch (err) {
+      setError(err.response?.data?.message || "Error al enviar el formulario");
+    } finally {
+      setLoading(false);
+    }
   };
-
-  try {
-    delete payload.extras
-    id ? await api.put(`/projects/${id}`, payload) : await api.post("/projects", payload);
-    navigate(-1);
-  } catch (err) {
-    setError(err.response?.data?.message || "Error al enviar el formulario");
-  } finally {
-    setLoading(false);
-  }
-};
 
 
   return (
@@ -178,7 +179,7 @@ const handleSubmit = async (e) => {
               InputLabelProps={{ shrink: true }}
             />
           </Grid2>
-          {["solicitante", "nombre_proyecto", "factura","obrero"].map((field, index) => (
+          {["solicitante", "nombre_proyecto", "factura", "obrero"].map((field, index) => (
             <Grid2 item xs={12} sm={6} key={index}>
               <TextField
                 label={field.replace(/_/g, " ").toUpperCase()}
@@ -189,7 +190,7 @@ const handleSubmit = async (e) => {
               />
             </Grid2>
           ))}
-                    <Grid2 item xs={12} sm={6}>
+          <Grid2 item xs={12} sm={6}>
             <TextField
               select
               label="Método de Pago"
@@ -198,29 +199,29 @@ const handleSubmit = async (e) => {
               onChange={handleChange}
               fullWidth
             >
-             <MenuItem value="">otro</MenuItem>
+              <MenuItem value="">otro</MenuItem>
               <MenuItem value="transferencia">Transferencia</MenuItem>
               <MenuItem value="efectivo">Efectivo</MenuItem>
             </TextField>
           </Grid2>
-           <Grid2 item xs={12} sm={6}>
-              <TextField
-                label="COSTO DEL SERVICIO"
-                name="costo_servicio"
-                value={formatNumber(project.costo_servicio)}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid2>
-           <Grid2 item xs={12} sm={6}>
-              <TextField
-                label="ABONO"
-                name="abono"
-                value={formatNumber(project.abono)}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid2>
+          <Grid2 item xs={12} sm={6}>
+            <TextField
+              label="COSTO DEL SERVICIO"
+              name="costo_servicio"
+              value={formatNumber(project.costo_servicio)}
+              onChange={handleChange}
+              fullWidth
+            />
+          </Grid2>
+          <Grid2 item xs={12} sm={6}>
+            <TextField
+              label="ABONO"
+              name="abono"
+              value={formatNumber(project.abono)}
+              onChange={handleChange}
+              fullWidth
+            />
+          </Grid2>
           <Grid2 item xs={12}>
             <FormControlLabel
               control={<Checkbox checked={project.retencionIva} onChange={handleCheckboxChange} />}

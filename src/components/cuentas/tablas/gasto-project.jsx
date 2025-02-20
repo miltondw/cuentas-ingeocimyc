@@ -63,7 +63,7 @@ const formatNumber = (number) =>
     maximumFractionDigits: 2,
   }).format(Number(number) || 0);
 
-const formatDate = (dateStr) => 
+const formatDate = (dateStr) =>
   dateStr ? new Date(dateStr).toLocaleDateString("es", { timeZone: "UTC" }) : "";
 
 const getGastos = (project) => {
@@ -172,7 +172,7 @@ const GastosProject = () => {
         const { field, direction } = state.sortConfig;
         const aValue = field in a ? a[field] : calculateValues(a)[field];
         const bValue = field in b ? b[field] : calculateValues(b)[field];
-        return direction === "asc" 
+        return direction === "asc"
           ? (aValue < bValue ? -1 : aValue > bValue ? 1 : 0)
           : (bValue < aValue ? -1 : bValue > aValue ? 1 : 0);
       });
@@ -376,7 +376,7 @@ const GastosProject = () => {
                           </Link>
                         </Tooltip>
                         <Tooltip title="Eliminar proyecto">
-                          <IconButton 
+                          <IconButton
                             color="error"
                             onClick={() => setState(prev => ({
                               ...prev,
@@ -388,7 +388,7 @@ const GastosProject = () => {
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Agregar pago">
-                          <IconButton 
+                          <IconButton
                             color="primary"
                             onClick={() => setState(prev => ({
                               ...prev,
@@ -405,7 +405,7 @@ const GastosProject = () => {
                       {["solicitante", "nombre_proyecto", "factura", "valor_iva", "obrero", "metodo_de_pago"].map((field, index) => (
                         <TableCell key={index} sx={{ whiteSpace: "nowrap" }}>{project[field] || "-"}</TableCell>
                       ))}
-                      {[["costo_servicio", project.costo_servicio], ["abono", project.abono]].map(([field, value], index) => (
+                      {[["costo_servicio", project.costo_servicio], ["abono", project.abono]].map(([, value], index) => (
                         <TableCell key={index} sx={{ whiteSpace: "nowrap" }}>{`$ ${formatNumber(value)}`}</TableCell>
                       ))}
                       <TableCell sx={{ whiteSpace: "nowrap" }}>{`$ ${formatNumber(totalGastos)}`}</TableCell>
@@ -437,8 +437,8 @@ const GastosProject = () => {
         )}
       </TableContainer>
 
-      <Dialog 
-        open={state.modals.payment} 
+      <Dialog
+        open={state.modals.payment}
         onClose={() => setState(prev => ({ ...prev, modals: { ...prev.modals, payment: false } }))}
       >
         <DialogTitle>Registrar Pago</DialogTitle>
@@ -454,7 +454,7 @@ const GastosProject = () => {
               <DialogContentText>
                 Saldo pendiente: $ {formatNumber(calculateValues(state.selectedProject).saldo)}
               </DialogContentText>
-              <TextField 
+              <TextField
                 autoFocus
                 margin="dense"
                 label="Monto del pago"
@@ -472,7 +472,7 @@ const GastosProject = () => {
           <Button onClick={() => setState(prev => ({ ...prev, modals: { ...prev.modals, payment: false } }))}>
             Cancelar
           </Button>
-          <Button 
+          <Button
             onClick={handlePayment}
             color="primary"
             disabled={!state.paymentAmount || state.loading}
@@ -482,8 +482,8 @@ const GastosProject = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog 
-        open={state.modals.delete} 
+      <Dialog
+        open={state.modals.delete}
         onClose={() => setState(prev => ({ ...prev, modals: { ...prev.modals, delete: false } }))}
       >
         <DialogTitle>Confirmar Eliminación</DialogTitle>

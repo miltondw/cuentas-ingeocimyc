@@ -36,8 +36,8 @@ const transformData = (data) => {
 
     const gastos = Object.entries(item)
       .filter(
-        ([key, value]) => 
-          !["gasto_empresa_id", "mes", "otros_campos"].includes(key) && 
+        ([key, value]) =>
+          !["gasto_empresa_id", "mes", "otros_campos"].includes(key) &&
           value !== null
       )
       .map(([key, value]) => ({
@@ -120,9 +120,15 @@ const TablaGastosEmpresa = () => {
   }, [selectedDate, gastosPorMes]);
 
   return (
-    <TableContainer component={Paper} sx={{ maxWidth: "90vw", mx: "auto", my: 3, p: 2 }}>
+    <TableContainer
+      component={Paper}
+      sx={{ maxWidth: "90vw", mx: "auto", my: 3, p: 2 }}
+    >
       {/* Diálogo de confirmación */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
         <DialogTitle>Confirmar eliminación</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -142,9 +148,9 @@ const TablaGastosEmpresa = () => {
       <Typography variant="h2" gutterBottom>
         Gastos de la Empresa por Mes
       </Typography>
-      
+
       {/* Filtros */}
-      <Box sx={{ display: "flex", gap: 2, alignItems: "center" }} >
+      <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
         <TextField
           type="month"
           label="Filtrar por Mes"
@@ -156,7 +162,6 @@ const TablaGastosEmpresa = () => {
           InputLabelProps={{ shrink: true }}
           margin="normal"
           sx={{ width: 300 }}
-
         />
         <Typography variant="body2" color="textSecondary">
           {filteredData.length} resultados encontrados
@@ -165,17 +170,23 @@ const TablaGastosEmpresa = () => {
 
       {/* Tabla de gastos */}
       {filteredData.map((mesData) => (
-        <Box key={mesData.id} sx={{ mb: 4, boxShadow: 3, p: 2, borderRadius: 2 }}>
+        <Box
+          key={mesData.id}
+          sx={{ mb: 4, boxShadow: 3, p: 2, borderRadius: 2 }}
+        >
           <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
             <Typography variant="h5" component="div">
               {mesData.mesDeGasto}
             </Typography>
             <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-              <Link to={`/crear-gasto-mes/${mesData.id}`} style={{ textDecoration: "none" }}>
+              <Link
+                to={`/crear-gasto-mes/${mesData.id}`}
+                style={{ textDecoration: "none" }}
+              >
                 <Typography color="primary">Ver Detalles</Typography>
               </Link>
-              <IconButton 
-                onClick={() => openDeleteDialog(mesData.id)} 
+              <IconButton
+                onClick={() => openDeleteDialog(mesData.id)}
                 color="error"
                 aria-label="eliminar"
               >
@@ -183,12 +194,17 @@ const TablaGastosEmpresa = () => {
               </IconButton>
             </Box>
           </Box>
-          
+
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: "bold", width: "70%" }}>Concepto</TableCell>
-                <TableCell sx={{ fontWeight: "bold", width: "30%" }} align="right">
+                <TableCell sx={{ fontWeight: "bold", width: "70%" }}>
+                  Concepto
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: "bold", width: "30%" }}
+                  align="right"
+                >
                   Valor Mensual
                 </TableCell>
               </TableRow>
@@ -197,14 +213,19 @@ const TablaGastosEmpresa = () => {
               {mesData.gastos.map((gasto, idx) => (
                 <TableRow key={idx} hover>
                   <TableCell>{gasto.name}</TableCell>
-                  <TableCell align="right">{`$ ${formatNumber(gasto.value)}`}</TableCell>
+                  <TableCell align="right">{`$ ${formatNumber(
+                    gasto.value
+                  )}`}</TableCell>
                 </TableRow>
               ))}
               <TableRow>
                 <TableCell sx={{ fontWeight: "bold" }}>Total Gastos</TableCell>
                 <TableCell sx={{ fontWeight: "bold" }} align="right">
                   {`$ ${formatNumber(
-                    mesData.gastos.reduce((total, gasto) => total + gasto.value, 0)
+                    mesData.gastos.reduce(
+                      (total, gasto) => total + gasto.value,
+                      0
+                    )
                   )}`}
                 </TableCell>
               </TableRow>
