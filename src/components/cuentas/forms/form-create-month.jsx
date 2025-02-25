@@ -13,7 +13,7 @@ const defaultData = {
   arriendo: 540000,
   internet: 85000,
   salud: 480000,
-  otros_campos: [],
+  extras: [], // Cambiamos "otros_campos" a "extras"
 };
 
 const formatNumber = (value) =>
@@ -35,10 +35,18 @@ const FormCreateMonth = () => {
         const res = await api.get(`/gastos-mes/${id}`);
         const data = res.data.data;
 
+        // Convertir "otros_campos" a "extras"
+        const extras = data.otros_campos
+          ? Object.entries(data.otros_campos).map(([field, value]) => ({
+              field,
+              value: value.toString(),
+            }))
+          : [];
+
         const formattedData = {
           ...data,
           mes: data.mes ? new Date(data.mes).toISOString().split("T")[0] : "",
-          otros_campos: data.otros_campos || [],
+          extras, // Usamos "extras" en lugar de "otros_campos"
         };
         setFormData(formattedData);
       } catch (error) {
@@ -57,38 +65,47 @@ const FormCreateMonth = () => {
     }));
   };
 
-  const handleExtraField = (index, field, value) => {
-    const nuevosCampos = formData.otros_campos.map((campo, i) =>
-      i === index ? { ...campo, [field]: field === "monto" ? parseNumber(value) : value } : campo
-    );
-    setFormData((prev) => ({ ...prev, otros_campos: nuevosCampos }));
+  const handleExtraChange = (index, e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => {
+      const updatedExtras = [...prev.extras];
+      updatedExtras[index] = {
+        ...updatedExtras[index],
+        [name]: name === "value" ? parseNumber(value) : value,
+      };
+      return { ...prev, extras: updatedExtras };
+    });
   };
 
   const addExtraField = () => {
     setFormData((prev) => ({
       ...prev,
-      otros_campos: [...prev.otros_campos, { nombre: "", monto: "" }],
+      extras: [...prev.extras, { field: "", value: "" }],
     }));
   };
 
   const removeExtraField = (index) => {
-    const nuevosCampos = formData.otros_campos.filter((_, i) => i !== index);
-    setFormData((prev) => ({ ...prev, otros_campos: nuevosCampos }));
+    setFormData((prev) => ({
+      ...prev,
+      extras: prev.extras.filter((_, i) => i !== index),
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const otrosCampos = formData.otros_campos
-        .filter((item) => item.nombre && item.monto)
-        .map((item) => ({ [item.nombre]: Number(item.monto) }));
+      // Convertir el arreglo de extras a un objeto { key: value }
+      const otrosCampos = formData.extras.reduce((acc, item) => {
+        if (item.field && item.value) acc[item.field.split(" ").join("_")] = Number(item.value);
+        return acc;
+      }, {});
 
       const payload = {
         ...formData,
-        mes: `${formData.mes}-01`,
-        otros_campos: otrosCampos.length > 0 ? otrosCampos : null,
+        mes: formData.mes,
+        otros_campos: Object.keys(otrosCampos).length > 0 ? otrosCampos : null,
       };
-
+      delete payload.extras
       const endpoint = id ? `/gastos-mes/${id}` : "/gastos-mes";
       await api[id ? "put" : "post"](endpoint, payload);
 
@@ -116,7 +133,7 @@ const FormCreateMonth = () => {
         }}
       >
         {Object.keys(defaultData)
-          .filter((key) => key !== "otros_campos")
+          .filter((key) => key !== "extras")
           .map((key) => (
             <TextField
               key={key}
@@ -130,22 +147,23 @@ const FormCreateMonth = () => {
             />
           ))}
 
-        {formData.otros_campos.map((campo, index) => (
+        {formData.extras.map((extra, index) => (
           <Box
             key={index}
             sx={{ gridColumn: "span 3", display: "flex", gap: 2, alignItems: "center" }}
           >
             <TextField
               label="Nombre del gasto"
-              value={campo.nombre}
-              onChange={(e) => handleExtraField(index, "nombre", e.target.value)}
+              name="field"
+              value={extra.field}
+              onChange={(e) => handleExtraChange(index, e)}
               fullWidth
             />
             <TextField
               label="Monto"
-              type="text"
-              value={formatNumber(campo.monto)}
-              onChange={(e) => handleExtraField(index, "monto", e.target.value)}
+              name="value"
+              value={formatNumber(extra.value)}
+              onChange={(e) => handleExtraChange(index, e)}
               fullWidth
             />
             <IconButton onClick={() => removeExtraField(index)} color="error" sx={{ height: "fit-content" }}>

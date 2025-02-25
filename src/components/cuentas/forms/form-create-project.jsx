@@ -105,17 +105,17 @@ useEffect(() => {
     const unformattedValue = unformatNumber(value);
     setProject((prev) => {
       const updatedGastos = [...prev.gastos];
-      updatedGastos[0] = { ...updatedGastos[0], [name]: unformattedValue };
+      updatedGastos[0] = { ...updatedGastos[0], [name]: Number(unformattedValue) };
       return { ...prev, gastos: updatedGastos };
     });
   };
 
-  const handleExtraChange = (index, e) => {
+  const handleExtraChange = (i, e) => {
     const { name, value } = e.target;
     setProject((prev) => {
       const updatedExtras = [...prev.gastos[0].extras];
-      updatedExtras[index] = {
-        ...updatedExtras[index],
+      updatedExtras[i] = {
+        ...updatedExtras[i],
         [name]: name === "value" ? unformatNumber(value) : value,
       };
       return { ...prev, gastos: [{ ...prev.gastos[0], extras: updatedExtras }] };
@@ -153,7 +153,7 @@ useEffect(() => {
     // Convertir el arreglo de extras a un objeto { key: value }
     const extrasArray = project.gastos[0].extras || [];
     const otrosCampos = extrasArray.reduce((acc, item) => {
-      if (item.field && item.value) acc[item.field] = Number(item.value);
+      if (item.field && item.value) acc[item.field.split(" ").join("_")] = Number(item.value);
       return acc;
     }, {});
 
@@ -177,6 +177,7 @@ useEffect(() => {
       if (id) {
         await api.put(`/projects/${id}`, payload);
       } else {
+        delete payload.retencionIva
         await api.post("/projects", payload);
       }
       navigate(-1);
