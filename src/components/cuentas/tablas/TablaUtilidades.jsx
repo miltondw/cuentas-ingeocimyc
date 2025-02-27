@@ -51,60 +51,58 @@ const TablaResumen = () => {
   });
   const rowsPerPage = 5;
 
-  const processData = (gastosEmpresa, proyectos) => {
-    const monthlyData = {};
+const processData = (gastosEmpresa, proyectos) => {
+  const monthlyData = {};
 
-    // Procesar gastos de empresa
-    gastosEmpresa.forEach((gasto) => {
-      const mes = formatDate(gasto.mes);
-      monthlyData[mes] = monthlyData[mes] || {
-        mes,
-        GastosEmpresa: 0,
-        GastosProyectos: 0,
-        CostoServicio: 0,
-        Ingresos: 0,
-      };
-      monthlyData[mes].GastosEmpresa += 
-        Number(gasto.salarios) +
-        Number(gasto.luz) +
-        Number(gasto.agua) +
-        Number(gasto.arriendo) +
-        Number(gasto.internet) +
-        Number(gasto.salud) +
-        sumOtrosCampos(gasto.otros_campos);
-    });
+  // Procesar gastos de empresa
+  gastosEmpresa.forEach((gasto) => {
+    const mes = formatDate(gasto.mes);
+    monthlyData[mes] = monthlyData[mes] || {
+      mes,
+      GastosEmpresa: 0,
+      GastosProyectos: 0,
+      CostoServicio: 0,
+      Ingresos: 0,
+    };
+    monthlyData[mes].GastosEmpresa += 
+      Number(gasto.salarios) +
+      Number(gasto.luz) +
+      Number(gasto.agua) +
+      Number(gasto.arriendo) +
+      Number(gasto.internet) +
+      Number(gasto.salud) +
+      sumOtrosCampos(gasto.otros_campos);
+  });
 
-    // Procesar proyectos y sus gastos
-    proyectos.forEach((proyecto) => {
-      const mes = formatDate(proyecto.fecha);
-      monthlyData[mes] = monthlyData[mes] || {
-        mes,
-        GastosEmpresa: 0,
-        GastosProyectos: 0,
-        CostoServicio: 0,
-        Ingresos: 0,
-      };
+  // Procesar proyectos y sus gastos (corregido)
+  proyectos.forEach((proyecto) => {
+    const mes = formatDate(proyecto.fecha);
+    monthlyData[mes] = monthlyData[mes] || {
+      mes,
+      GastosEmpresa: 0,
+      GastosProyectos: 0,
+      CostoServicio: 0,
+      Ingresos: 0,
+    };
 
-      monthlyData[mes].Ingresos += Number(proyecto.costo_servicio);
-      monthlyData[mes].CostoServicio += Number(proyecto.costo_servicio);
+    monthlyData[mes].Ingresos += Number(proyecto.costo_servicio);
+    monthlyData[mes].CostoServicio += Number(proyecto.costo_servicio);
 
-      proyecto.gastos.forEach((gasto) => {
-        const gastoProyecto = [
-          'camioneta', 'campo', 'obreros', 'comidas', 
-           'otros', 'peajes', 'combustible', 'hospedaje'
-        ].reduce((acc, key) => acc + (Number(gasto[key]) || 0), 0);
-        
-        monthlyData[mes].GastosProyectos += gastoProyecto + sumOtrosCampos(gasto.otros_campos);
-      });
+    // Procesar el objeto "gastos" directamente
+    const gasto = proyecto.gastos;
+    const gastoProyecto = [
+      'camioneta', 'campo', 'obreros', 'comidas', 
+      'otros', 'peajes', 'combustible', 'hospedaje'
+    ].reduce((acc, key) => acc + (Number(gasto[key]) || 0), 0);
+    
+    monthlyData[mes].GastosProyectos += gastoProyecto + sumOtrosCampos(gasto.otros_campos);
+  });
 
-    });
-
-    return Object.values(monthlyData).map((item) => ({
-      ...item,
-      TotalGastos: Number(item.GastosProyectos) + Number(item.GastosEmpresa),
-      
-    }));
-  };
+  return Object.values(monthlyData).map((item) => ({
+    ...item,
+    TotalGastos: item.GastosProyectos + item.GastosEmpresa,
+  }));
+};
 
   useEffect(() => {
     const fetchData = async () => {
@@ -114,17 +112,18 @@ const TablaResumen = () => {
           api.get("/gastos-mes"),
           api.get("/projects"),
         ]);
+        console.log(empresaRes.data.data.gastos, proyectosRes.data.proyectos)
 
         const processedData = processData(
           empresaRes.data.data.gastos,
-          proyectosRes.data.data.proyectos
+          proyectosRes.data.proyectos
         );
 
         // Añadir log para verificar datos procesados
         setResumen(processedData);
       } catch (err) {
         setError("Error al cargar los datos");
-        console.error(err);
+        console.error(err); 
       } finally {
         setLoading(false);
       }

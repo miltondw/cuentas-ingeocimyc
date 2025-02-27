@@ -1,9 +1,11 @@
 import axios from "axios";
-
+const url_local="https://localhost:5050/api"
+const url_remota= "https://api-cuentas-zlut.onrender.com/api"
 const api = axios.create({
-  baseURL: "https://api-cuentas-zlut.onrender.com/api",
+  baseURL:url_remota,
   headers: { "Content-Type": "application/json" },
   withCredentials: true, // Importante para enviar/recibir cookies
+  credentials: "include",
 });
 
 // Ya no añadimos el token manualmente, ya que éste se envía en una cookie httpOnly

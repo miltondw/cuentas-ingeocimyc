@@ -13,14 +13,11 @@ const defaultData = {
   arriendo: 540000,
   internet: 85000,
   salud: 480000,
-  extras: [], // Cambiamos "otros_campos" a "extras"
+  extras: [], // Array para renderización en el formulario
 };
 
-const formatNumber = (value) =>
-  value !== "" ? Number(value).toLocaleString() : "";
-
-const parseNumber = (value) =>
-  value.replace(/,/g, "");
+const formatNumber = (value) => (value !== "" ? Number(value).toLocaleString() : "");
+const parseNumber = (value) => value.replace(/,/g, "");
 
 const FormCreateMonth = () => {
   const [formData, setFormData] = useState(defaultData);
@@ -33,9 +30,10 @@ const FormCreateMonth = () => {
     const fetchData = async () => {
       try {
         const res = await api.get(`/gastos-mes/${id}`);
-        const data = res.data.data;
+        console.log(res.data.data)
+        const data = res.data.data; // La respuesta ya no está envuelta en "data"
 
-        // Convertir "otros_campos" a "extras"
+        // Convertir "otros_campos" (objeto) a "extras" (array para renderización)
         const extras = data.otros_campos
           ? Object.entries(data.otros_campos).map(([field, value]) => ({
               field,
@@ -46,7 +44,7 @@ const FormCreateMonth = () => {
         const formattedData = {
           ...data,
           mes: data.mes ? new Date(data.mes).toISOString().split("T")[0] : "",
-          extras, // Usamos "extras" en lugar de "otros_campos"
+          extras, // Usamos "extras" para renderización
         };
         setFormData(formattedData);
       } catch (error) {
@@ -105,7 +103,8 @@ const FormCreateMonth = () => {
         mes: formData.mes,
         otros_campos: Object.keys(otrosCampos).length > 0 ? otrosCampos : null,
       };
-      delete payload.extras
+      delete payload.extras; // Eliminar el campo "extras" antes de enviar
+
       const endpoint = id ? `/gastos-mes/${id}` : "/gastos-mes";
       await api[id ? "put" : "post"](endpoint, payload);
 

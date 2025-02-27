@@ -22,7 +22,7 @@ import {
   TableSortLabel,
   Tooltip,
   MenuItem,
-  Grid
+  Grid,
 } from "@mui/material";
 import { Link } from "react-router-dom";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -68,15 +68,25 @@ const formatDate = (dateStr) =>
 
 const getGastos = (project) => {
   try {
-    return (project.gastos || []).reduce((total, gasto) => {
-      const current = { ...gasto, ...(gasto.otros_campos || {}) };
-      Object.entries(current).forEach(([key, value]) => {
-        if (!["gasto_proyecto_id", "proyecto_id", "otros_campos"].includes(key)) {
-          total[key] = (parseFloat(total[key]) || 0) + (parseFloat(value) || 0);
-        }
-      });
+    const gastos = project.gastos || {};
+    const otrosCampos = gastos.otros_campos || {};
+
+    // Sumar los valores de los campos fijos
+    const gastosFijos = Object.entries(gastos).reduce((total, [key, value]) => {
+      if (!["gasto_proyecto_id", "proyecto_id", "otros_campos"].includes(key)) {
+        total[key] = (parseFloat(total[key]) || 0) + (parseFloat(value) || 0);
+      }
       return total;
     }, {});
+
+    // Sumar los valores de otros_campos
+    const gastosOtrosCampos = Object.entries(otrosCampos).reduce((total, [key, value]) => {
+      total[key] = (parseFloat(total[key]) || 0) + (parseFloat(value) || 0);
+      return total;
+    }, {});
+
+    // Combinar ambos resultados
+    return { ...gastosFijos, ...gastosOtrosCampos };
   } catch {
     return {};
   }
@@ -127,18 +137,18 @@ const GastosProject = () => {
 
   useEffect(() => {
     const fetchProjects = async () => {
-      setState(prev => ({ ...prev, loading: true, error: null }));
+      setState((prev) => ({ ...prev, loading: true, error: null }));
       try {
         const response = await api.get("/projects");
-        if (response.data?.data) {
-          setState(prev => ({
+        if (response?.data?.proyectos) {
+          setState((prev) => ({
             ...prev,
-            allProjects: response.data.data.proyectos,
+            allProjects: response.data.proyectos,
             loading: false,
           }));
         }
       } catch (error) {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           error: `Error al cargar proyectos: ${error.message}`,
           loading: false,
@@ -173,8 +183,8 @@ const GastosProject = () => {
         const aValue = field in a ? a[field] : calculateValues(a)[field];
         const bValue = field in b ? b[field] : calculateValues(b)[field];
         return direction === "asc"
-          ? (aValue < bValue ? -1 : aValue > bValue ? 1 : 0)
-          : (bValue < aValue ? -1 : bValue > aValue ? 1 : 0);
+          ? aValue < bValue ? -1 : aValue > bValue ? 1 : 0
+          : bValue < aValue ? -1 : bValue > aValue ? 1 : 0;
       });
   }, [state.allProjects, state.filters, state.sortConfig]);
 
@@ -184,7 +194,7 @@ const GastosProject = () => {
   }, [processedProjects, state.currentPage]);
 
   const handleSort = (field) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       sortConfig: {
         field,
@@ -195,7 +205,7 @@ const GastosProject = () => {
   };
 
   const handleFilterChange = (field, value) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       filters: { ...prev.filters, [field]: value },
       currentPage: 1,
@@ -203,7 +213,7 @@ const GastosProject = () => {
   };
 
   const handleClearFilters = () => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       filters: {
         fechaInicio: "",
@@ -221,22 +231,22 @@ const GastosProject = () => {
     if (!selectedProject || !paymentAmount) return;
 
     try {
-      setState(prev => ({ ...prev, loading: true }));
+      setState((prev) => ({ ...prev, loading: true }));
 
       await api.patch(`/projects/${selectedProject.proyecto_id}/abonar`, {
         abono: parseFloat(paymentAmount),
       });
 
       const response = await api.get("/projects");
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
-        allProjects: response.data.data.proyectos,
+        allProjects: response.data.proyectos,
         modals: { ...prev.modals, payment: false },
         paymentAmount: "",
         loading: false,
       }));
     } catch (error) {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         error: `Error al procesar el pago: ${error.message}`,
         loading: false,
@@ -246,18 +256,20 @@ const GastosProject = () => {
 
   const handleDelete = async () => {
     try {
-      setState(prev => ({ ...prev, loading: true }));
+      setState((prev) => ({ ...prev, loading: true }));
       await api.delete(`/projects/${state.selectedProject.proyecto_id}`);
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
-        allProjects: prev.allProjects.filter(project => project.proyecto_id !== state.selectedProject.proyecto_id),
+        allProjects: prev.allProjects.filter(
+          (project) => project.proyecto_id !== state.selectedProject.proyecto_id
+        ),
         modals: { ...prev.modals, delete: false },
         selectedProject: null,
         loading: false,
       }));
     } catch (error) {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         error: `Error al eliminar proyecto: ${error.message}`,
         loading: false,
@@ -265,18 +277,24 @@ const GastosProject = () => {
     }
   };
 
-  const extraFields = useMemo(() => {
-    const fields = new Set();
-    state.allProjects.forEach(project => {
-      Object.keys(getGastos(project)).forEach(key => {
-        if (!fixedGastoFields.includes(key) && !["gasto_proyecto_id", "proyecto_id", "otros_campos"].includes(key)) {
-          fields.add(key);
-        }
-      });
+const extraFields = useMemo(() => {
+  const fields = new Set();
+  state.allProjects.forEach((project) => {
+    // Campos adicionales en el nivel principal de gastos
+    Object.keys(getGastos(project)).forEach((key) => {
+      if (!fixedGastoFields.includes(key) && !["gasto_proyecto_id", "proyecto_id", "otros_campos"].includes(key)) {
+        fields.add(key);
+      }
     });
-    return Array.from(fields);
-  }, [state.allProjects]);
 
+    // Campos dentro de otros_campos
+    const otrosCampos = project.gastos?.otros_campos || {};
+    Object.keys(otrosCampos).forEach((key) => {
+      fields.add(key);
+    });
+  });
+  return Array.from(fields);
+}, [state.allProjects]);
   return (
     <>
       <TableContainer component={Paper} sx={{ m: 3, p: 2, width: "90vw" }}>
@@ -336,32 +354,32 @@ const GastosProject = () => {
         ) : (
           <>
             <Table sx={{ minWidth: "800px", border: "1px solid #ccc" }}>
-              <TableHead>
-                <TableRow>
-                  {tableRowInputs.map(({ id, label, sortable }) => (
-                    <TableCell key={id} sx={{ whiteSpace: "nowrap" }}>
-                      <div style={{ display: "flex", flexDirection: "column" }}>
-                        {sortable ? (
-                          <TableSortLabel
-                            active={state.sortConfig.field === id}
-                            direction={state.sortConfig.direction}
-                            onClick={() => handleSort(id)}
-                          >
-                            {label}
-                          </TableSortLabel>
-                        ) : (
-                          label
-                        )}
-                      </div>
-                    </TableCell>
-                  ))}
-                  {[...fixedGastoFields, ...extraFields].map((field) => (
-                    <TableCell key={field} sx={{ textTransform: "capitalize", whiteSpace: "nowrap" }}>
-                      {field}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
+<TableHead>
+  <TableRow>
+    {tableRowInputs.map(({ id, label, sortable }) => (
+      <TableCell key={id} sx={{ whiteSpace: "nowrap" }}>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {sortable ? (
+            <TableSortLabel
+              active={state.sortConfig.field === id}
+              direction={state.sortConfig.direction}
+              onClick={() => handleSort(id)}
+            >
+              {label}
+            </TableSortLabel>
+          ) : (
+            label
+          )}
+        </div>
+      </TableCell>
+    ))}
+    {[...fixedGastoFields, ...extraFields].map((field) => (
+      <TableCell key={field} sx={{ whiteSpace: "nowrap" }}>
+        {field} {/* Solo muestra el nombre del campo, no accede a gastos */}
+      </TableCell>
+    ))}
+  </TableRow>
+</TableHead>
               <TableBody>
                 {paginatedProjects.map((project) => {
                   const { totalGastos, saldo, estadoCuenta, utilidadNeta } = calculateValues(project);
@@ -378,11 +396,13 @@ const GastosProject = () => {
                         <Tooltip title="Eliminar proyecto">
                           <IconButton
                             color="error"
-                            onClick={() => setState(prev => ({
-                              ...prev,
-                              selectedProject: project,
-                              modals: { ...prev.modals, delete: true },
-                            }))}
+                            onClick={() =>
+                              setState((prev) => ({
+                                ...prev,
+                                selectedProject: project,
+                                modals: { ...prev.modals, delete: true },
+                              }))
+                            }
                           >
                             <DeleteIcon />
                           </IconButton>
@@ -390,11 +410,13 @@ const GastosProject = () => {
                         <Tooltip title="Agregar pago">
                           <IconButton
                             color="primary"
-                            onClick={() => setState(prev => ({
-                              ...prev,
-                              selectedProject: project,
-                              modals: { ...prev.modals, payment: true },
-                            }))}
+                            onClick={() =>
+                              setState((prev) => ({
+                                ...prev,
+                                selectedProject: project,
+                                modals: { ...prev.modals, payment: true },
+                              }))
+                            }
                           >
                             <AddIcon />
                           </IconButton>
@@ -402,26 +424,38 @@ const GastosProject = () => {
                       </TableCell>
 
                       <TableCell sx={{ whiteSpace: "nowrap" }}>{formatDate(project.fecha)}</TableCell>
-                      {["solicitante", "nombre_proyecto", "factura", "valor_iva", "obrero", "metodo_de_pago"].map((field, index) => (
-                        <TableCell key={index} sx={{ whiteSpace: "nowrap" }}>{project[field] || "-"}</TableCell>
-                      ))}
-                      {[["costo_servicio", project.costo_servicio], ["abono", project.abono]].map(([, value], index) => (
-                        <TableCell key={index} sx={{ whiteSpace: "nowrap" }}>{`$ ${formatNumber(value)}`}</TableCell>
-                      ))}
+                      {["solicitante", "nombre_proyecto", "factura", "valor_iva", "obrero", "metodo_de_pago"].map(
+                        (field, index) => (
+                          <TableCell key={index} sx={{ whiteSpace: "nowrap" }}>
+                            {project[field] || "-"}
+                          </TableCell>
+                        )
+                      )}
+                      {[["costo_servicio", project.costo_servicio], ["abono", project.abono]].map(
+                        ([, value], index) => (
+                          <TableCell key={index} sx={{ whiteSpace: "nowrap" }}>{`$ ${formatNumber(value)}`}</TableCell>
+                        )
+                      )}
                       <TableCell sx={{ whiteSpace: "nowrap" }}>{`$ ${formatNumber(totalGastos)}`}</TableCell>
-                      <TableCell sx={{ color: utilidadNeta < 0 ? "#f44336" : "#4caf50", fontWeight: "bold", whiteSpace: "nowrap" }}>
+                      <TableCell
+                        sx={{
+                          color: utilidadNeta < 0 ? "#f44336" : "#4caf50",
+                          fontWeight: "bold",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {`$ ${formatNumber(utilidadNeta)}`}
                       </TableCell>
                       <TableCell sx={{ whiteSpace: "nowrap" }}>{`$ ${formatNumber(saldo)}`}</TableCell>
                       <TableCell sx={{ backgroundColor: colorEstadoCuenta(estadoCuenta), color: "white" }}>
                         {estadoCuenta}
                       </TableCell>
-                      {[...fixedGastoFields, ...extraFields].map((field) => (
+                        {[...fixedGastoFields, ...extraFields].map((field) => (
                         <TableCell key={field} sx={{ whiteSpace: "nowrap" }}>
                           {gastos[field] ? `$ ${formatNumber(gastos[field])}` : "-"}
                         </TableCell>
-                      ))}
-                    </TableRow>
+                          ))}
+                      </TableRow>
                   );
                 })}
               </TableBody>
@@ -430,7 +464,7 @@ const GastosProject = () => {
             <Pagination
               count={Math.ceil(processedProjects.length / rowsPerPage)}
               page={state.currentPage}
-              onChange={(event, page) => setState(prev => ({ ...prev, currentPage: page }))}
+              onChange={(event, page) => setState((prev) => ({ ...prev, currentPage: page }))}
               sx={{ mt: 3, display: "flex", justifyContent: "center" }}
             />
           </>
@@ -439,7 +473,7 @@ const GastosProject = () => {
 
       <Dialog
         open={state.modals.payment}
-        onClose={() => setState(prev => ({ ...prev, modals: { ...prev.modals, payment: false } }))}
+        onClose={() => setState((prev) => ({ ...prev, modals: { ...prev.modals, payment: false } }))}
       >
         <DialogTitle>Registrar Pago</DialogTitle>
         <DialogContent>
@@ -461,15 +495,19 @@ const GastosProject = () => {
                 type="number"
                 fullWidth
                 value={state.paymentAmount}
-                onChange={(e) => setState(prev => ({ ...prev, paymentAmount: e.target.value }))}
+                onChange={(e) => setState((prev) => ({ ...prev, paymentAmount: e.target.value }))}
                 error={parseFloat(state.paymentAmount) > calculateValues(state.selectedProject).saldo}
-                helperText={parseFloat(state.paymentAmount) > calculateValues(state.selectedProject).saldo ? "El monto excede el saldo pendiente" : ""}
+                helperText={
+                  parseFloat(state.paymentAmount) > calculateValues(state.selectedProject).saldo
+                    ? "El monto excede el saldo pendiente"
+                    : ""
+                }
               />
             </>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setState(prev => ({ ...prev, modals: { ...prev.modals, payment: false } }))}>
+          <Button onClick={() => setState((prev) => ({ ...prev, modals: { ...prev.modals, payment: false } }))}>
             Cancelar
           </Button>
           <Button
@@ -484,16 +522,17 @@ const GastosProject = () => {
 
       <Dialog
         open={state.modals.delete}
-        onClose={() => setState(prev => ({ ...prev, modals: { ...prev.modals, delete: false } }))}
+        onClose={() => setState((prev) => ({ ...prev, modals: { ...prev.modals, delete: false } }))}
       >
         <DialogTitle>Confirmar Eliminación</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            ¿Está seguro de eliminar el proyecto {state.selectedProject?.nombre_proyecto}? Esta acción no se puede deshacer.
+            ¿Está seguro de eliminar el proyecto {state.selectedProject?.nombre_proyecto}? Esta acción no se puede
+            deshacer.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setState(prev => ({ ...prev, modals: { ...prev.modals, delete: false } }))}>
+          <Button onClick={() => setState((prev) => ({ ...prev, modals: { ...prev.modals, delete: false } }))}>
             Cancelar
           </Button>
           <Button onClick={handleDelete} color="error" disabled={state.loading}>
