@@ -61,11 +61,8 @@ const fixedGastoFields = [
   "hospedaje",
 ];
 
-const formatNumber = (number) =>
-  new Intl.NumberFormat("es", {
-    maximumFractionDigits: 2,
-  }).format(Number(number) || 0);
-
+const formatNumber = (value) => (value === "" || isNaN(value) ? "" : Number(value).toLocaleString("en-US"));
+const unformatNumber = (value) => value.replace(/,/g, "");
 const formatDate = (dateStr) =>
   dateStr ? new Date(dateStr).toLocaleDateString("es", { timeZone: "UTC" }) : "";
 
@@ -98,8 +95,7 @@ const getGastos = (project) => {
 const calculateValues = (project) => {
   const gastos = getGastos(project);
   const costo = parseFloat(project.costo_servicio) || 0;
-  const abono = parseFloat(project.abono) || 0;
-
+  const abono = unformatNumber(project.abono) || 0;
   const totalGastos = Object.values(gastos).reduce((sum, value) => sum + value, 0);
   const saldo = Math.max(costo - abono, 0);
   const estadoCuenta = abono === 0 ? "Pendiente" : abono >= costo ? "Pagado" : "Abonado";
@@ -243,9 +239,8 @@ const GastosProject = () => {
 
     try {
       setState((prev) => ({ ...prev, loading: true }));
-
       await api.patch(`/projects/${selectedProject.proyecto_id}/abonar`, {
-        abono: parseFloat(paymentAmount),
+       abono: unformatNumber(paymentAmount),
       });
 
       const response = await api.get("/projects");
@@ -435,17 +430,40 @@ const extraFields = useMemo(() => {
                       </TableCell>
 
                       <TableCell sx={{ whiteSpace: "nowrap" }}>{formatDate(project.fecha)}</TableCell>
-                      {["solicitante", "nombre_proyecto", 
-                        "factura", "valor_retencion","valor_iva",
-                        "valor_re", "obrero", "metodo_de_pago"
-                      ].map(
+
+                      {["solicitante", "nombre_proyecto", "factura"].map(
                         (field, index) => (
                           <TableCell key={index} sx={{ whiteSpace: "nowrap", border:" 1px solid #ccc",textAlign: "center"}}>
-                           
-                             {field=="factura" && project[field] ?`SYCO-${project[field]}`:typeof project[field] =='number' ?formatNumber(project[field] ):project[field] || "-"}
+                             {
+                              field=="factura" && project[field] ?
+                              `SYCO-${project[field]}`:typeof project[field] =='number' ?
+                              formatNumber(project[field] ):project[field] || "-"
+                            }
                           </TableCell>
                         )
                       )}
+
+                      {["valor_retencion","valor_iva","valor_re"].map(
+                        (field, index) => (
+                          <TableCell key={index} sx={{ whiteSpace: "nowrap", border:" 1px solid #ccc",textAlign: "center"}}>
+                             {
+                                Number(project.valor_retencion )>0?formatNumber(project[field] ): "-"
+                            }
+                          </TableCell>
+                        )
+                      )}
+
+                      {["obrero", "metodo_de_pago"].map(
+                        (field, index) => (
+                          <TableCell key={index} sx={{ whiteSpace: "nowrap", border:" 1px solid #ccc",textAlign: "center"}}>
+                           
+                             {
+                              typeof project[field] =='number' ?formatNumber(project[field] ):project[field] || "-"
+                            }
+                          </TableCell>
+                        )
+                      )}
+
                       {[["costo_servicio", project.costo_servicio], ["abono", project.abono]].map(
                         ([, value], index) => (
                           <TableCell key={index} sx={{ whiteSpace: "nowrap",border:" 1px solid #ccc",textAlign: "center" }}>{`$ ${formatNumber(value)}`}</TableCell>
@@ -507,10 +525,9 @@ const extraFields = useMemo(() => {
                 autoFocus
                 margin="dense"
                 label="Monto del pago"
-                type="number"
                 fullWidth
-                value={state.paymentAmount}
-                onChange={(e) => setState((prev) => ({ ...prev, paymentAmount: e.target.value }))}
+                value={formatNumber(state.paymentAmount) || ""}
+                onChange={(e) => setState((prev) => ({ ...prev, paymentAmount: unformatNumber(e.target.value) }))}
                 error={parseFloat(state.paymentAmount) > calculateValues(state.selectedProject).saldo}
                 helperText={
                   parseFloat(state.paymentAmount) > calculateValues(state.selectedProject).saldo
@@ -518,6 +535,7 @@ const extraFields = useMemo(() => {
                     : ""
                 }
               />
+              
             </>
           )}
         </DialogContent>
