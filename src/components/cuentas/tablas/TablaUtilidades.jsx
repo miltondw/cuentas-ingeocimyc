@@ -60,6 +60,8 @@ const processData = (gastosEmpresa, proyectos) => {
     monthlyData[mes] = monthlyData[mes] || {
       mes,
       GastosEmpresa: 0,
+      TotalRetencion:0,
+      TotalIva:0,
       GastosProyectos: 0,
       CostoServicio: 0,
       Ingresos: 0,
@@ -80,6 +82,8 @@ const processData = (gastosEmpresa, proyectos) => {
     monthlyData[mes] = monthlyData[mes] || {
       mes,
       GastosEmpresa: 0,
+      TotalRetencion:0,
+      TotalIva:0,
       GastosProyectos: 0,
       CostoServicio: 0,
       Ingresos: 0,
@@ -87,6 +91,8 @@ const processData = (gastosEmpresa, proyectos) => {
 
     monthlyData[mes].Ingresos += Number(proyecto.costo_servicio);
     monthlyData[mes].CostoServicio += Number(proyecto.costo_servicio);
+    monthlyData[mes].TotalRetencion += Number(proyecto.costo_servicio) *( Number(proyecto.valor_retencion)/100 );
+    monthlyData[mes].TotalIva += Number(proyecto.costo_servicio) *0.19;
 
     // Procesar el objeto "gastos" directamente
     const gasto = proyecto.gastos;
@@ -98,9 +104,11 @@ const processData = (gastosEmpresa, proyectos) => {
     monthlyData[mes].GastosProyectos += gastoProyecto + sumOtrosCampos(gasto.otros_campos);
   });
 
+  //console.log(proyectos)
   return Object.values(monthlyData).map((item) => ({
     ...item,
     TotalGastos: item.GastosProyectos + item.GastosEmpresa,
+    
   }));
 };
 
@@ -112,14 +120,13 @@ const processData = (gastosEmpresa, proyectos) => {
           api.get("/gastos-mes"),
           api.get("/projects"),
         ]);
-        console.log(empresaRes.data.data.gastos, proyectosRes.data.proyectos)
+        //console.log(empresaRes.data.data.gastos, proyectosRes.data.proyectos)
 
         const processedData = processData(
           empresaRes.data.data.gastos,
           proyectosRes.data.proyectos
         );
 
-        // Añadir log para verificar datos procesados
         setResumen(processedData);
       } catch (err) {
         setError("Error al cargar los datos");
@@ -179,6 +186,8 @@ const processData = (gastosEmpresa, proyectos) => {
               { key: "GastosProyectos", label: "Gastos Proyectos" },
               { key: "GastosEmpresa", label: "Gastos Empresa" },
               { key: "TotalGastos", label: "Total Gastos" },
+              { key: "TotalRetencion", label: "Total De Retención" },
+              { key: "TotalIva", label: "Total De Iva" },
               { key: "Ingresos", label: "Total De Ingresos" },
               { key: "UtilidadNeta", label: "Utilidad Neta" },
             ].map((header) => (
@@ -202,6 +211,8 @@ const processData = (gastosEmpresa, proyectos) => {
               <TableCell>{`$ ${formatNumber(item.GastosProyectos)}`}</TableCell>
               <TableCell>{`$ ${formatNumber(item.GastosEmpresa)}`}</TableCell>
               <TableCell>{`$ ${formatNumber(item.TotalGastos)}`}</TableCell>
+               <TableCell>{`$ ${formatNumber(item.TotalRetencion)}`}</TableCell>
+               <TableCell>{`$ ${formatNumber(item.TotalIva)}`}</TableCell>
               <TableCell>{`$ ${formatNumber(item.Ingresos)}`}</TableCell>
               <TableCell
                 sx={{

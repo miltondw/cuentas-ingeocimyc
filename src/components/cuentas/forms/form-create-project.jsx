@@ -37,9 +37,9 @@ const defaultProject = {
   abono: 0,
   factura: "",
   metodo_de_pago: "",
-  valor_iva: 0,
+  valor_retencion: 0,
   retencionIva: false,
-  gastos: defaultGasto, // Ahora es un objeto, no un arreglo
+  gastos: defaultGasto, 
 };
 
 // Formatear y desformatear números
@@ -72,7 +72,7 @@ const FormCreateProject = () => {
             setProject({
               ...data,
               fecha: data.fecha ? new Date(data.fecha).toISOString().substring(0, 10) : "",
-              retencionIva: Boolean(data.valor_iva),
+              retencionIva: Boolean(data.valor_retencion),
               gastos: { ...gastoFromApi, extras }, // Ahora es un objeto
             });
           }
@@ -88,7 +88,7 @@ const FormCreateProject = () => {
   // Manejar cambios en los campos del proyecto
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const unformattedValue = ["valor_iva", "abono", "costo_servicio"].includes(name)
+    const unformattedValue = ["valor_retencion", "abono", "costo_servicio"].includes(name)
       ? unformatNumber(value)
       : value;
     setProject((prev) => ({ ...prev, [name]: unformattedValue }));
@@ -139,7 +139,7 @@ const FormCreateProject = () => {
     setProject((prev) => ({
       ...prev,
       retencionIva: checked,
-      valor_iva: checked ? prev.valor_iva : 0,
+      valor_retencion: checked ? prev.valor_retencion : 0,
     }));
   };
 
@@ -161,7 +161,7 @@ const FormCreateProject = () => {
         ...project,
         costo_servicio: Number(project.costo_servicio),
         abono: Number(project.abono),
-        valor_iva: project.retencionIva ? Number(project.valor_iva) : 0,
+        valor_retencion: project.retencionIva ? Number(project.valor_retencion) : 0,
         gastos: {
           ...project.gastos,
           otros_campos: Object.keys(otrosCampos).length > 0 ? otrosCampos : null,
@@ -208,7 +208,7 @@ const FormCreateProject = () => {
               InputLabelProps={{ shrink: true }}
             />
           </Grid2>
-          {["solicitante", "nombre_proyecto", "factura", "obrero"].map((field) => (
+          {["solicitante", "nombre_proyecto", "obrero"].map((field) => (
             <Grid2 item xs={12} sm={6} key={field}>
               <TextField
                 label={field.replace(/_/g, " ").toUpperCase()}
@@ -254,19 +254,22 @@ const FormCreateProject = () => {
           <Grid2 item xs={12}>
             <FormControlLabel
               control={<Checkbox checked={project.retencionIva} onChange={handleCheckboxChange} />}
-              label="¿Aplica retención de IVA?"
+              label="¿Aplica Facturacion?"
             />
           </Grid2>
           {project.retencionIva && (
-            <Grid2 item xs={12} sm={6}>
+            ["factura","valor_retencion"].map((field) => (
+            <Grid2 item xs={12} sm={6} key={field}>
               <TextField
-                label="Valor IVA"
-                name="valor_iva"
-                value={formatNumber(project.valor_iva) || ""} // Asegúrate de que no sea null
+                label={field.replace(/_/g, " ").toUpperCase()}
+                name={field}
+                value={project[field] || ""}
                 onChange={handleChange}
                 fullWidth
               />
             </Grid2>
+          ))
+            
           )}
         </Grid2>
 

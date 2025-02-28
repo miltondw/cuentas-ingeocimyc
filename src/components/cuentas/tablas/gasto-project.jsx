@@ -35,7 +35,11 @@ const tableRowInputs = [
   { id: "solicitante", label: "Solicitante", sortable: true, filterType: "text", width: 150 },
   { id: "nombre_proyecto", label: "Proyecto", sortable: true, filterType: "text", width: 200 },
   { id: "factura", label: "N° Factura", sortable: true, filterType: "text", width: 120 },
-  { id: "valor_iva", label: "Valor del IVA", sortable: true, filterType: "text", width: 120 },
+  { id: "valor_retencion", label: "% De Retención", sortable: true, filterType: "text", width: 120 },
+
+  { id: "valor_iva", label: "Valor de Iva", sortable: true, filterType: "text", width: 120 },
+  { id: "valor_re", label: "Valor de Retención", sortable: true, filterType: "text", width: 120 },
+
   { id: "obrero", label: "Obrero", sortable: true, filterType: "text", width: 150 },
   { id: "metodo_de_pago", label: "Método de Pago", sortable: true, filterType: "text", width: 150 },
   { id: "costo_servicio", label: "Costo Servicio", sortable: true, width: 150 },
@@ -59,7 +63,6 @@ const fixedGastoFields = [
 
 const formatNumber = (number) =>
   new Intl.NumberFormat("es", {
-    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(Number(number) || 0);
 
@@ -140,10 +143,18 @@ const GastosProject = () => {
       setState((prev) => ({ ...prev, loading: true, error: null }));
       try {
         const response = await api.get("/projects");
-        if (response?.data?.proyectos) {
+        const getAllProyectosData=response?.data?.proyectos
+        const getProyectos=getAllProyectosData.map(p=>{
+          if(p.valor_retencion){
+           return {...p,valor_re:(Number(p.valor_retencion)/100)*p.costo_servicio,valor_iva:(0.19)*p.costo_servicio}
+          }
+          return {...p,valor_re:0,valor_iva:0}
+        })
+
+        if (getAllProyectosData) {
           setState((prev) => ({
             ...prev,
-            allProjects: response.data.proyectos,
+            allProjects: getProyectos,
             loading: false,
           }));
         }
@@ -424,19 +435,23 @@ const extraFields = useMemo(() => {
                       </TableCell>
 
                       <TableCell sx={{ whiteSpace: "nowrap" }}>{formatDate(project.fecha)}</TableCell>
-                      {["solicitante", "nombre_proyecto", "factura", "valor_iva", "obrero", "metodo_de_pago"].map(
+                      {["solicitante", "nombre_proyecto", 
+                        "factura", "valor_retencion","valor_iva",
+                        "valor_re", "obrero", "metodo_de_pago"
+                      ].map(
                         (field, index) => (
-                          <TableCell key={index} sx={{ whiteSpace: "nowrap" }}>
-                            {project[field] || "-"}
+                          <TableCell key={index} sx={{ whiteSpace: "nowrap", border:" 1px solid #ccc",textAlign: "center"}}>
+                           
+                             {field=="factura" && project[field] ?`SYCO-${project[field]}`:typeof project[field] =='number' ?formatNumber(project[field] ):project[field] || "-"}
                           </TableCell>
                         )
                       )}
                       {[["costo_servicio", project.costo_servicio], ["abono", project.abono]].map(
                         ([, value], index) => (
-                          <TableCell key={index} sx={{ whiteSpace: "nowrap" }}>{`$ ${formatNumber(value)}`}</TableCell>
+                          <TableCell key={index} sx={{ whiteSpace: "nowrap",border:" 1px solid #ccc",textAlign: "center" }}>{`$ ${formatNumber(value)}`}</TableCell>
                         )
                       )}
-                      <TableCell sx={{ whiteSpace: "nowrap" }}>{`$ ${formatNumber(totalGastos)}`}</TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap",border:" 1px solid #ccc",textAlign: "center" }}>{`$ ${formatNumber(totalGastos)}`}</TableCell>
                       <TableCell
                         sx={{
                           color: utilidadNeta < 0 ? "#f44336" : "#4caf50",
@@ -446,12 +461,12 @@ const extraFields = useMemo(() => {
                       >
                         {`$ ${formatNumber(utilidadNeta)}`}
                       </TableCell>
-                      <TableCell sx={{ whiteSpace: "nowrap" }}>{`$ ${formatNumber(saldo)}`}</TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap",border:" 1px solid #ccc",textAlign: "center" }}>{`$ ${formatNumber(saldo)}`}</TableCell>
                       <TableCell sx={{ backgroundColor: colorEstadoCuenta(estadoCuenta), color: "white" }}>
                         {estadoCuenta}
                       </TableCell>
                         {[...fixedGastoFields, ...extraFields].map((field) => (
-                        <TableCell key={field} sx={{ whiteSpace: "nowrap" }}>
+                        <TableCell key={field} sx={{ whiteSpace: "nowrap",border:" 1px solid #ccc",textAlign: "center" }}>
                           {gastos[field] ? `$ ${formatNumber(gastos[field])}` : "-"}
                         </TableCell>
                           ))}
