@@ -139,12 +139,12 @@ const GastosProject = () => {
       setState((prev) => ({ ...prev, loading: true, error: null }));
       try {
         const response = await api.get("/projects");
-        const getAllProyectosData=response?.data?.proyectos
-        const getProyectos=getAllProyectosData.map(p=>{
-          if(p.valor_retencion){
-           return {...p,valor_re:(Number(p.valor_retencion)/100)*p.costo_servicio,valor_iva:(0.19)*p.costo_servicio}
+        const getAllProyectosData = response?.data?.proyectos
+        const getProyectos = getAllProyectosData.map(p => {
+          if (p.valor_retencion) {
+            return { ...p, valor_re: (Number(p.valor_retencion) / 100) * p.costo_servicio, valor_iva: (0.19) * p.costo_servicio }
           }
-          return {...p,valor_re:0,valor_iva:0}
+          return { ...p, valor_re: 0, valor_iva: 0 }
         })
 
         if (getAllProyectosData) {
@@ -240,7 +240,7 @@ const GastosProject = () => {
     try {
       setState((prev) => ({ ...prev, loading: true }));
       await api.patch(`/projects/${selectedProject.proyecto_id}/abonar`, {
-       abono: unformatNumber(paymentAmount),
+        abono: unformatNumber(paymentAmount),
       });
 
       const response = await api.get("/projects");
@@ -283,24 +283,24 @@ const GastosProject = () => {
     }
   };
 
-const extraFields = useMemo(() => {
-  const fields = new Set();
-  state.allProjects.forEach((project) => {
-    // Campos adicionales en el nivel principal de gastos
-    Object.keys(getGastos(project)).forEach((key) => {
-      if (!fixedGastoFields.includes(key) && !["gasto_proyecto_id", "proyecto_id", "otros_campos"].includes(key)) {
-        fields.add(key);
-      }
-    });
+  const extraFields = useMemo(() => {
+    const fields = new Set();
+    state.allProjects.forEach((project) => {
+      // Campos adicionales en el nivel principal de gastos
+      Object.keys(getGastos(project)).forEach((key) => {
+        if (!fixedGastoFields.includes(key) && !["gasto_proyecto_id", "proyecto_id", "otros_campos"].includes(key)) {
+          fields.add(key);
+        }
+      });
 
-    // Campos dentro de otros_campos
-    const otrosCampos = project.gastos?.otros_campos || {};
-    Object.keys(otrosCampos).forEach((key) => {
-      fields.add(key);
+      // Campos dentro de otros_campos
+      const otrosCampos = project.gastos?.otros_campos || {};
+      Object.keys(otrosCampos).forEach((key) => {
+        fields.add(key);
+      });
     });
-  });
-  return Array.from(fields);
-}, [state.allProjects]);
+    return Array.from(fields);
+  }, [state.allProjects]);
   return (
     <>
       <TableContainer component={Paper} sx={{ m: 3, p: 2, width: "90vw" }}>
@@ -360,32 +360,32 @@ const extraFields = useMemo(() => {
         ) : (
           <>
             <Table sx={{ minWidth: "800px", border: "1px solid #ccc" }}>
-<TableHead>
-  <TableRow>
-    {tableRowInputs.map(({ id, label, sortable }) => (
-      <TableCell key={id} sx={{ whiteSpace: "nowrap" }}>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          {sortable ? (
-            <TableSortLabel
-              active={state.sortConfig.field === id}
-              direction={state.sortConfig.direction}
-              onClick={() => handleSort(id)}
-            >
-              {label}
-            </TableSortLabel>
-          ) : (
-            label
-          )}
-        </div>
-      </TableCell>
-    ))}
-    {[...fixedGastoFields, ...extraFields].map((field) => (
-      <TableCell key={field} sx={{ whiteSpace: "nowrap" }}>
-        {field} {/* Solo muestra el nombre del campo, no accede a gastos */}
-      </TableCell>
-    ))}
-  </TableRow>
-</TableHead>
+              <TableHead>
+                <TableRow>
+                  {tableRowInputs.map(({ id, label, sortable }) => (
+                    <TableCell key={id} sx={{ whiteSpace: "nowrap" }}>
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        {sortable ? (
+                          <TableSortLabel
+                            active={state.sortConfig.field === id}
+                            direction={state.sortConfig.direction}
+                            onClick={() => handleSort(id)}
+                          >
+                            {label}
+                          </TableSortLabel>
+                        ) : (
+                          label
+                        )}
+                      </div>
+                    </TableCell>
+                  ))}
+                  {[...fixedGastoFields, ...extraFields].map((field) => (
+                    <TableCell key={field} sx={{ whiteSpace: "nowrap" }}>
+                      {field} {/* Solo muestra el nombre del campo, no accede a gastos */}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
               <TableBody>
                 {paginatedProjects.map((project) => {
                   const { totalGastos, saldo, estadoCuenta, utilidadNeta } = calculateValues(project);
@@ -433,21 +433,21 @@ const extraFields = useMemo(() => {
 
                       {["solicitante", "nombre_proyecto", "factura"].map(
                         (field, index) => (
-                          <TableCell key={index} sx={{ whiteSpace: "nowrap", border:" 1px solid #ccc",textAlign: "center"}}>
-                             {
-                              field=="factura" && project[field] ?
-                              `SYCO-${project[field]}`:typeof project[field] =='number' ?
-                              formatNumber(project[field] ):project[field] || "-"
+                          <TableCell key={index} sx={{ whiteSpace: "nowrap", border: " 1px solid #ccc", textAlign: "center" }}>
+                            {
+                              field == "factura" && project[field] ?
+                                `SYCO-${project[field]}` : typeof project[field] == 'number' ?
+                                  formatNumber(project[field]) : project[field] || "-"
                             }
                           </TableCell>
                         )
                       )}
 
-                      {["valor_retencion","valor_iva","valor_re"].map(
+                      {["valor_retencion", "valor_iva", "valor_re"].map(
                         (field, index) => (
-                          <TableCell key={index} sx={{ whiteSpace: "nowrap", border:" 1px solid #ccc",textAlign: "center"}}>
-                             {
-                                Number(project.valor_retencion )>0?formatNumber(project[field] ): "-"
+                          <TableCell key={index} sx={{ whiteSpace: "nowrap", border: " 1px solid #ccc", textAlign: "center" }}>
+                            {
+                              Number(project.valor_retencion) > 0 ? formatNumber(project[field]) : "-"
                             }
                           </TableCell>
                         )
@@ -455,10 +455,10 @@ const extraFields = useMemo(() => {
 
                       {["obrero", "metodo_de_pago"].map(
                         (field, index) => (
-                          <TableCell key={index} sx={{ whiteSpace: "nowrap", border:" 1px solid #ccc",textAlign: "center"}}>
-                           
-                             {
-                              typeof project[field] =='number' ?formatNumber(project[field] ):project[field] || "-"
+                          <TableCell key={index} sx={{ whiteSpace: "nowrap", border: " 1px solid #ccc", textAlign: "center" }}>
+
+                            {
+                              typeof project[field] == 'number' ? formatNumber(project[field]) : project[field] || "-"
                             }
                           </TableCell>
                         )
@@ -466,10 +466,10 @@ const extraFields = useMemo(() => {
 
                       {[["costo_servicio", project.costo_servicio], ["abono", project.abono]].map(
                         ([, value], index) => (
-                          <TableCell key={index} sx={{ whiteSpace: "nowrap",border:" 1px solid #ccc",textAlign: "center" }}>{`$ ${formatNumber(value)}`}</TableCell>
+                          <TableCell key={index} sx={{ whiteSpace: "nowrap", border: " 1px solid #ccc", textAlign: "center" }}>{`$ ${formatNumber(value)}`}</TableCell>
                         )
                       )}
-                      <TableCell sx={{ whiteSpace: "nowrap",border:" 1px solid #ccc",textAlign: "center" }}>{`$ ${formatNumber(totalGastos)}`}</TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap", border: " 1px solid #ccc", textAlign: "center" }}>{`$ ${formatNumber(totalGastos)}`}</TableCell>
                       <TableCell
                         sx={{
                           color: utilidadNeta < 0 ? "#f44336" : "#4caf50",
@@ -479,16 +479,16 @@ const extraFields = useMemo(() => {
                       >
                         {`$ ${formatNumber(utilidadNeta)}`}
                       </TableCell>
-                      <TableCell sx={{ whiteSpace: "nowrap",border:" 1px solid #ccc",textAlign: "center" }}>{`$ ${formatNumber(saldo)}`}</TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap", border: " 1px solid #ccc", textAlign: "center" }}>{`$ ${formatNumber(saldo)}`}</TableCell>
                       <TableCell sx={{ backgroundColor: colorEstadoCuenta(estadoCuenta), color: "white" }}>
                         {estadoCuenta}
                       </TableCell>
-                        {[...fixedGastoFields, ...extraFields].map((field) => (
-                        <TableCell key={field} sx={{ whiteSpace: "nowrap",border:" 1px solid #ccc",textAlign: "center" }}>
+                      {[...fixedGastoFields, ...extraFields].map((field) => (
+                        <TableCell key={field} sx={{ whiteSpace: "nowrap", border: " 1px solid #ccc", textAlign: "center" }}>
                           {gastos[field] ? `$ ${formatNumber(gastos[field])}` : "-"}
                         </TableCell>
-                          ))}
-                      </TableRow>
+                      ))}
+                    </TableRow>
                   );
                 })}
               </TableBody>
@@ -535,7 +535,7 @@ const extraFields = useMemo(() => {
                     : ""
                 }
               />
-              
+
             </>
           )}
         </DialogContent>

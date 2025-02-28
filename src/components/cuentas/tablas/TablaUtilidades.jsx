@@ -25,10 +25,10 @@ const formatDate = (dateStr) => {
   if (!dateStr) return "";
   const date = new Date(dateStr);
   if (isNaN(date)) return "Fecha inválida"; // Manejar fechas inválidas
-  return date.toLocaleDateString("es-ES", { 
-    month: "long", 
-    year: "numeric", 
-    timeZone: "UTC" 
+  return date.toLocaleDateString("es-ES", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC"
   });
 };
 
@@ -51,66 +51,66 @@ const TablaResumen = () => {
   });
   const rowsPerPage = 5;
 
-const processData = (gastosEmpresa, proyectos) => {
-  const monthlyData = {};
+  const processData = (gastosEmpresa, proyectos) => {
+    const monthlyData = {};
 
-  // Procesar gastos de empresa
-  gastosEmpresa.forEach((gasto) => {
-    const mes = formatDate(gasto.mes);
-    monthlyData[mes] = monthlyData[mes] || {
-      mes,
-      GastosEmpresa: 0,
-      TotalRetencion:0,
-      TotalIva:0,
-      GastosProyectos: 0,
-      CostoServicio: 0,
-      Ingresos: 0,
-    };
-    monthlyData[mes].GastosEmpresa += 
-      Number(gasto.salarios) +
-      Number(gasto.luz) +
-      Number(gasto.agua) +
-      Number(gasto.arriendo) +
-      Number(gasto.internet) +
-      Number(gasto.salud) +
-      sumOtrosCampos(gasto.otros_campos);
-  });
+    // Procesar gastos de empresa
+    gastosEmpresa.forEach((gasto) => {
+      const mes = formatDate(gasto.mes);
+      monthlyData[mes] = monthlyData[mes] || {
+        mes,
+        GastosEmpresa: 0,
+        TotalRetencion: 0,
+        TotalIva: 0,
+        GastosProyectos: 0,
+        CostoServicio: 0,
+        Ingresos: 0,
+      };
+      monthlyData[mes].GastosEmpresa +=
+        Number(gasto.salarios) +
+        Number(gasto.luz) +
+        Number(gasto.agua) +
+        Number(gasto.arriendo) +
+        Number(gasto.internet) +
+        Number(gasto.salud) +
+        sumOtrosCampos(gasto.otros_campos);
+    });
 
-  // Procesar proyectos y sus gastos (corregido)
-  proyectos.forEach((proyecto) => {
-    const mes = formatDate(proyecto.fecha);
-    monthlyData[mes] = monthlyData[mes] || {
-      mes,
-      GastosEmpresa: 0,
-      TotalRetencion:0,
-      TotalIva:0,
-      GastosProyectos: 0,
-      CostoServicio: 0,
-      Ingresos: 0,
-    };
+    // Procesar proyectos y sus gastos (corregido)
+    proyectos.forEach((proyecto) => {
+      const mes = formatDate(proyecto.fecha);
+      monthlyData[mes] = monthlyData[mes] || {
+        mes,
+        GastosEmpresa: 0,
+        TotalRetencion: 0,
+        TotalIva: 0,
+        GastosProyectos: 0,
+        CostoServicio: 0,
+        Ingresos: 0,
+      };
 
-    monthlyData[mes].Ingresos += Number(proyecto.costo_servicio);
-    monthlyData[mes].CostoServicio += Number(proyecto.costo_servicio);
-    monthlyData[mes].TotalRetencion += Number(proyecto.costo_servicio) *( Number(proyecto.valor_retencion)/100 );
-    monthlyData[mes].TotalIva += Number(proyecto.costo_servicio) *0.19;
+      monthlyData[mes].Ingresos += Number(proyecto.costo_servicio);
+      monthlyData[mes].CostoServicio += Number(proyecto.costo_servicio);
+      monthlyData[mes].TotalRetencion += Number(proyecto.costo_servicio) * (Number(proyecto.valor_retencion) / 100);
+      monthlyData[mes].TotalIva += Number(proyecto.costo_servicio) * 0.19;
 
-    // Procesar el objeto "gastos" directamente
-    const gasto = proyecto.gastos;
-    const gastoProyecto = [
-      'camioneta', 'campo', 'obreros', 'comidas', 
-      'otros', 'peajes', 'combustible', 'hospedaje'
-    ].reduce((acc, key) => acc + (Number(gasto[key]) || 0), 0);
-    
-    monthlyData[mes].GastosProyectos += gastoProyecto + sumOtrosCampos(gasto.otros_campos);
-  });
+      // Procesar el objeto "gastos" directamente
+      const gasto = proyecto.gastos;
+      const gastoProyecto = [
+        'camioneta', 'campo', 'obreros', 'comidas',
+        'otros', 'peajes', 'combustible', 'hospedaje'
+      ].reduce((acc, key) => acc + (Number(gasto[key]) || 0), 0);
 
-  //console.log(proyectos)
-  return Object.values(monthlyData).map((item) => ({
-    ...item,
-    TotalGastos: item.GastosProyectos + item.GastosEmpresa,
-    
-  }));
-};
+      monthlyData[mes].GastosProyectos += gastoProyecto + sumOtrosCampos(gasto.otros_campos);
+    });
+
+    //console.log(proyectos)
+    return Object.values(monthlyData).map((item) => ({
+      ...item,
+      TotalGastos: item.GastosProyectos + item.GastosEmpresa,
+
+    }));
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -130,7 +130,7 @@ const processData = (gastosEmpresa, proyectos) => {
         setResumen(processedData);
       } catch (err) {
         setError("Error al cargar los datos");
-        console.error(err); 
+        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -155,7 +155,7 @@ const processData = (gastosEmpresa, proyectos) => {
     }
     return 0;
   });
-  
+
 
   const paginatedData = sortedData.slice(
     (currentPage - 1) * rowsPerPage,
@@ -211,16 +211,16 @@ const processData = (gastosEmpresa, proyectos) => {
               <TableCell>{`$ ${formatNumber(item.GastosProyectos)}`}</TableCell>
               <TableCell>{`$ ${formatNumber(item.GastosEmpresa)}`}</TableCell>
               <TableCell>{`$ ${formatNumber(item.TotalGastos)}`}</TableCell>
-               <TableCell>{`$ ${formatNumber(item.TotalRetencion)}`}</TableCell>
-               <TableCell>{`$ ${formatNumber(item.TotalIva)}`}</TableCell>
+              <TableCell>{`$ ${formatNumber(item.TotalRetencion)}`}</TableCell>
+              <TableCell>{`$ ${formatNumber(item.TotalIva)}`}</TableCell>
               <TableCell>{`$ ${formatNumber(item.Ingresos)}`}</TableCell>
               <TableCell
                 sx={{
-                  color: item.Ingresos-item.TotalGastos < 0 ? "error.main" : "success.main",
+                  color: item.Ingresos - item.TotalGastos < 0 ? "error.main" : "success.main",
                   fontWeight: 600,
                 }}
               >
-                {`$ ${formatNumber(item.Ingresos-item.TotalGastos)}`}
+                {`$ ${formatNumber(item.Ingresos - item.TotalGastos)}`}
               </TableCell>
             </TableRow>
           ))}

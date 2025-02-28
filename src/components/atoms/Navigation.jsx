@@ -28,7 +28,7 @@ const pages = {
   ],
 };
 
-const settings = ["perfil", ];
+const settings = ["perfil",];
 
 function ResponsiveAppBar() {
   const navigate = useNavigate();
@@ -54,14 +54,14 @@ function ResponsiveAppBar() {
     setCurrentSubMenu(null);
     setDesktopSubMenuAnchor({ create: null, tables: null });
   };
-      const logoutUser = async () => {
-      try {
-        await api.post("/auth/logout");
-      } finally {
-        localStorage.removeItem("userData");
-        navigate("/login");
-      }
-    };
+  const logoutUser = async () => {
+    try {
+      await api.post("/auth/logout");
+    } finally {
+      localStorage.removeItem("userData");
+      navigate("/login");
+    }
+  };
 
 
 
@@ -98,7 +98,7 @@ function ResponsiveAppBar() {
             >
               <MenuIcon />
             </IconButton>
-            
+
             {/* Menú principal móvil */}
             <Menu
               anchorEl={anchorElNav}
@@ -108,7 +108,7 @@ function ResponsiveAppBar() {
               transformOrigin={{ vertical: 'top', horizontal: 'left' }}
             >
               {['Crear', 'Tablas'].map((label, index) => (
-                <MenuItem 
+                <MenuItem
                   key={label}
                   onClick={handleOpenMobileSubMenu(index === 0 ? 'create' : 'tables')}
                 >
@@ -126,15 +126,15 @@ function ResponsiveAppBar() {
                 onClose={handleCloseAll}
                 anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                sx={{ 
-                  '& .MuiPaper-root': { 
+                sx={{
+                  '& .MuiPaper-root': {
                     maxHeight: '80vh',
                     ml: 1,
                   }
                 }}
               >
                 {pages[key].map((page) => (
-                  <MenuItem 
+                  <MenuItem
                     key={page.link}
                     component={Link}
                     to={`/${page.link}`}
@@ -166,12 +166,12 @@ function ResponsiveAppBar() {
                     PaperProps={{
                       sx: {
                         maxWidth: '300px',
-                        
+
                       }
                     }}
                   >
                     {pages[menuKey].map((page) => (
-                      <MenuItem 
+                      <MenuItem
                         key={page.link}
                         component={Link}
                         to={`/${page.link}`}
@@ -203,10 +203,10 @@ function ResponsiveAppBar() {
                   {setting}
                 </MenuItem>
               ))}
-               <MenuItem onClick={logoutUser}>
-                  cerrar sesión
-                </MenuItem>
-              
+              <MenuItem onClick={logoutUser}>
+                cerrar sesión
+              </MenuItem>
+
             </Menu>
           </Box>
         </Toolbar>

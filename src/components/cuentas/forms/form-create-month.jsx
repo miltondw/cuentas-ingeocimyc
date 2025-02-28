@@ -36,9 +36,9 @@ const FormCreateMonth = () => {
         // Convertir "otros_campos" (objeto) a "extras" (array para renderización)
         const extras = data.otros_campos
           ? Object.entries(data.otros_campos).map(([field, value]) => ({
-              field,
-              value: value.toString(),
-            }))
+            field,
+            value: value.toString(),
+          }))
           : [];
 
         const formattedData = {

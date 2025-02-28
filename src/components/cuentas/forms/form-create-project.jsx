@@ -39,7 +39,7 @@ const defaultProject = {
   metodo_de_pago: "",
   valor_retencion: 0,
   retencionIva: false,
-  gastos: defaultGasto, 
+  gastos: defaultGasto,
 };
 
 // Formatear y desformatear números
@@ -64,9 +64,9 @@ const FormCreateProject = () => {
             const gastoFromApi = data.gastos || defaultGasto; // Asegúrate de que gastos no sea undefined
             const extras = gastoFromApi.otros_campos
               ? Object.entries(gastoFromApi.otros_campos).map(([key, value]) => ({
-                  field: key,
-                  value: value.toString(),
-                }))
+                field: key,
+                value: value.toString(),
+              }))
               : [];
 
             setProject({
@@ -258,18 +258,18 @@ const FormCreateProject = () => {
             />
           </Grid2>
           {project.retencionIva && (
-            ["factura","valor_retencion"].map((field) => (
-            <Grid2 item xs={12} sm={6} key={field}>
-              <TextField
-                label={field.replace(/_/g, " ").toUpperCase()}
-                name={field}
-                value={project[field] || ""}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid2>
-          ))
-            
+            ["factura", "valor_retencion"].map((field) => (
+              <Grid2 item xs={12} sm={6} key={field}>
+                <TextField
+                  label={field.replace(/_/g, " ").toUpperCase()}
+                  name={field}
+                  value={project[field] || ""}
+                  onChange={handleChange}
+                  fullWidth
+                />
+              </Grid2>
+            ))
+
           )}
         </Grid2>
 

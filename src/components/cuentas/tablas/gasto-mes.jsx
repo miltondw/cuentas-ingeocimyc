@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -71,12 +71,7 @@ const TablaGastosEmpresa = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedDeleteId, setSelectedDeleteId] = useState(null);
   const rowsPerPage = 10;
-
-  useEffect(() => {
-    fetchGastos();
-  }, [currentPage]);
-
-  const fetchGastos = async () => {
+  const fetchGastos = useCallback(async () => {
     try {
       const response = await api.get("/gastos-mes", {
         params: { page: currentPage, limit: rowsPerPage },
@@ -87,7 +82,13 @@ const TablaGastosEmpresa = () => {
     } catch (error) {
       console.error("Error al obtener los gastos:", error);
     }
-  };
+  }, [currentPage, rowsPerPage]);
+
+  useEffect(() => {
+    fetchGastos();
+  }, [fetchGastos]);
+
+
 
   const handleDelete = async () => {
     try {
