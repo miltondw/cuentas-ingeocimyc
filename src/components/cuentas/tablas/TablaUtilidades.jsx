@@ -220,7 +220,7 @@ const TablaResumen = () => {
                   fontWeight: 600,
                 }}
               >
-                {`$ ${formatNumber(item.Ingresos - item.TotalGastos)}`}
+                {`$ ${formatNumber(item.Ingresos - item.TotalGastos - item.TotalRetencion)}`}
               </TableCell>
             </TableRow>
           ))}

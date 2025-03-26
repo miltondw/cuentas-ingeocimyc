@@ -24,4 +24,6 @@ dist-ssr
 *.sln
 *.sw?
 certs
-.todo
+.env
+.env.local
+.env.development.local

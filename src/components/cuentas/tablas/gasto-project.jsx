@@ -22,7 +22,7 @@ import {
   TableSortLabel,
   Tooltip,
   MenuItem,
-  Grid,
+  Grid2,
 } from "@mui/material";
 import { Link } from "react-router-dom";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -95,11 +95,12 @@ const getGastos = (project) => {
 const calculateValues = (project) => {
   const gastos = getGastos(project);
   const costo = parseFloat(project.costo_servicio) || 0;
-  const abono = unformatNumber(project.abono) || 0;
+  const abono = Number(unformatNumber(project.abono)) || 0;
   const totalGastos = Object.values(gastos).reduce((sum, value) => sum + value, 0);
   const saldo = Math.max(costo - abono, 0);
   const estadoCuenta = abono === 0 ? "Pendiente" : abono >= costo ? "Pagado" : "Abonado";
-  const utilidadNeta = costo - totalGastos;
+  const re = (Number(project.valor_retencion) / 100) * project.costo_servicio;
+  const utilidadNeta = costo - totalGastos - re;
 
   return { totalGastos, saldo, estadoCuenta, utilidadNeta };
 };
@@ -239,6 +240,7 @@ const GastosProject = () => {
 
     try {
       setState((prev) => ({ ...prev, loading: true }));
+      console.log(paymentAmount, "paymentAmount")
       await api.patch(`/projects/${selectedProject.proyecto_id}/abonar`, {
         abono: unformatNumber(paymentAmount),
       });
@@ -314,9 +316,9 @@ const GastosProject = () => {
           </Alert>
         )}
 
-        <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid2 container spacing={2} sx={{ mb: 3 }}>
           {Object.entries(state.filters).map(([key, value]) => (
-            <Grid item key={key} xs={12} sm={6} md={3}>
+            <Grid2 item key={key} xs={12} sm={6} md={3}>
               {key === "estado_cuenta" ? (
                 <TextField
                   select
@@ -346,14 +348,14 @@ const GastosProject = () => {
                   slotProps={{ inputLabel: { shrink: true } }}
                 />
               )}
-            </Grid>
+            </Grid2>
           ))}
-          <Grid item xs={12}>
+          <Grid2 item xs={12}>
             <Button onClick={handleClearFilters} variant="outlined" color="error" fullWidth>
               Limpiar Filtros
             </Button>
-          </Grid>
-        </Grid>
+          </Grid2>
+        </Grid2>
 
         {state.loading ? (
           <CircularProgress sx={{ display: "block", mx: "auto", my: 4 }} />
