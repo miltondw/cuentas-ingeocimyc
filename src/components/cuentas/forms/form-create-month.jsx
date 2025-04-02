@@ -16,7 +16,7 @@ const defaultData = {
   extras: [], // Array para renderización en el formulario
 };
 
-const formatNumber = (value) => (value !== "" ? Number(value).toLocaleString() : "");
+const formatNumber = (value) => (value === "" || isNaN(value) ? "" : Number(value).toLocaleString("en-US"));
 const parseNumber = (value) => value.replace(/,/g, "");
 
 const FormCreateMonth = () => {
