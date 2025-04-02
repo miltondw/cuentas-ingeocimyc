@@ -8,6 +8,7 @@ import FormCreateMonth from "./components/cuentas/forms/form-create-month";
 import FormCreateProject from "./components/cuentas/forms/form-create-project";
 import TablaUtilidades from "./components/cuentas/tablas/TablaUtilidades";
 import PrivateRoute from "./api/PrivateRoute";
+import PerfilesDeSuelo from "./components/lab/components/PerfilDeSuelos";
 
 function App() {
   return (
@@ -15,6 +16,12 @@ function App() {
       <Navigation />
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route
+          path="/perfil"
+          element={
+            <PerfilesDeSuelo />
+          }
+        />
         {/* Rutas para creación y actualización de proyectos */}
         <Route
           path="/"
