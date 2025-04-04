@@ -141,7 +141,7 @@ const FormCreateMonth = () => {
               type={key === "mes" ? "date" : "text"}
               value={key !== "mes" ? formatNumber(formData[key]) : formData[key]}
               onChange={handleChange}
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
               fullWidth
             />
           ))}

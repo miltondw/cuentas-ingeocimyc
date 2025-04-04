@@ -160,7 +160,7 @@ const TablaGastosEmpresa = () => {
             setSelectedDate(e.target.value);
             setCurrentPage(1);
           }}
-          InputLabelProps={{ shrink: true }}
+          slotProps={{ inputLabel: { shrink: true } }}
           margin="normal"
           sx={{ width: 300 }}
         />

@@ -17,10 +17,8 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route
-          path="/perfil"
-          element={
-            <PerfilesDeSuelo />
-          }
+          path="/proyecto/:projectId/perfil/:profileId"
+          element={<PerfilesDeSuelo />}
         />
         {/* Rutas para creación y actualización de proyectos */}
         <Route

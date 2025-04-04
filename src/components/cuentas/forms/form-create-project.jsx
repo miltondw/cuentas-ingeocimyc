@@ -205,7 +205,7 @@ const FormCreateProject = () => {
               value={project.fecha || ""} // Asegúrate de que no sea null
               onChange={handleChange}
               fullWidth
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
             />
           </Grid2>
           {["solicitante", "nombre_proyecto", "obrero"].map((field) => (

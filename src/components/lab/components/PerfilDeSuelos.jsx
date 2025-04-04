@@ -1,283 +1,430 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-    Box,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
-    Typography,
     TextField,
     Button,
+    Container,
+    Typography,
+    Box,
+    Paper,
+    Accordion,
+    AccordionSummary,
+    AccordionDetails,
+    IconButton,
     useMediaQuery,
-} from '@mui/material';
-import PropTypes from 'prop-types';
+    Divider
+} from "@mui/material";
+import { useNavigate, useParams } from "react-router-dom";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import api from "../../../api";
 
-// Datos de ejemplo (puedes pasarlos como props)
-const profileData = {
-    project: "CONSTRUCCIÓN DE EDIFICACIÓN DE 5 NIVELES EN EL SECTOR DEL BARRIO LA TORCOROMA, OCAÑA NORTE DE SANTANDER",
-    location: "BARRIO LA TORCOROMA, OCAÑA, NORTE DE SANTANDER",
-    date: "MARZO DE 2022",
-    waterLevel: "NO SE ENCONTRÓ",
-    samples: 2,
-};
+const DEPTH_INCREMENT = 0.45;
+const DEPTH_LEVELS = 14;
 
-// Generar profundidades de 0.45 a 6.30 con incrementos de 0.45
-const depths = Array.from({ length: 14 }, (_, i) => (i + 1) * 0.45);
-
-const PerfilesDeSuelo = ({ data = profileData }) => {
-    const isMobile = useMediaQuery('(max-width:600px)'); // Detectar si es pantalla móvil
-
-    // Estados
-    const [waterLevel, setWaterLevel] = useState(data.waterLevel);
-    const [date, setDate] = useState(data.date);
-    const [soundingNumber, setSoundingNumber] = useState("1");
-    const [muestrasNumber, setMuestrasNumber] = useState(data.samples);
-    const [blowsData, setBlowsData] = useState(
-        depths.map((depth) => ({
-            depth,
-            blows6: null,
-            blows12: null,
-            blows18: null,
-            n: null,
-            observation: "",
+const FormCreateProfile = () => {
+    const [formData, setFormData] = useState({
+        sounding_number: "1",
+        water_level: "",
+        profile_date: new Date().toISOString().split('T')[0],
+        samples_number: 0,
+        blows_data: Array.from({ length: DEPTH_LEVELS }, (_, i) => ({
+            depth: ((i + 1) * DEPTH_INCREMENT).toFixed(2),
+            blows6: "",
+            blows12: "",
+            blows18: "",
+            n: 0,
+            observation: ""
         }))
-    );
+    });
 
-    // Manejar cambios en los golpes
-    const handleBlowsChange = (index, field, value) => {
-        const newBlowsData = [...blowsData];
-        newBlowsData[index][field] = parseInt(value) || 0;
-        newBlowsData[index].n = newBlowsData[index].blows12 + newBlowsData[index].blows18;
-        setBlowsData(newBlowsData);
-    };
+    const [expandedDepth, setExpandedDepth] = useState(null);
+    const navigate = useNavigate();
+    const { projectId, profileId } = useParams(); // Asegúrate que estos nombres coincidan con tus rutas
+    const isMobile = useMediaQuery('(max-width:768px)');
 
-    // Manejar cambios en las observaciones
-    const handleTextChange = (index, field, value) => {
-        const newBlowsData = [...blowsData];
-        newBlowsData[index][field] = value;
-        setBlowsData(newBlowsData);
-    };
+    // Cargar datos si estamos editando
+    useEffect(() => {
+        if (!profileId) return;
 
-    // Guardar los datos
-    const handleSave = () => {
-        const savedData = {
-            soundingNumber,
-            waterLevel,
-            date,
-            samples: muestrasNumber,
-            blowsData,
+        const fetchProfile = async () => {
+            try {
+                const res = await api.get(`/projects/${projectId}/profiles/${profileId}`);
+                const profile = res.data.perfil;
+
+                setFormData({
+                    sounding_number: profile.sounding_number,
+                    water_level: profile.water_level,
+                    profile_date: profile.profile_date.split('T')[0],
+                    samples_number: profile.samples_number,
+                    blows_data: profile.blows_data.map(blow => ({
+                        ...blow,
+                        blows6: blow.blows6.toString(),
+                        blows12: blow.blows12.toString(),
+                        blows18: blow.blows18.toString(),
+                        n: blow.n.toString()
+                    }))
+                });
+            } catch (error) {
+                console.error("Error fetching profile:", error);
+            }
         };
-        console.log("Datos guardados:", savedData);
-        alert("Datos guardados. Revisa la consola para ver los datos.");
+
+        fetchProfile();
+    }, [projectId, profileId]);
+
+    // Resto del código sigue igual...
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
     };
 
-    return (
-        <Box sx={{ padding: 2, maxWidth: 900, margin: 'auto' }}>
-            {/* Título */}
-            <Typography variant={isMobile ? "h4" : "h2"} align="center" gutterBottom>
-                PERFIL DE SUELOS
-            </Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" sx={{ mr: 1 }}>
-                    SONDEO N°
+    const handleBlowChange = (index, field, value) => {
+        setFormData(prev => {
+            const newBlowsData = [...prev.blows_data];
+            const numValue = value === "" ? "" : parseInt(value) || 0;
+
+            newBlowsData[index] = {
+                ...newBlowsData[index],
+                [field]: numValue
+            };
+
+            if (field === 'blows12' || field === 'blows18') {
+                const blows12 = field === 'blows12' ? numValue : newBlowsData[index].blows12;
+                const blows18 = field === 'blows18' ? numValue : newBlowsData[index].blows18;
+
+                if (blows12 !== "" && blows18 !== "") {
+                    newBlowsData[index].n = (parseInt(blows12) || 0) + (parseInt(blows18) || 0);
+                }
+            }
+
+            return {
+                ...prev,
+                blows_data: newBlowsData
+            };
+        });
+    };
+
+    const handleAccordionChange = (depth) => (_, isExpanded) => {
+        setExpandedDepth(isExpanded ? depth : null);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = {
+                ...formData,
+                blows_data: formData.blows_data.map(blow => ({
+                    depth: parseFloat(blow.depth),
+                    blows6: parseInt(blow.blows6) || 0,
+                    blows12: parseInt(blow.blows12) || 0,
+                    blows18: parseInt(blow.blows18) || 0,
+                    n: parseInt(blow.n) || 0,
+                    observation: blow.observation
+                }))
+            };
+
+            const endpoint = profileId
+                ? `/projects/${projectId}/profiles/${profileId}`
+                : `/projects/${projectId}/profiles`;
+
+            const method = profileId ? 'put' : 'post';
+
+            await api[method](endpoint, payload);
+            navigate(`/projects/${projectId}/profiles`);
+        } catch (error) {
+            console.error("Error saving profile:", error);
+            alert(error.response?.data?.message || "Error al guardar el perfil");
+        }
+    };
+
+    // Vista móvil optimizada para campo
+    if (isMobile) {
+        return (
+            <Container sx={{ py: 2, px: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <IconButton onClick={() => navigate(`/projects/${projectId}/profiles`)}>
+                        <ArrowBackIcon />
+                    </IconButton>
+                    <Typography variant="h6" sx={{ ml: 1 }}>
+                        {profileId ? "Editar" : "Nuevo"} Perfil
+                    </Typography>
+                </Box>
+
+                <Paper component="form" onSubmit={handleSubmit} sx={{ p: 2, mb: 2 }}>
+                    <Typography variant="subtitle1" gutterBottom>Información Básica</Typography>
+
+                    <TextField
+                        label="N° Sondeo"
+                        name="sounding_number"
+                        value={formData.sounding_number}
+                        onChange={handleChange}
+                        fullWidth
+                        margin="normal"
+                        size="small"
+                        required
+                    />
+
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        <TextField
+                            label="Nivel Freático"
+                            name="water_level"
+                            value={formData.water_level}
+                            onChange={handleChange}
+                            fullWidth
+                            margin="normal"
+                            size="small"
+                        />
+                        <TextField
+                            label="Muestras"
+                            name="samples_number"
+                            type="number"
+                            value={formData.samples_number}
+                            onChange={handleChange}
+                            fullWidth
+                            margin="normal"
+                            size="small"
+                        />
+                    </Box>
+
+                    <TextField
+                        label="Fecha"
+                        name="profile_date"
+                        type="date"
+                        value={formData.profile_date}
+                        onChange={handleChange}
+                        fullWidth
+                        margin="normal"
+                        size="small"
+                        InputLabelProps={{ shrink: true }}
+                        required
+                    />
+                </Paper>
+
+                <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+                    Datos de Golpes por Profundidad
                 </Typography>
-                <TextField
-                    type="number"
-                    value={soundingNumber}
-                    onChange={(e) => setSoundingNumber(e.target.value)}
-                    size="small"
-                    sx={{ width: 60 }}
-                />
-            </Box>
 
-            {/* Información superior */}
-            <TableContainer component={Paper} sx={{ marginBottom: 2 }}>
-                <Table size="small">
-                    <TableBody>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold' }}>PROYECTO</TableCell>
-                            <TableCell>{data.project}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold' }}>UBICACIÓN</TableCell>
-                            <TableCell>{data.location}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold' }}>FECHA</TableCell>
-                            <TableCell>
-                                <TextField
-                                    type="date"
-                                    value={date}
-                                    onChange={(e) => setDate(e.target.value)}
-                                    size="small"
-                                    fullWidth
-                                />
-                            </TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold' }}>NIVEL FREÁTICO</TableCell>
-                            <TableCell>
-                                <TextField
-                                    value={waterLevel}
-                                    onChange={(e) => setWaterLevel(e.target.value)}
-                                    size="small"
-                                    fullWidth
-                                />
-                            </TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold' }}>NÚMERO DE MUESTRAS</TableCell>
-                            <TableCell>
-                                <TextField
-                                    type="number"
-                                    value={muestrasNumber}
-                                    onChange={(e) => setMuestrasNumber(e.target.value)}
-                                    size="small"
-                                    sx={{ width: 60 }}
-                                />
-                            </TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            {/* Tabla de perfil de suelos */}
-            {isMobile ? (
-                // Vista móvil: bloques verticales
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {blowsData.map((row, index) => (
-                        <Paper key={index} sx={{ padding: 2 }}>
-                            <Typography variant="subtitle1" gutterBottom>
-                                Profundidad: {row.depth.toFixed(2)} m
+                {formData.blows_data.map((row, index) => (
+                    <Accordion
+                        key={index}
+                        expanded={expandedDepth === row.depth}
+                        onChange={handleAccordionChange(row.depth)}
+                        sx={{ mb: 1 }}
+                    >
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <Typography sx={{ width: '33%', flexShrink: 0 }}>
+                                {row.depth} m
                             </Typography>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <Typography sx={{ color: 'text.secondary' }}>
+                                N: {row.n} | 6": {row.blows6} | 12": {row.blows12} | 18": {row.blows18}
+                            </Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                    <TextField
+                                        label='Golpes 6"'
+                                        type="number"
+                                        value={row.blows6}
+                                        onChange={(e) => handleBlowChange(index, 'blows6', e.target.value)}
+                                        fullWidth
+                                        size="small"
+                                    />
+                                    <TextField
+                                        label='Golpes 12"'
+                                        type="number"
+                                        value={row.blows12}
+                                        onChange={(e) => handleBlowChange(index, 'blows12', e.target.value)}
+                                        fullWidth
+                                        size="small"
+                                    />
+                                    <TextField
+                                        label='Golpes 18"'
+                                        type="number"
+                                        value={row.blows18}
+                                        onChange={(e) => handleBlowChange(index, 'blows18', e.target.value)}
+                                        fullWidth
+                                        size="small"
+                                    />
+                                </Box>
                                 <TextField
-                                    label="Golpes 6\"
+                                    label="N (automático)"
                                     type="number"
-                                    value={row.blows6}
-                                    onChange={(e) => handleBlowsChange(index, 'blows6', e.target.value)}
+                                    value={row.n}
+                                    disabled
+                                    fullWidth
                                     size="small"
                                 />
                                 <TextField
-                                    label="Golpes 12\"
-                                    type="number"
-                                    value={row.blows12}
-                                    onChange={(e) => handleBlowsChange(index, 'blows12', e.target.value)}
-                                    size="small"
-                                />
-                                <TextField
-                                    label="Golpes 18\"
-                                    type="number"
-                                    value={row.blows18}
-                                    onChange={(e) => handleBlowsChange(index, 'blows18', e.target.value)}
-                                    size="small"
-                                />
-                                <Typography variant="body1">N: {row.n || 0}</Typography>
-                                <TextField
-                                    label="Descripción y Observaciones"
+                                    label="Observaciones"
                                     value={row.observation}
-                                    onChange={(e) => handleTextChange(index, 'observation', e.target.value)}
+                                    onChange={(e) => handleBlowChange(index, 'observation', e.target.value)}
+                                    fullWidth
                                     size="small"
                                     multiline
                                     rows={2}
                                 />
                             </Box>
-                        </Paper>
-                    ))}
+                        </AccordionDetails>
+                    </Accordion>
+                ))}
+
+                <Box sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, p: 2, bgcolor: 'background.paper', boxShadow: 3 }}>
+                    <Button
+                        type="submit"
+                        variant="contained"
+                        color="primary"
+                        fullWidth
+                        onClick={handleSubmit}
+                        size="large"
+                    >
+                        {profileId ? "Actualizar" : "Guardar"} Perfil
+                    </Button>
                 </Box>
-            ) : (
-                // Vista de escritorio: tabla horizontal
-                <TableContainer component={Paper}>
-                    <Table size="small">
-                        <TableHead>
-                            <TableRow>
-                                <TableCell align="center">Escala Pulg (m)</TableCell>
-                                <TableCell align="center" colSpan={3}>NÚMERO DE GOLPES</TableCell>
-                                <TableCell align="center">N</TableCell>
-                                <TableCell align="center">DESCRIPCIÓN Y OBSERVACIONES</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell></TableCell>
-                                <TableCell align="center">6"</TableCell>
-                                <TableCell align="center">12"</TableCell>
-                                <TableCell align="center">18"</TableCell>
-                                <TableCell></TableCell>
-                                <TableCell></TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {blowsData.map((row, index) => (
-                                <TableRow key={index}>
-                                    <TableCell align="center">{row.depth.toFixed(2)}</TableCell>
-                                    <TableCell align="center">
+            </Container>
+        );
+    }
+
+    // Vista para pantallas más grandes (tablet/desktop)
+    return (
+        <Container maxWidth="md" sx={{ mt: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <IconButton onClick={() => navigate(`/projects/${projectId}/profiles`)}>
+                    <ArrowBackIcon />
+                </IconButton>
+                <Typography variant="h4" sx={{ ml: 1 }}>
+                    {profileId ? "Editar" : "Crear"} Perfil de Suelo
+                </Typography>
+            </Box>
+
+            <Paper component="form" onSubmit={handleSubmit} sx={{ p: 3, mb: 3 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2, mb: 3 }}>
+                    <TextField
+                        label="Número de Sondeo"
+                        name="sounding_number"
+                        value={formData.sounding_number}
+                        onChange={handleChange}
+                        required
+                        size="small"
+                    />
+
+                    <TextField
+                        label="Nivel Freático"
+                        name="water_level"
+                        value={formData.water_level}
+                        onChange={handleChange}
+                        size="small"
+                    />
+
+                    <TextField
+                        label="Fecha"
+                        name="profile_date"
+                        type="date"
+                        value={formData.profile_date}
+                        onChange={handleChange}
+                        InputLabelProps={{ shrink: true }}
+                        required
+                        size="small"
+                    />
+
+                    <TextField
+                        label="Número de Muestras"
+                        name="samples_number"
+                        type="number"
+                        value={formData.samples_number}
+                        onChange={handleChange}
+                        size="small"
+                    />
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Typography variant="h6" gutterBottom>
+                    Datos de Golpes
+                </Typography>
+
+                <Box sx={{ maxHeight: '500px', overflowY: 'auto', border: '1px solid #ddd', borderRadius: 1 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ backgroundColor: '#f5f5f5', position: 'sticky', top: 0 }}>
+                                <th style={{ padding: '8px', textAlign: 'left' }}>Profundidad (m)</th>
+                                <th style={{ padding: '8px', textAlign: 'center' }}>6"</th>
+                                <th style={{ padding: '8px', textAlign: 'center' }}>12"</th>
+                                <th style={{ padding: '8px', textAlign: 'center' }}>18"</th>
+                                <th style={{ padding: '8px', textAlign: 'center' }}>N</th>
+                                <th style={{ padding: '8px', textAlign: 'left' }}>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {formData.blows_data.map((row, index) => (
+                                <tr key={index} style={{ borderBottom: '1px solid #eee' }}>
+                                    <td style={{ padding: '8px' }}>{row.depth}</td>
+                                    <td style={{ padding: '8px' }}>
                                         <TextField
                                             type="number"
                                             value={row.blows6}
-                                            onChange={(e) => handleBlowsChange(index, 'blows6', e.target.value)}
-                                            size="small"
-                                            sx={{ width: 60 }}
-                                        />
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <TextField
-                                            type="number"
-                                            value={row.blows12}
-                                            onChange={(e) => handleBlowsChange(index, 'blows12', e.target.value)}
-                                            size="small"
-                                            sx={{ width: 60 }}
-                                        />
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <TextField
-                                            type="number"
-                                            value={row.blows18}
-                                            onChange={(e) => handleBlowsChange(index, 'blows18', e.target.value)}
-                                            size="small"
-                                            sx={{ width: 60 }}
-                                        />
-                                    </TableCell>
-                                    <TableCell align="center">{row.n || 0}</TableCell>
-                                    <TableCell align="center">
-                                        <TextField
-                                            value={row.observation}
-                                            onChange={(e) => handleTextChange(index, 'observation', e.target.value)}
+                                            onChange={(e) => handleBlowChange(index, 'blows6', e.target.value)}
                                             size="small"
                                             fullWidth
                                         />
-                                    </TableCell>
-                                </TableRow>
+                                    </td>
+                                    <td style={{ padding: '8px' }}>
+                                        <TextField
+                                            type="number"
+                                            value={row.blows12}
+                                            onChange={(e) => handleBlowChange(index, 'blows12', e.target.value)}
+                                            size="small"
+                                            fullWidth
+                                        />
+                                    </td>
+                                    <td style={{ padding: '8px' }}>
+                                        <TextField
+                                            type="number"
+                                            value={row.blows18}
+                                            onChange={(e) => handleBlowChange(index, 'blows18', e.target.value)}
+                                            size="small"
+                                            fullWidth
+                                        />
+                                    </td>
+                                    <td style={{ padding: '8px', textAlign: 'center' }}>{row.n}</td>
+                                    <td style={{ padding: '8px' }}>
+                                        <TextField
+                                            value={row.observation}
+                                            onChange={(e) => handleBlowChange(index, 'observation', e.target.value)}
+                                            size="small"
+                                            fullWidth
+                                        />
+                                    </td>
+                                </tr>
                             ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            )}
+                        </tbody>
+                    </table>
+                </Box>
+            </Paper>
 
-            {/* Botón para guardar */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                <Button variant="contained" onClick={handleSave}>
-                    Guardar
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                <Button
+                    variant="outlined"
+                    onClick={() => navigate(`/projects/${projectId}/profiles`)}
+                    size="large"
+                >
+                    Cancelar
+                </Button>
+                <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    onClick={handleSubmit}
+                    size="large"
+                >
+                    {profileId ? "Actualizar" : "Guardar"} Perfil
                 </Button>
             </Box>
-
-            {/* Número de página */}
-            <Typography variant="body2" align="center" sx={{ mt: 2 }}>
-                Página 1
-            </Typography>
-        </Box>
+        </Container>
     );
 };
 
-PerfilesDeSuelo.propTypes = {
-    data: PropTypes.shape({
-        project: PropTypes.string.isRequired,
-        location: PropTypes.string.isRequired,
-        date: PropTypes.string.isRequired,
-        waterLevel: PropTypes.string.isRequired,
-        samples: PropTypes.number.isRequired,
-    }).isRequired,
-};
-
-export default PerfilesDeSuelo;
+export default FormCreateProfile;
