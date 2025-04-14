@@ -214,7 +214,7 @@ const FormCreateProfile = () => {
 
             // Breve retraso antes de navegar para que el usuario vea la notificación
             setTimeout(() => {
-                navigate(`/proyecto/${projectId}/perfiles`);
+                navigate(`/proyectos/${projectId}/perfiles`);
             }, 1000);
         } catch (error) {
             console.error("Error saving profile:", error);
@@ -238,7 +238,7 @@ const FormCreateProfile = () => {
                 {loading && <LinearProgress sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1100 }} />}
 
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <IconButton onClick={() => navigate(`/proyecto/${projectId}/perfiles`)}>
+                    <IconButton onClick={() => navigate(`/proyectos/${projectId}/perfiles`)}>
                         <ArrowBackIcon />
                     </IconButton>
                     <Typography variant="h6" sx={{ ml: 1 }}>
@@ -495,7 +495,7 @@ const FormCreateProfile = () => {
             {loading && <LinearProgress sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1100 }} />}
 
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <IconButton onClick={() => navigate(`/proyecto/${projectId}/perfiles`)}>
+                <IconButton onClick={() => navigate(`/proyectos/${projectId}/perfiles`)}>
                     <ArrowBackIcon />
                 </IconButton>
                 <Typography variant="h4" sx={{ ml: 1 }}>
@@ -690,7 +690,7 @@ const FormCreateProfile = () => {
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
                 <Button
                     variant="outlined"
-                    onClick={() => navigate(`/proyecto/${projectId}/perfiles`)}
+                    onClick={() => navigate(`/proyectos/${projectId}/perfiles`)}
                     size="large"
                 >
                     Cancelar

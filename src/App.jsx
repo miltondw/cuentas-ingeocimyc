@@ -12,8 +12,9 @@ import TablaUtilidades from "./components/cuentas/tablas/TablaUtilidades";
 import PrivateRoute from "./api/PrivateRoute";
 import PerfilesDeSuelo from "./components/lab/components/PerfilDeSuelos";
 import ProjectProfiles from "./components/lab/pages/ProjectProfiles";
-import { Suspense, lazy } from "react";
-import { CircularProgress, Box, Typography, Container, Alert } from "@mui/material";
+import { Suspense } from "react";
+import { CircularProgress, Box, Typography, Container, Alert, Button } from "@mui/material";
+import ProjectsProfiles from "./components/lab/pages/ProjectsProfiles";
 
 // Página de no autorizado (opcional, para cuando un usuario no tiene el rol requerido)
 const Unauthorized = () => (
@@ -75,7 +76,15 @@ const AppRoutes = () => {
 
           {/* Rutas para laboratorio y perfiles */}
           <Route
-            path="/proyecto/:projectId/perfiles"
+            path="/proyectos-perfiles"
+            element={
+              <PrivateRoute>
+                <ProjectsProfiles />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/proyectos/:projectId/perfiles"
             element={
               <PrivateRoute>
                 <ProjectProfiles />
@@ -83,7 +92,7 @@ const AppRoutes = () => {
             }
           />
           <Route
-            path="/proyecto/:projectId/perfil/:profileId"
+            path="/proyectos/:projectId/perfil/:profileId"
             element={
               <PrivateRoute>
                 <PerfilesDeSuelo />
@@ -91,7 +100,7 @@ const AppRoutes = () => {
             }
           />
           <Route
-            path="/proyecto/:projectId/perfil/nuevo"
+            path="/proyectos/:projectId/perfil/nuevo"
             element={
               <PrivateRoute>
                 <PerfilesDeSuelo />

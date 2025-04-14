@@ -7,7 +7,6 @@ import {
     Card,
     CardContent,
     IconButton,
-    CircularProgress,
     Divider,
     Fab,
     Grid,
@@ -60,11 +59,11 @@ const ProjectProfiles = () => {
     }, [projectId]);
 
     const handleCreateProfile = () => {
-        navigate(`/proyecto/${projectId}/perfil/nuevo`);
+        navigate(`/proyectos/${projectId}/perfil/nuevo`);
     };
 
     const handleEditProfile = (profileId) => {
-        navigate(`/proyecto/${projectId}/perfil/${profileId}`);
+        navigate(`/proyectos/${projectId}/perfil/${profileId}`);
     };
 
     const handleDeleteProfile = async (profileId) => {
@@ -90,12 +89,7 @@ const ProjectProfiles = () => {
         });
     };
 
-    const formatWaterLevel = (waterLevel) => {
-        if (!waterLevel || waterLevel === "ninguno") {
-            return null;
-        }
-        return waterLevel;
-    };
+
 
     const getCompletedDepthsCount = (blowsData) => {
         if (!blowsData || !blowsData.length) return 0;

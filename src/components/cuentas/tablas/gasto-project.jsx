@@ -128,33 +128,45 @@ const GastosProject = () => {
     loading: false,
     error: null,
     currentPage: 1,
+    totalPages: 1,
     modals: { delete: false, payment: false },
     selectedProject: null,
     paymentAmount: "",
   });
 
-  const rowsPerPage = 5;
+  const rowsPerPage = 10;
+
+  const buildQueryParams = () => {
+    const params = {
+      page: state.currentPage,
+      limit: rowsPerPage,
+    };
+
+    Object.entries(state.filters).forEach(([key, value]) => {
+      if (value) params[key] = value;
+    });
+
+    return params;
+  };
 
   useEffect(() => {
     const fetchProjects = async () => {
       setState((prev) => ({ ...prev, loading: true, error: null }));
       try {
-        const response = await api.get("/projects");
-        const getAllProyectosData = response?.data?.proyectos
-        const getProyectos = getAllProyectosData.map(p => {
-          if (p.valor_retencion) {
-            return { ...p, valor_re: (Number(p.valor_retencion) / 100) * p.costo_servicio, valor_iva: (0.19) * p.costo_servicio }
-          }
-          return { ...p, valor_re: 0, valor_iva: 0 }
-        })
+        const params = buildQueryParams();
+        const response = await api.get("/projects", { params });
+        const proyectos = response.data?.proyectos?.map((p) => ({
+          ...p,
+          valor_re: p.valor_retencion ? (Number(p.valor_retencion) / 100) * p.costo_servicio : 0,
+          valor_iva: p.costo_servicio ? 0.19 * p.costo_servicio : 0,
+        })) || [];
 
-        if (getAllProyectosData) {
-          setState((prev) => ({
-            ...prev,
-            allProjects: getProyectos,
-            loading: false,
-          }));
-        }
+        setState((prev) => ({
+          ...prev,
+          allProjects: proyectos,
+          totalPages: response.data?.totalPages || 1,
+          loading: false,
+        }));
       } catch (error) {
         setState((prev) => ({
           ...prev,
@@ -163,43 +175,17 @@ const GastosProject = () => {
         }));
       }
     };
+
     fetchProjects();
-  }, []);
+  }, [state.filters, state.currentPage]);
 
-  const processedProjects = useMemo(() => {
-    return state.allProjects
-      .filter((project) => {
-        const values = calculateValues(project);
-        const projectDate = new Date(project.fecha);
-        const filterStart = state.filters.fechaInicio ? new Date(state.filters.fechaInicio) : null;
-        const filterEnd = state.filters.fechaFin ? new Date(state.filters.fechaFin) : null;
+  const handlePageChange = (event, page) => {
+    setState((prev) => ({ ...prev, currentPage: page }));
+  };
 
-        return Object.entries(state.filters).every(([key, value]) => {
-          if (!value) return true;
-          if (key === "fechaInicio" || key === "fechaFin") {
-            return (!filterStart || projectDate >= filterStart) && (!filterEnd || projectDate <= filterEnd);
-          }
-          if (key === "estado_cuenta") {
-            return values.estadoCuenta.toLowerCase() === value.toLowerCase();
-          }
-          const projectValue = project[key]?.toString().toLowerCase() || "";
-          return projectValue.includes(value.toLowerCase());
-        });
-      })
-      .sort((a, b) => {
-        const { field, direction } = state.sortConfig;
-        const aValue = field in a ? a[field] : calculateValues(a)[field];
-        const bValue = field in b ? b[field] : calculateValues(b)[field];
-        return direction === "asc"
-          ? aValue < bValue ? -1 : aValue > bValue ? 1 : 0
-          : bValue < aValue ? -1 : bValue > aValue ? 1 : 0;
-      });
-  }, [state.allProjects, state.filters, state.sortConfig]);
 
-  const paginatedProjects = useMemo(() => {
-    const start = (state.currentPage - 1) * rowsPerPage;
-    return processedProjects.slice(start, start + rowsPerPage);
-  }, [processedProjects, state.currentPage]);
+
+
 
   const handleSort = (field) => {
     setState((prev) => ({
@@ -389,7 +375,7 @@ const GastosProject = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {paginatedProjects.map((project) => {
+                {state.allProjects.map((project) => {
                   const { totalGastos, saldo, estadoCuenta, utilidadNeta } = calculateValues(project);
                   const gastos = getGastos(project);
 
@@ -497,9 +483,9 @@ const GastosProject = () => {
             </Table>
 
             <Pagination
-              count={Math.ceil(processedProjects.length / rowsPerPage)}
+              count={state.totalPages}
               page={state.currentPage}
-              onChange={(event, page) => setState((prev) => ({ ...prev, currentPage: page }))}
+              onChange={handlePageChange}
               sx={{ mt: 3, display: "flex", justifyContent: "center" }}
             />
           </>

@@ -25,6 +25,7 @@ export const AuthProvider = ({ children }) => {
                 });
             } catch (error) {
                 // Token inválido o expirado
+                console.error('Error de verificación:', error);
                 setAuthState({
                     isAuthenticated: false,
                     user: null,
