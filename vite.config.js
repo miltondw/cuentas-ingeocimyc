@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-const prod = true;
+const prod = false;
 
 export default defineConfig({
   plugins: [react()],
