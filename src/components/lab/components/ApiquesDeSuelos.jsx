@@ -283,6 +283,7 @@ const ApiquesDeSuelos = () => {
                         <FormControlLabel
                             control={<Checkbox checked={formData.cbr_unaltered} onChange={handleChange} name="cbr_unaltered" />}
                             label="CBR Inalterado"
+                            color='#000'
                         />
                     </Grid2>
                     {formData.cbr_unaltered && (
@@ -299,9 +300,7 @@ const ApiquesDeSuelos = () => {
                     )}
                 </Grid2>
 
-                <Button variant="contained" color="primary" onClick={addLayer} sx={{ mt: 3 }}>
-                    Agregar Capa
-                </Button>
+
 
                 {formData.layers.length > 0 && (
                     <>
@@ -424,10 +423,16 @@ const ApiquesDeSuelos = () => {
                         )}
                     </>
                 )}
+                <Grid2 container spacing={2} justifyContent="space-between" sx={{ mt: 3 }}>
+                    <Button variant="contained" color="primary" onClick={addLayer} sx={{ mt: 3 }}>
+                        Agregar Capa
+                    </Button>
 
-                <Button type="submit" variant="contained" color="primary" sx={{ mt: 3 }} disabled={loading}>
-                    {loading ? 'Guardando...' : 'Guardar'}
-                </Button>
+                    <Button type="submit" variant="contained" color="primary" sx={{ mt: 3 }} disabled={loading}>
+                        {loading ? 'Guardando...' : 'Guardar'}
+                    </Button>
+                </Grid2>
+
             </form>
 
             <Snackbar open={notification.open} autoHideDuration={6000} onClose={handleCloseNotification}>

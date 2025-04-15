@@ -228,7 +228,7 @@ const ProjectApiques = () => {
                                         <Chip
                                             size="small"
                                             label="CBR Inalterado"
-                                            color="secondary"
+                                            color="#000"
                                         />
                                     )}
                                 </Box>
@@ -350,7 +350,7 @@ const ProjectApiques = () => {
                                             {apique.cbr_unaltered && (
                                                 <Chip
                                                     label="CBR Inalterado"
-                                                    color="secondary"
+                                                    color="#000"
                                                     size="small"
                                                 />
                                             )}
