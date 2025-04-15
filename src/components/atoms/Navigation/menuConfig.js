@@ -7,7 +7,7 @@ export const menuConfig = {
         { title: "Proyecto", link: "crear-proyecto" },
         { title: "Gasto del Mes", link: "crear-gasto-mes" },
       ],
-      roles: ["admin"], // Solo visible para admin
+      roles: ["admin"],
     },
     {
       key: "tables",
@@ -17,7 +17,7 @@ export const menuConfig = {
         { title: "Gastos", link: "gastos" },
       ],
       adminItems: [{ title: "Utilidades", link: "utilidades" }],
-      roles: ["admin"], // Solo visible para admin
+      roles: ["admin"],
     },
     {
       key: "profiles",

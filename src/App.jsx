@@ -109,7 +109,7 @@ const AppRoutes = () => (
       <Route path="/crear-gasto-mes/:id" element={<FormCreateMonth />} />
 
       {/* Administración */}
-      <Route path="/utilidades" element={<PrivateRouteWrapper requiredRole="admin"><TablaUtilidades /></PrivateRouteWrapper>} />
+      <Route path="/utilidades" element={<TablaUtilidades />} />
 
       {/* Módulo de Laboratorio */}
       <Route path="/lab/proyectos">
