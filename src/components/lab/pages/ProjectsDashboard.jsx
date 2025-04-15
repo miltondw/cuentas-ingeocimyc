@@ -20,32 +20,35 @@ import {
     Grid2,
     Box,
     Chip,
-    Fab
+    Fab,
+    useMediaQuery,
+    Stack
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import LandscapeIcon from "@mui/icons-material/Landscape";
+import BlurCircularIcon from '@mui/icons-material/BlurCircular';
 import api from "../../../api";
 
 // Table column definitions
 const tableColumns = [
-    { id: "acciones", label: "Acciones", sortable: false, width: 150 },
+    { id: "acciones", label: "Acciones", sortable: false, width: 180 },
     { id: "fecha", label: "Fecha", sortable: true, filterType: "date", width: 120 },
     { id: "solicitante", label: "Solicitante", sortable: true, filterType: "text", width: 150 },
     { id: "nombre_proyecto", label: "Proyecto", sortable: true, filterType: "text", width: 200 },
-    { id: "perfiles", label: "Perfiles", sortable: true, width: 100 },
+    { id: "perfiles", label: "Perfiles", sortable: true, width: 120 },
+    { id: "apiques", label: "Apiques", sortable: true, width: 120 },
 ];
 
-// Format date function
 const formatDate = (dateStr) =>
     dateStr ? new Date(dateStr).toLocaleDateString("es", { timeZone: "UTC" }) : "";
 
-const ProjectsProfiles = () => {
-
+const ProjectsDashboard = () => {
+    const isMobile = useMediaQuery('(max-width:600px)');
     const [state, setState] = useState({
         projects: [],
-        projectProfiles: {},
+        projectCounts: {},
         filters: {
             fechaInicio: "",
             fechaFin: "",
@@ -63,6 +66,7 @@ const ProjectsProfiles = () => {
 
     const navigate = useNavigate();
     const rowsPerPage = 10;
+
     const buildQueryParams = () => {
         const params = {
             page: state.currentPage,
@@ -71,31 +75,18 @@ const ProjectsProfiles = () => {
             order: state.sortConfig.direction
         };
 
-        // Añadir filtros solo si tienen valor
-        if (state.filters.fechaInicio) {
-            params.fechaInicio = state.filters.fechaInicio;
-        }
-        if (state.filters.fechaFin) {
-            params.fechaFin = state.filters.fechaFin;
-        }
-        if (state.filters.solicitante) {
-            params.solicitante = state.filters.solicitante;
-        }
-        if (state.filters.nombre_proyecto) {
-            params.nombre_proyecto = state.filters.nombre_proyecto;
-        }
+        Object.entries(state.filters).forEach(([key, value]) => {
+            if (value) params[key] = value;
+        });
 
         return params;
     };
 
-    // Fetch projects con paginación y filtros
     const fetchProjects = async () => {
         setState(prev => ({ ...prev, loading: true, error: null }));
-
         try {
             const params = buildQueryParams();
             const response = await api.get("/projects", { params });
-
             const { proyectos: projects = [], totalPages, total } = response.data;
 
             setState(prev => ({
@@ -106,8 +97,7 @@ const ProjectsProfiles = () => {
                 loading: false
             }));
 
-            // Fetch profile counts solo para los proyectos de la página actual
-            fetchProfileCounts(projects);
+            fetchProjectCounts(projects);
         } catch (error) {
             setState(prev => ({
                 ...prev,
@@ -117,31 +107,44 @@ const ProjectsProfiles = () => {
         }
     };
 
-    // Get profile counts for each project
-    const fetchProfileCounts = async (projects) => {
-        const profileCounts = {};
+    const fetchProjectCounts = async (projects) => {
+        const counts = {};
 
         try {
             await Promise.all(projects.map(async (project) => {
                 try {
-                    const response = await api.get(`/projects/${project.proyecto_id}/profiles`);
-                    profileCounts[project.proyecto_id] = (response.data.perfiles || []).length;
-                } catch {
-                    profileCounts[project.proyecto_id] = 0;
+                    // Obtener conteo de perfiles
+                    const profilesResponse = await api.get(`/projects/${project.proyecto_id}/profiles`);
+                    const profilesCount = profilesResponse.data.perfiles ? profilesResponse.data.perfiles.length : 0;
+
+                    // Obtener conteo de apiques
+                    const apiquesResponse = await api.get(`/projects/${project.proyecto_id}/apiques`);
+                    const apiquesCount = apiquesResponse.data.apiques ? apiquesResponse.data.apiques.length : 0;
+
+                    counts[project.proyecto_id] = {
+                        profiles: profilesCount,
+                        apiques: apiquesCount
+                    };
+                } catch (error) {
+                    console.error(`Error en proyecto ${project.proyecto_id}:`, error);
+                    counts[project.proyecto_id] = {
+                        profiles: 0,
+                        apiques: 0
+                    };
                 }
             }));
 
-            setState((prev) => ({
+            setState(prev => ({
                 ...prev,
-                projectProfiles: { ...prev.projectProfiles, ...profileCounts }
+                projectCounts: { ...prev.projectCounts, ...counts }
             }));
+
         } catch (error) {
-            console.error("Error fetching profile counts:", error);
+            console.error("Error general:", error);
         }
     };
-    // Efecto para cargar proyectos cuando cambian filtros, orden o página
+
     useEffect(() => {
-        // Resetear a página 1 cuando cambian filtros u ordenamiento
         if (state.currentPage !== 1) {
             setState(prev => ({ ...prev, currentPage: 1 }));
         } else {
@@ -149,14 +152,10 @@ const ProjectsProfiles = () => {
         }
     }, [state.filters, state.sortConfig]);
 
-    // Efecto para cargar proyectos cuando cambia la página
     useEffect(() => {
         fetchProjects();
     }, [state.currentPage]);
-    // Initial fetch and when filters/sorting change
 
-
-    // Handle sorting
     const handleSort = (field) => {
         setState((prev) => ({
             ...prev,
@@ -167,7 +166,6 @@ const ProjectsProfiles = () => {
         }));
     };
 
-    // Handle filter changes
     const handleFilterChange = (field, value) => {
         setState((prev) => ({
             ...prev,
@@ -175,52 +173,46 @@ const ProjectsProfiles = () => {
         }));
     };
 
-    // Clear all filters
     const handleClearFilters = () => {
         setState((prev) => ({
             ...prev,
-            filters: {
-                fechaInicio: "",
-                fechaFin: "",
-                solicitante: "",
-                nombre_proyecto: "",
-            }
+            filters: { fechaInicio: "", fechaFin: "", solicitante: "", nombre_proyecto: "" }
         }));
     };
-
 
     const handlePageChange = (_, page) => {
         setState(prev => ({ ...prev, currentPage: page }));
     };
-    // View project profiles
-    const handleViewProfiles = (projectId) => {
-        navigate(`/proyectos/${projectId}/perfiles`);
+
+    const handleNavigate = (projectId, type) => {
+        const basePath = `/lab/proyectos/${projectId}`;
+        const paths = {
+            viewP: `${basePath}/perfiles`,
+            viewA: `${basePath}/apiques`,
+            newProfile: `${basePath}/perfil/nuevo`,
+            newApique: `${basePath}/apique/nuevo`
+        };
+        navigate(paths[type]);
     };
 
-    // Create new profile for project
-    const handleCreateProfile = (projectId) => {
-        navigate(`/proyectos/${projectId}/perfil/nuevo`);
-    };
-
-    // Toggle filters visibility
     const toggleFilters = () => {
-        setState(prev => ({
-            ...prev,
-            showFilters: !prev.showFilters
-        }));
+        setState(prev => ({ ...prev, showFilters: !prev.showFilters }));
     };
 
     return (
         <Box sx={{ m: 3, p: 2, maxWidth: "1200px", mx: "auto" }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-                <Typography variant="h4">Perfiles de Suelo por Proyecto</Typography>
+                <Typography variant="h4" sx={{ fontSize: isMobile ? '1.5rem' : '2rem' }}>
+                    Gestión de Proyectos
+                </Typography>
                 <Button
                     variant="contained"
                     color="primary"
                     startIcon={<FilterListIcon />}
                     onClick={toggleFilters}
+                    size={isMobile ? "small" : "medium"}
                 >
-                    Filtros
+                    {isMobile ? 'Filtros' : 'Mostrar Filtros'}
                 </Button>
             </Box>
 
@@ -242,12 +234,7 @@ const ProjectsProfiles = () => {
                                 onChange={(e) => handleFilterChange("fechaInicio", e.target.value)}
                                 variant="outlined"
                                 size="small"
-                                slotProps={{ inputLabel: { shrink: true } }}
-                                InputProps={{
-                                    inputProps: {
-                                        max: state.filters.fechaFin || new Date().toISOString().split('T')[0]
-                                    }
-                                }}
+                                InputLabelProps={{ shrink: true }}
                             />
                         </Grid2>
                         <Grid2 item xs={12} sm={6} md={3}>
@@ -260,12 +247,6 @@ const ProjectsProfiles = () => {
                                 variant="outlined"
                                 size="small"
                                 InputLabelProps={{ shrink: true }}
-                                InputProps={{
-                                    inputProps: {
-                                        min: state.filters.fechaInicio,
-                                        max: new Date().toISOString().split('T')[0]
-                                    }
-                                }}
                             />
                         </Grid2>
                         <Grid2 item xs={12} sm={6} md={3}>
@@ -289,14 +270,15 @@ const ProjectsProfiles = () => {
                             />
                         </Grid2>
                         <Grid2 item xs={12}>
-                            <Button
-                                variant="outlined"
-                                color="error"
-                                onClick={handleClearFilters}
-                                fullWidth
-                            >
-                                Limpiar Filtros
-                            </Button>
+                            <Stack direction="row" spacing={2} justifyContent="flex-end">
+                                <Button
+                                    variant="outlined"
+                                    color="error"
+                                    onClick={handleClearFilters}
+                                >
+                                    Limpiar Filtros
+                                </Button>
+                            </Stack>
                         </Grid2>
                     </Grid2>
                 </Paper>
@@ -312,21 +294,23 @@ const ProjectsProfiles = () => {
                         <Paper sx={{ p: 5, textAlign: "center" }}>
                             <LandscapeIcon sx={{ fontSize: 60, color: "text.secondary", mb: 2 }} />
                             <Typography variant="h6">
-                                No hay proyectos disponibles.
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                Cree un nuevo proyecto o ajuste los filtros de búsqueda.
+                                No hay proyectos disponibles
                             </Typography>
                         </Paper>
                     ) : (
                         <TableContainer component={Paper}>
-                            <Table sx={{ minWidth: 800 }}>
+                            <Table sx={{ minWidth: 650 }} size={isMobile ? "small" : "medium"}>
                                 <TableHead>
-                                    <TableRow sx={{ backgroundColor: (theme) => theme.palette.grey[100] }}>
+                                    <TableRow sx={{ bgcolor: 'background.default' }}>
                                         {tableColumns.map((column) => (
                                             <TableCell
                                                 key={column.id}
-                                                sx={{ fontWeight: "bold", whiteSpace: "nowrap", width: column.width }}
+                                                sx={{
+                                                    fontWeight: "bold",
+                                                    whiteSpace: "nowrap",
+                                                    width: column.width,
+                                                    display: isMobile && column.id === 'solicitante' ? 'none' : 'table-cell'
+                                                }}
                                             >
                                                 {column.sortable ? (
                                                     <TableSortLabel
@@ -347,35 +331,85 @@ const ProjectsProfiles = () => {
                                     {state.projects.map((project) => (
                                         <TableRow key={project.proyecto_id} hover>
                                             <TableCell>
-                                                <Box sx={{ display: "flex", gap: 1 }}>
-                                                    <Tooltip title="Ver perfiles de suelo">
+                                                <Stack direction={isMobile ? "column" : "row"} spacing={1}>
+                                                    <Tooltip title="Ver perfiles">
+                                                        <Typography variant="caption" sx={{
+                                                            display: !isMobile && "block",
+                                                            textAlign: "center"
+                                                        }} gutterBottom>Ver perfiles</Typography>
                                                         <IconButton
-                                                            color="primary"
-                                                            onClick={() => handleViewProfiles(project.proyecto_id)}
+                                                            color="info"
+                                                            onClick={() => handleNavigate(project.proyecto_id, 'viewP')}
                                                             size="small"
                                                         >
                                                             <VisibilityIcon />
                                                         </IconButton>
                                                     </Tooltip>
-                                                    <Tooltip title="Crear nuevo perfil">
+                                                    <Tooltip title="Ver apiques">
+                                                        <Typography variant="caption" sx={{
+                                                            display: !isMobile && "block",
+                                                            textAlign: "center"
+                                                        }} gutterBottom>Ver apiques</Typography>
                                                         <IconButton
-                                                            color="secondary"
-                                                            onClick={() => handleCreateProfile(project.proyecto_id)}
+                                                            color="info"
+                                                            onClick={() => handleNavigate(project.proyecto_id, 'viewA')}
+                                                            size="small"
+                                                        >
+                                                            <VisibilityIcon />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title="Nuevo perfil">
+                                                        <Typography variant="caption" sx={{
+                                                            display: !isMobile && "block",
+                                                            textAlign: "center"
+                                                        }} gutterBottom>Nuevo Perfil</Typography>
+                                                        <IconButton
+                                                            color="success"
+                                                            onClick={() => handleNavigate(project.proyecto_id, 'newProfile')}
                                                             size="small"
                                                         >
                                                             <AddIcon />
                                                         </IconButton>
                                                     </Tooltip>
-                                                </Box>
+                                                    <Tooltip title="Nuevo apique">
+                                                        <Typography variant="caption" sx={{
+                                                            display: !isMobile && "block",
+                                                            textAlign: "center"
+                                                        }} gutterBottom>Nuevo Apique</Typography>
+                                                        <IconButton
+                                                            color="warning"
+                                                            onClick={() => handleNavigate(project.proyecto_id, 'newApique')}
+                                                            size="small"
+                                                        >
+                                                            <AddIcon />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </Stack>
                                             </TableCell>
                                             <TableCell>{formatDate(project.fecha)}</TableCell>
-                                            <TableCell>{project.solicitante || "-"}</TableCell>
-                                            <TableCell sx={{ fontWeight: "medium" }}>{project.nombre_proyecto}</TableCell>
+                                            <TableCell sx={{ display: isMobile ? 'none' : 'table-cell' }}>
+                                                {project.solicitante || "-"}
+                                            </TableCell>
+                                            <TableCell sx={{ fontWeight: "medium" }}>
+                                                {project.nombre_proyecto}
+                                            </TableCell>
                                             <TableCell>
                                                 <Chip
-                                                    label={state.projectProfiles[project.proyecto_id] || 0}
-                                                    color={state.projectProfiles[project.proyecto_id] > 0 ? "primary" : "default"}
+
+                                                    label={state.projectCounts[project.proyecto_id]?.profiles ?? 0}
+                                                    color="primary"
+                                                    variant="outlined"
                                                     size="small"
+                                                    icon={<BlurCircularIcon fontSize="small" />}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={state.projectCounts[project.proyecto_id]?.apiques || 0}
+                                                    color="secondary"
+                                                    variant="outlined"
+                                                    size="small"
+                                                    icon={<BlurCircularIcon fontSize="small" />}
                                                 />
                                             </TableCell>
                                         </TableRow>
@@ -391,24 +425,27 @@ const ProjectsProfiles = () => {
                             page={state.currentPage}
                             onChange={handlePageChange}
                             color="primary"
+                            size={isMobile ? "small" : "medium"}
                         />
                     </Box>
                 </>
             )}
 
-            {/* Mobile FAB for better mobile UX */}
-            <Box sx={{ display: { xs: "block", md: "none" } }}>
-                <Fab
-                    color="primary"
-                    aria-label="filtros"
-                    onClick={toggleFilters}
-                    sx={{ position: "fixed", bottom: 16, right: 16 }}
-                >
-                    <FilterListIcon />
-                </Fab>
-            </Box>
+            {/* Mobile Floating Actions */}
+            {isMobile && (
+                <Box sx={{ position: 'fixed', bottom: 16, right: 16, display: 'flex', gap: 1 }}>
+                    <Fab
+                        color="primary"
+                        aria-label="filtros"
+                        onClick={toggleFilters}
+                        size="small"
+                    >
+                        <FilterListIcon />
+                    </Fab>
+                </Box>
+            )}
         </Box>
     );
 };
 
-export default ProjectsProfiles;
+export default ProjectsDashboard;

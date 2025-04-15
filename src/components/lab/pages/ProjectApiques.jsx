@@ -9,25 +9,24 @@ import {
     IconButton,
     Divider,
     Fab,
-    Grid,
+    Grid2,
     Paper,
     Chip,
     useMediaQuery,
     Skeleton,
-    Tooltip
+
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import WaterDropIcon from '@mui/icons-material/WaterDrop';
-import LandscapeIcon from '@mui/icons-material/Landscape';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import HardnessIcon from '@mui/icons-material/Terrain';
+import TerrainIcon from '@mui/icons-material/Terrain';
+import LayersIcon from '@mui/icons-material/Layers';
+import ScienceIcon from '@mui/icons-material/Science';
 import api from '../../../api';
 
-const ProjectProfiles = () => {
-    const [profiles, setProfiles] = useState([]);
+const ProjectApiques = () => {
+    const [apiques, setApiques] = useState([]);
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -36,46 +35,46 @@ const ProjectProfiles = () => {
     const isMobile = useMediaQuery('(max-width:768px)');
 
     useEffect(() => {
-        const fetchProjectAndProfiles = async () => {
+        const fetchProjectAndApiques = async () => {
             try {
                 setLoading(true);
                 // Obtener información del proyecto
                 const projectResponse = await api.get(`/projects/${projectId}`);
                 setProject(projectResponse.data.project);
 
-                // Obtener perfiles de suelo del proyecto
-                const profilesResponse = await api.get(`/projects/${projectId}/profiles`);
-                setProfiles(profilesResponse.data.perfiles || []);
+                // Obtener apiques del proyecto
+                const apiquesResponse = await api.get(`/projects/${projectId}/apiques`);
+                setApiques(apiquesResponse.data.apiques || []);
 
                 setLoading(false);
             } catch (err) {
                 console.error('Error al cargar datos:', err);
-                setError('Error al cargar los perfiles. Por favor, intenta de nuevo.');
+                setError('Error al cargar los apiques. Por favor, intenta de nuevo.');
                 setLoading(false);
             }
         };
 
-        fetchProjectAndProfiles();
+        fetchProjectAndApiques();
     }, [projectId]);
 
-    const handleCreateProfile = () => {
-        navigate(`/lab/proyectos/${projectId}/perfil/nuevo`);
+    const handleCreateApique = () => {
+        navigate(`/lab/proyectos/${projectId}/apique/nuevo`);
     };
 
-    const handleEditProfile = (profileId) => {
-        navigate(`/lab/proyectos/${projectId}/perfil/${profileId}`);
+    const handleEditApique = (apiqueId) => {
+        navigate(`/lab/proyectos/${projectId}/apique/${apiqueId}`);
     };
 
-    const handleDeleteProfile = async (profileId) => {
-        if (!confirm('¿Estás seguro de eliminar este perfil?')) return;
+    const handleDeleteApique = async (apiqueId) => {
+        if (!confirm('¿Estás seguro de eliminar este apique?')) return;
 
         try {
-            await api.delete(`/projects/${projectId}/profiles/${profileId}`);
+            await api.delete(`/projects/${projectId}/apiques/${apiqueId}`);
             // Actualizar la lista después de eliminar
-            setProfiles(profiles.filter(profile => profile.profile_id !== profileId));
+            setApiques(apiques.filter(apique => apique.apique_id !== apiqueId));
         } catch (err) {
-            console.error('Error al eliminar perfil:', err);
-            alert('No se pudo eliminar el perfil. Intenta de nuevo.');
+            console.error('Error al eliminar apique:', err);
+            alert('No se pudo eliminar el apique. Intenta de nuevo.');
         }
     };
 
@@ -89,42 +88,18 @@ const ProjectProfiles = () => {
         });
     };
 
-
-
-    const getCompletedDepthsCount = (blowsData) => {
-        if (!blowsData || !blowsData.length) return 0;
-        return blowsData.filter(blow => blow.n > 0).length;
+    const getLayersCount = (layers) => {
+        return layers?.length || 0;
     };
 
-    const getMaxN = (blowsData) => {
-        if (!blowsData || !blowsData.length) return 0;
-        return Math.max(...blowsData.map(blow => blow.n || 0));
+    const getSamplesCount = (layers) => {
+        if (!layers) return 0;
+        return layers.filter(layer => layer.sample_id).length;
     };
 
-    const getMaxDepth = (blowsData) => {
-        if (!blowsData || !blowsData.length) return 0;
-
-        // Filtramos solo profundidades con datos reales (N > 0)
-        const depthsWithData = blowsData.filter(blow => blow.n > 0);
-
-        if (depthsWithData.length === 0) return 0;
-
-        // Encontramos la máxima profundidad con datos
-        return Math.max(...depthsWithData.map(blow => parseFloat(blow.depth) || 0));
-    };
-
-    const getSoilHardnessColor = (maxN) => {
-        if (maxN >= 50) return '#e53935'; // Duro - rojo
-        if (maxN >= 30) return '#fb8c00'; // Medio - naranja
-        if (maxN >= 10) return '#fdd835'; // Blando a medio - amarillo
-        return '#8bc34a'; // Muy blando - verde
-    };
-
-    const getSoilHardnessText = (maxN) => {
-        if (maxN >= 50) return 'Suelo muy duro';
-        if (maxN >= 30) return 'Suelo duro';
-        if (maxN >= 10) return 'Suelo medio';
-        return 'Suelo blando';
+    const getMaxDepth = (layers) => {
+        if (!layers || !layers.length) return 0;
+        return layers.reduce((sum, layer) => sum + parseFloat(layer.thickness || 0), 0).toFixed(2);
     };
 
     // Vista de carga
@@ -171,7 +146,7 @@ const ProjectProfiles = () => {
                         <ArrowBackIcon />
                     </IconButton>
                     <Typography variant="h6" sx={{ ml: 1 }}>
-                        Perfiles de Suelo
+                        Apiques de Suelo
                     </Typography>
                 </Box>
 
@@ -186,53 +161,56 @@ const ProjectProfiles = () => {
                     </Paper>
                 )}
 
-                {profiles.length === 0 ? (
+                {apiques.length === 0 ? (
                     <Paper sx={{ p: 3, textAlign: 'center', mb: 2 }}>
-                        <LandscapeIcon sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
+                        <TerrainIcon sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
                         <Typography>
-                            No hay perfiles de suelo registrados para este proyecto.
+                            No hay apiques registrados para este proyecto.
                         </Typography>
                     </Paper>
                 ) : (
-                    profiles.map((profile) => (
-                        <Card key={profile.profile_id} sx={{ mb: 2 }}>
+                    apiques.map((apique) => (
+                        <Card key={apique.apique_id} sx={{ mb: 2 }}>
                             <CardContent sx={{ pb: 1 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                     <Box>
                                         <Typography variant="h6" component="div">
-                                            Sondeo #{profile.sounding_number}
+                                            Apique #{apique.apique}
                                         </Typography>
                                         <Typography variant="body2" color="text.secondary">
-                                            Fecha: {formatDate(profile.profile_date)}
+                                            Fecha: {formatDate(apique.date)}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Ubicación: {apique.location || 'No especificada'}
                                         </Typography>
 
-                                        {profile.water_level && profile.water_level !== "ninguno" && (
-                                            <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                                                <WaterDropIcon color="primary" fontSize="small" />
-                                                <Typography variant="body2" sx={{ ml: 0.5 }}>
-                                                    Nivel freático: {profile.water_level} m
-                                                </Typography>
-                                            </Box>
-                                        )}
-
-                                        <Chip
-                                            size="small"
-                                            label={`${profile.samples_number || 0} muestras`}
-                                            sx={{ mt: 1 }}
-                                        />
+                                        <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                                            <Chip
+                                                size="small"
+                                                icon={<LayersIcon fontSize="small" />}
+                                                label={`${getLayersCount(apique.layers)} capas`}
+                                            />
+                                            <Chip
+                                                size="small"
+                                                icon={<ScienceIcon fontSize="small" />}
+                                                label={`${getSamplesCount(apique.layers)} muestras`}
+                                                color="primary"
+                                                variant="outlined"
+                                            />
+                                        </Box>
                                     </Box>
 
                                     <Box>
                                         <IconButton
                                             size="small"
-                                            onClick={() => handleEditProfile(profile.profile_id)}
+                                            onClick={() => handleEditApique(apique.apique_id)}
                                             color="primary"
                                         >
                                             <EditIcon fontSize="small" />
                                         </IconButton>
                                         <IconButton
                                             size="small"
-                                            onClick={() => handleDeleteProfile(profile.profile_id)}
+                                            onClick={() => handleDeleteApique(apique.apique_id)}
                                             color="error"
                                         >
                                             <DeleteIcon fontSize="small" />
@@ -244,31 +222,15 @@ const ProjectProfiles = () => {
 
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <Typography variant="body2">
-                                        {getCompletedDepthsCount(profile.blows_data)} / {profile.blows_data?.length || 0} profundidades con datos
+                                        Profundidad total: {getMaxDepth(apique.layers)} m
                                     </Typography>
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => handleEditProfile(profile.profile_id)}
-                                        aria-label="ver detalles"
-                                    >
-                                        <ExpandMoreIcon fontSize="small" />
-                                    </IconButton>
-                                </Box>
-
-                                <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-                                    <Tooltip title={getSoilHardnessText(getMaxN(profile.blows_data))}>
-                                        <HardnessIcon
-                                            sx={{
-                                                color: getSoilHardnessColor(getMaxN(profile.blows_data)),
-                                                fontSize: 'small',
-                                                mr: 0.5
-                                            }}
+                                    {apique.cbr_unaltered && (
+                                        <Chip
+                                            size="small"
+                                            label="CBR Inalterado"
+                                            color="secondary"
                                         />
-                                    </Tooltip>
-
-                                    <Typography variant="body2">
-                                        Prof. máx: {getMaxDepth(profile.blows_data)} m
-                                    </Typography>
+                                    )}
                                 </Box>
                             </CardContent>
                         </Card>
@@ -278,7 +240,7 @@ const ProjectProfiles = () => {
                 <Fab
                     color="primary"
                     aria-label="añadir"
-                    onClick={handleCreateProfile}
+                    onClick={handleCreateApique}
                     sx={{ position: 'fixed', bottom: 16, right: 16 }}
                 >
                     <AddIcon />
@@ -295,12 +257,12 @@ const ProjectProfiles = () => {
                     <ArrowBackIcon />
                 </IconButton>
                 <Typography variant="h4">
-                    Perfiles de Suelo
+                    Apiques de Suelo
                 </Typography>
                 <Box sx={{ flexGrow: 1 }} />
                 <IconButton
                     color="primary"
-                    onClick={handleCreateProfile}
+                    onClick={handleCreateApique}
                     sx={{
                         backgroundColor: (theme) => theme.palette.primary.main,
                         color: 'white',
@@ -329,37 +291,37 @@ const ProjectProfiles = () => {
                 </Paper>
             )}
 
-            {profiles.length === 0 ? (
+            {apiques.length === 0 ? (
                 <Paper sx={{ p: 5, textAlign: 'center' }}>
-                    <LandscapeIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+                    <TerrainIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
                     <Typography variant="h6">
-                        No hay perfiles de suelo registrados para este proyecto.
+                        No hay apiques registrados para este proyecto.
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        Haz clic en el botón + para crear un nuevo perfil.
+                        Haz clic en el botón + para crear un nuevo apique.
                     </Typography>
                 </Paper>
             ) : (
-                <Grid container spacing={3}>
-                    {profiles.map((profile) => (
-                        <Grid item xs={12} sm={6} key={profile.profile_id}>
+                <Grid2 container spacing={3}>
+                    {apiques.map((apique) => (
+                        <Grid2 item xs={12} sm={6} key={apique.apique_id}>
                             <Card>
                                 <CardContent>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                                         <Typography variant="h6" component="div">
-                                            Sondeo #{profile.sounding_number}
+                                            Apique #{apique.apique}
                                         </Typography>
                                         <Box>
                                             <IconButton
                                                 size="small"
-                                                onClick={() => handleEditProfile(profile.profile_id)}
+                                                onClick={() => handleEditApique(apique.apique_id)}
                                                 color="primary"
                                             >
                                                 <EditIcon fontSize="small" />
                                             </IconButton>
                                             <IconButton
                                                 size="small"
-                                                onClick={() => handleDeleteProfile(profile.profile_id)}
+                                                onClick={() => handleDeleteApique(apique.apique_id)}
                                                 color="error"
                                             >
                                                 <DeleteIcon fontSize="small" />
@@ -369,57 +331,39 @@ const ProjectProfiles = () => {
 
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                         <Typography variant="body2">
-                                            <strong>Fecha:</strong> {formatDate(profile.profile_date)}
+                                            <strong>Fecha:</strong> {formatDate(apique.date)}
                                         </Typography>
-
-                                        {profile.water_level && profile.water_level !== "ninguno" && (
-                                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                <WaterDropIcon color="primary" fontSize="small" />
-                                                <Typography variant="body2" sx={{ ml: 0.5 }}>
-                                                    Nivel freático: {profile.water_level} m
-                                                </Typography>
-                                            </Box>
-                                        )}
-
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                                            <Tooltip title={getSoilHardnessText(getMaxN(profile.blows_data))}>
-                                                <HardnessIcon
-                                                    sx={{
-                                                        color: getSoilHardnessColor(getMaxN(profile.blows_data)),
-                                                        fontSize: 'small',
-                                                        mr: 0.5
-                                                    }}
-                                                />
-                                            </Tooltip>
-                                            <Typography variant="body2" sx={{ mr: 2 }}>
-                                                N máx: {getMaxN(profile.blows_data)}
-                                            </Typography>
-                                            <Typography variant="body2">
-                                                Profundidad máxima: {getMaxDepth(profile.blows_data)} m
-                                            </Typography>
-                                        </Box>
+                                        <Typography variant="body2">
+                                            <strong>Ubicación:</strong> {apique.location || 'No especificada'}
+                                        </Typography>
+                                        <Typography variant="body2">
+                                            <strong>Profundidad total:</strong> {getMaxDepth(apique.layers)} m
+                                        </Typography>
 
                                         <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
                                             <Chip
+                                                icon={<LayersIcon fontSize="small" />}
+                                                label={`${getLayersCount(apique.layers)} capas`}
                                                 size="small"
-                                                label={`${profile.samples_number || 0} muestras`}
                                             />
-                                            <Chip
-                                                size="small"
-                                                label={`${getCompletedDepthsCount(profile.blows_data)} / ${profile.blows_data?.length || 0} profundidades`}
-                                                color="primary"
-                                                variant="outlined"
-                                            />
+
+                                            {apique.cbr_unaltered && (
+                                                <Chip
+                                                    label="CBR Inalterado"
+                                                    color="secondary"
+                                                    size="small"
+                                                />
+                                            )}
                                         </Box>
                                     </Box>
                                 </CardContent>
                             </Card>
-                        </Grid>
+                        </Grid2>
                     ))}
-                </Grid>
+                </Grid2>
             )}
         </Container>
     );
 };
 
-export default ProjectProfiles; 
+export default ProjectApiques;

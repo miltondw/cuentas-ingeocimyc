@@ -1,22 +1,32 @@
+/* eslint-disable react/prop-types */
 import "./App.css";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import Navigation from "./components/atoms/Navigation";
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { Suspense, lazy } from "react";
 import { AuthProvider, useAuth } from "./api/AuthContext";
-import Login from "./api/Login";
-import Logout from "./api/Logout";
-import GastosProject from "./components/cuentas/tablas/gasto-project";
-import TablaGastosEmpresa from "./components/cuentas/tablas/gasto-mes";
-import FormCreateMonth from "./components/cuentas/forms/form-create-month";
-import FormCreateProject from "./components/cuentas/forms/form-create-project";
-import TablaUtilidades from "./components/cuentas/tablas/TablaUtilidades";
-import PrivateRoute from "./api/PrivateRoute";
-import PerfilesDeSuelo from "./components/lab/components/PerfilDeSuelos";
-import ProjectProfiles from "./components/lab/pages/ProjectProfiles";
-import { Suspense } from "react";
 import { CircularProgress, Box, Typography, Container, Alert, Button } from "@mui/material";
-import ProjectsProfiles from "./components/lab/pages/ProjectsProfiles";
+import Navigation from "./components/atoms/Navigation";
+import ProjectApiques from "./components/lab/pages/ProjectApiques";
 
-// Página de no autorizado (opcional, para cuando un usuario no tiene el rol requerido)
+// Componentes de carga perezosa
+const Login = lazy(() => import("./api/Login"));
+const Logout = lazy(() => import("./api/Logout"));
+const GastosProject = lazy(() => import("./components/cuentas/tablas/gasto-project"));
+const TablaGastosEmpresa = lazy(() => import("./components/cuentas/tablas/gasto-mes"));
+const FormCreateMonth = lazy(() => import("./components/cuentas/forms/form-create-month"));
+const FormCreateProject = lazy(() => import("./components/cuentas/forms/form-create-project"));
+const TablaUtilidades = lazy(() => import("./components/cuentas/tablas/TablaUtilidades"));
+const PerfilesDeSuelo = lazy(() => import("./components/lab/components/PerfilDeSuelos"));
+const ProjectProfiles = lazy(() => import("./components/lab/pages/ProjectProfiles"));
+const ProjectsDashboard = lazy(() => import("./components/lab/pages/ProjectsDashboard"));
+const ApiquesDeSuelos = lazy(() => import("./components/lab/components/ApiquesDeSuelos"));
+
+// Componentes comunes
+const LoadingFallback = () => (
+  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+    <CircularProgress />
+  </Box>
+);
+
 const Unauthorized = () => (
   <Container maxWidth="sm" sx={{ mt: 4 }}>
     <Alert severity="error" sx={{ mb: 2 }}>
@@ -31,164 +41,111 @@ const Unauthorized = () => (
   </Container>
 );
 
-// Componente que redirecciona a /proyectos o /login según estado de autenticación
-const RootRedirect = () => {
-  const { isAuthenticated, loading } = useAuth();
+const NotFound = () => (
+  <Container maxWidth="sm" sx={{ mt: 4 }}>
+    <Alert severity="warning">
+      <Typography variant="h6">Página no encontrada</Typography>
+      <Typography variant="body1">
+        La página solicitada no existe.
+      </Typography>
+    </Alert>
+  </Container>
+);
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+// Layout principal
+const MainLayout = () => (
+  <>
+    <Navigation />
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Suspense fallback={<LoadingFallback />}>
+        <Outlet />
+      </Suspense>
+    </Container>
+  </>
+);
 
-  return isAuthenticated ? <Navigate to="/proyectos" /> : <Navigate to="/login" />;
+// Componente de ruta privada mejorado
+const PrivateRouteWrapper = ({ children, requiredRole }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return <LoadingFallback />;
+
+  if (!user) return <Navigate to="/login" replace />;
+
+  if (requiredRole && user.role !== requiredRole) return <Unauthorized />;
+
+  return children || <Outlet />;
 };
 
-// Wrapper con el proveedor de autenticación
-const AppWithAuth = () => {
-  return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
-  );
+// Gestión de rutas de autenticación
+const AuthRedirect = () => {
+  const { user } = useAuth();
+  return user ? <Navigate to="/proyectos" replace /> : <Navigate to="/login" replace />;
 };
 
-// Componente principal con rutas
-const AppRoutes = () => {
-  return (
+// Configuración principal de rutas
+const AppRoutes = () => (
+  <Routes>
+    <Route path="/" element={<AuthRedirect />} />
+
+    {/* Rutas públicas */}
+    <Route path="/login" element={<Login />} />
+    <Route path="/logout" element={<Logout />} />
+    <Route path="/unauthorized" element={<Unauthorized />} />
+
+    {/* Rutas protegidas */}
+    <Route element={<PrivateRouteWrapper><MainLayout /></PrivateRouteWrapper>}>
+      {/* Gestión principal */}
+      <Route path="/proyectos" element={<GastosProject />} />
+      <Route path="/gastos" element={<TablaGastosEmpresa />} />
+
+      {/* CRUD Proyectos */}
+      <Route path="/crear-proyecto" element={<FormCreateProject />} />
+      <Route path="/crear-proyecto/:id" element={<FormCreateProject />} />
+
+      {/* CRUD Gastos */}
+      <Route path="/crear-gasto-mes" element={<FormCreateMonth />} />
+      <Route path="/crear-gasto-mes/:id" element={<FormCreateMonth />} />
+
+      {/* Administración */}
+      <Route path="/utilidades" element={<PrivateRouteWrapper requiredRole="admin"><TablaUtilidades /></PrivateRouteWrapper>} />
+
+      {/* Módulo de Laboratorio */}
+      <Route path="/lab/proyectos">
+        <Route index element={<ProjectsDashboard />} />
+
+
+        <Route path=":projectId">
+          <Route index element={<Navigate to="perfiles" replace />} />
+          <Route path="perfiles" element={<ProjectProfiles />} />
+
+          <Route path="perfil">
+            <Route path=":profileId" element={<PerfilesDeSuelo />} />
+            <Route path="nuevo" element={<PerfilesDeSuelo />} />
+          </Route>
+          <Route path="apiques" element={<ProjectApiques />} />
+          <Route path="apique">
+            <Route path=":apiqueId" element={<ApiquesDeSuelos />} />
+            <Route path="nuevo" element={<ApiquesDeSuelos />} />
+          </Route>
+        </Route>
+      </Route>
+    </Route>
+
+    {/* Ruta de fallback */}
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
+
+// Componente principal
+const App = () => (
+  <AuthProvider>
     <Router>
-      <Navigation />
-      <Suspense fallback={
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-          <CircularProgress />
-        </Box>
-      }>
-        <Routes>
-          {/* Ruta raíz con redirección inteligente */}
-          <Route path="/" element={<RootRedirect />} />
-
-          {/* Rutas de autenticación */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/logout" element={<Logout />} />
-          <Route path="/unauthorized" element={<Unauthorized />} />
-
-          {/* Rutas para laboratorio y perfiles */}
-          <Route
-            path="/proyectos-perfiles"
-            element={
-              <PrivateRoute>
-                <ProjectsProfiles />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/proyectos/:projectId/perfiles"
-            element={
-              <PrivateRoute>
-                <ProjectProfiles />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/proyectos/:projectId/perfil/:profileId"
-            element={
-              <PrivateRoute>
-                <PerfilesDeSuelo />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/proyectos/:projectId/perfil/nuevo"
-            element={
-              <PrivateRoute>
-                <PerfilesDeSuelo />
-              </PrivateRoute>
-            }
-          />
-
-          {/* Rutas para creación y actualización de proyectos */}
-          <Route
-            path="/crear-proyecto"
-            element={
-              <PrivateRoute>
-                <FormCreateProject />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/crear-proyecto/:id"
-            element={
-              <PrivateRoute>
-                <FormCreateProject />
-              </PrivateRoute>
-            }
-          />
-
-          {/* Rutas para creación y actualización de gastos mensuales */}
-          <Route
-            path="/crear-gasto-mes"
-            element={
-              <PrivateRoute>
-                <FormCreateMonth />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/crear-gasto-mes/:id"
-            element={
-              <PrivateRoute>
-                <FormCreateMonth />
-              </PrivateRoute>
-            }
-          />
-
-          {/* Rutas para visualización de Tablas */}
-          <Route
-            path="/proyectos"
-            element={
-              <PrivateRoute>
-                <GastosProject />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/gastos"
-            element={
-              <PrivateRoute>
-                <TablaGastosEmpresa />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/utilidades"
-            element={
-              <PrivateRoute requiredRole="admin">
-                <TablaUtilidades />
-              </PrivateRoute>
-            }
-          />
-
-          {/* Ruta de fallback para páginas no encontradas */}
-          <Route path="*" element={
-            <Container maxWidth="sm" sx={{ mt: 4 }}>
-              <Alert severity="warning">
-                <Typography variant="h6">Página no encontrada</Typography>
-                <Typography variant="body1">
-                  La página solicitada no existe.
-                </Typography>
-              </Alert>
-            </Container>
-          } />
-        </Routes>
+      <Suspense fallback={<LoadingFallback />}>
+        <AppRoutes />
       </Suspense>
     </Router>
-  );
-};
-
-function App() {
-  return <AppWithAuth />;
-}
+  </AuthProvider>
+);
 
 export default App;
