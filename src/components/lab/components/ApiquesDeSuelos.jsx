@@ -283,7 +283,7 @@ const ApiquesDeSuelos = () => {
                         <FormControlLabel
                             control={<Checkbox checked={formData.cbr_unaltered} onChange={handleChange} name="cbr_unaltered" />}
                             label="CBR Inalterado"
-                            color='#000'
+                            color='secondary'
                         />
                     </Grid2>
                     {formData.cbr_unaltered && (

@@ -6,7 +6,8 @@ import { AuthProvider, useAuth } from "./api/AuthContext";
 import { CircularProgress, Box, Typography, Container, Alert, Button } from "@mui/material";
 import Navigation from "./components/atoms/Navigation";
 import ProjectApiques from "./components/lab/pages/ProjectApiques";
-
+import { ThemeProvider } from '@mui/material/styles';
+import theme from './theme';
 // Componentes de carga perezosa
 const Login = lazy(() => import("./api/Login"));
 const Logout = lazy(() => import("./api/Logout"));
@@ -139,13 +140,15 @@ const AppRoutes = () => (
 
 // Componente principal
 const App = () => (
-  <AuthProvider>
-    <Router>
-      <Suspense fallback={<LoadingFallback />}>
-        <AppRoutes />
-      </Suspense>
-    </Router>
-  </AuthProvider>
+  <ThemeProvider theme={theme}>
+    <AuthProvider>
+      <Router>
+        <Suspense fallback={<LoadingFallback />}>
+          <AppRoutes />
+        </Suspense>
+      </Router>
+    </AuthProvider>
+  </ThemeProvider>
 );
 
 export default App;
