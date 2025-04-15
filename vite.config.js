@@ -1,7 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-
-const prod = false;
+const prod = true;
 
 export default defineConfig({
   plugins: [react()],
@@ -13,16 +12,6 @@ export default defineConfig({
           : "https://api-cuentas-zlut.onrender.com",
         changeOrigin: true,
         secure: false,
-      },
-    },
-  },
-  build: {
-    outDir: "dist", // Directorio de salida para los archivos construidos
-    sourcemap: false, // Desactiva los sourcemaps en producción
-    minify: "terser", // Minifica el código para producción
-    terserOptions: {
-      compress: {
-        drop_console: true, // Elimina los console.log en producción
       },
     },
   },
