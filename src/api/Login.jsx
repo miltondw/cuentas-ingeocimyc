@@ -20,11 +20,9 @@ const Login = () => {
 
     try {
       const result = await login(email, password);
-      console.log("Resultado del login:", result);
       if (result.success) {
         navigate("/lab/proyectos");
       } else {
-        // Manejar diferentes tipos de errores
         if (result.status === 429) {
           const waitMinutes = result.error.waitMinutes || 15;
           setError(`Cuenta temporalmente bloqueada. Intente nuevamente en ${waitMinutes} minutos.`);
@@ -37,7 +35,7 @@ const Login = () => {
       }
     } catch (err) {
       console.error("Error inesperado:", err);
-      setError("Error al conectar con el servidor. Intente nuevamente.");
+      setError("No se pudo conectar con el servidor. Verifique su conexión e intente nuevamente.");
     } finally {
       setLoading(false);
     }

@@ -1,4 +1,3 @@
-// AuthContext.jsx
 import { createContext, useState, useContext, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import api from './index';
@@ -12,7 +11,6 @@ export const AuthProvider = ({ children }) => {
         loading: true
     });
 
-    // AuthContext.jsx
     useEffect(() => {
         const checkAuth = async () => {
             try {
@@ -21,21 +19,43 @@ export const AuthProvider = ({ children }) => {
                     setAuthState({ isAuthenticated: false, user: null, loading: false });
                     return;
                 }
-
+                if (!navigator.onLine) {
+                    setAuthState({
+                        isAuthenticated: true,
+                        user: userData,
+                        loading: false,
+                    });
+                    return;
+                }
                 const response = await api.get('/auth/verify');
                 setAuthState({
                     isAuthenticated: true,
                     user: response.data.user,
-                    loading: false
+                    loading: false,
                 });
-
             } catch (error) {
+                if (error.response?.status === 401) {
+                    try {
+                        const refreshResponse = await api.post('/auth/refresh');
+                        if (refreshResponse.status === 200) {
+                            const response = await api.get('/auth/verify');
+                            setAuthState({
+                                isAuthenticated: true,
+                                user: response.data.user,
+                                loading: false
+                            });
+                            return;
+                        }
+                    } catch (refreshError) {
+                        console.error('Error al refrescar el token:', refreshError);
+                    }
+                }
                 console.error('Error al verificar la autenticación:', error);
                 localStorage.removeItem('userData');
                 setAuthState({
                     isAuthenticated: false,
                     user: null,
-                    loading: false // Asegurar que loading siempre se establece en false
+                    loading: false
                 });
             }
         };
@@ -48,6 +68,23 @@ export const AuthProvider = ({ children }) => {
         try {
             const response = await api.post('/auth/login', { email, password });
             localStorage.setItem('userData', JSON.stringify(response.data.user));
+
+            // Verificar si el token CSRF está presente; si no, obtener uno
+            let csrfToken = document.cookie
+                .split("; ")
+                .find((row) => row.startsWith("csrf_token="))
+                ?.split("=")[1];
+            if (!csrfToken) {
+                try {
+                    const csrfResponse = await api.get('/auth/csrf');
+                    csrfToken = csrfResponse.data.csrfToken;
+                    // El backend ya establece la cookie csrf_token, pero podemos confirmar que existe
+                    console.log('Token CSRF obtenido:', csrfToken);
+                } catch (csrfError) {
+                    console.warn('No se pudo obtener el token CSRF:', csrfError);
+                    // No fallar el login si el CSRF no se obtiene, ya que no es crítico para todas las acciones
+                }
+            }
 
             setAuthState({
                 isAuthenticated: true,

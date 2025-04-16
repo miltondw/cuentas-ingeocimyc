@@ -1,5 +1,6 @@
 // api.js
 import axios from "axios";
+import { saveRequest } from "../utils/offlineStorage";
 
 //const url_remota = "https://api-cuentas-zlut.onrender.com/api";
 //const url_remota = "http://localhost:5050/api";
@@ -14,52 +15,22 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-
-    // Si el error es 401 y no es una solicitud de refresh
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
+    if (!navigator.onLine && !originalRequest._retry) {
       try {
-        // Intentar renovar el token
-        const refreshResponse = await api.post("/auth/refresh");
-        if (refreshResponse.status === 200) {
-          // Reintentar la solicitud original con el nuevo token
-          return api(originalRequest);
-        }
-      } catch (refreshError) {
-        // Redirigir a login si el refresh falla
-        console.error("Error al refrescar el token:", refreshError);
-        localStorage.removeItem("userData");
-        window.location.href = "/login";
+        await saveRequest({
+          url: originalRequest.url,
+          method: originalRequest.method,
+          data: originalRequest.data,
+          headers: originalRequest.headers,
+          timestamp: new Date().toISOString(),
+        });
+        error.customMessage =
+          "No hay conexión. La solicitud se sincronizará cuando haya señal.";
+      } catch (storageError) {
+        console.error("Error al guardar la solicitud:", storageError);
       }
+      return Promise.reject(error);
     }
-
-    return Promise.reject(error);
-  }
-);
-// Agregar un interceptor para manejar tokens CSRF
-api.interceptors.request.use(
-  async (config) => {
-    if (["post", "put", "delete"].includes(config.method)) {
-      const csrfToken = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("csrf_token="))
-        ?.split("=")[1];
-      if (csrfToken) {
-        config.headers["X-CSRF-Token"] = csrfToken;
-      }
-    }
-    config.withCredentials = true;
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
@@ -96,6 +67,32 @@ api.interceptors.response.use(
 
     return Promise.reject(error);
   }
+);
+
+api.interceptors.request.use(
+  async (config) => {
+    if (["post", "put", "delete"].includes(config.method)) {
+      let csrfToken = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("csrf_token="))
+        ?.split("=")[1];
+      if (!csrfToken) {
+        try {
+          const csrfResponse = await api.get("/auth/csrf");
+          csrfToken = csrfResponse.data.csrfToken;
+        } catch (csrfError) {
+          console.error("Error al obtener el CSRF token:", csrfError);
+          throw new Error("No se pudo obtener el token CSRF");
+        }
+      }
+      if (csrfToken) {
+        config.headers["X-CSRF-Token"] = csrfToken;
+      }
+    }
+    config.withCredentials = true;
+    return config;
+  },
+  (error) => Promise.reject(error)
 );
 
 export default api;

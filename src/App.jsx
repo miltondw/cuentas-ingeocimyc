@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import "./App.css";
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "./api/AuthContext";
 import { CircularProgress, Box, Typography, Container, Alert, Button } from "@mui/material";
 import Navigation from "./components/atoms/Navigation";
@@ -9,6 +9,7 @@ import ProjectApiques from "./components/lab/pages/ProjectApiques";
 import { ThemeProvider } from '@mui/material/styles';
 import theme from './theme';
 import ClientForm from "./components/client/components/ClientForm";
+import { syncPendingRequests } from "./utils/sync";
 // Componentes de carga perezosa
 const Login = lazy(() => import("./api/Login"));
 const Logout = lazy(() => import("./api/Logout"));
@@ -151,16 +152,42 @@ const AppRoutes = () => (
 );
 
 // Componente principal
-const App = () => (
-  <ThemeProvider theme={theme}>
-    <AuthProvider>
-      <Router>
-        <Suspense fallback={<LoadingFallback />}>
-          <AppRoutes />
-        </Suspense>
-      </Router>
-    </AuthProvider>
-  </ThemeProvider>
-);
+const App = () => {
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  useEffect(() => {
+    const handleOnline = () => {
+      syncPendingRequests();
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  return (
+    <ThemeProvider theme={theme}>
+      <AuthProvider>
+        <Router>
+          {isOffline && (
+            <Alert severity="warning" sx={{ m: 2 }}>
+              Estás sin conexión. Los datos se sincronizarán cuando tengas señal.
+            </Alert>
+          )}
+          <Suspense fallback={<LoadingFallback />}>
+            <AppRoutes />
+          </Suspense>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
+  )
+}
 
 export default App;

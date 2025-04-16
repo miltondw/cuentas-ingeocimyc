@@ -30,6 +30,7 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import LandscapeIcon from "@mui/icons-material/Landscape";
 import BlurCircularIcon from '@mui/icons-material/BlurCircular';
 import api from "../../../api";
+import { cacheProjects, getCachedProjects } from "../../../utils/offlineStorage";
 
 // Table column definitions
 const tableColumns = [
@@ -85,18 +86,28 @@ const ProjectsDashboard = () => {
     const fetchProjects = async () => {
         setState(prev => ({ ...prev, loading: true, error: null }));
         try {
+            if (!navigator.onLine) {
+                const cachedProjects = await getCachedProjects(); // Implementa esta función
+                setState(prev => ({
+                    ...prev,
+                    projects: cachedProjects,
+                    totalPages: 1,
+                    totalItems: cachedProjects.length,
+                    loading: false,
+                }));
+                return;
+            }
             const params = buildQueryParams();
-            const response = await api.get("/projects", { params });
+            const response = await api.get('/projects', { params });
             const { proyectos: projects = [], totalPages, total } = response.data;
-
+            await cacheProjects(projects); // Implementa esta función
             setState(prev => ({
                 ...prev,
                 projects,
                 totalPages,
                 totalItems: total,
-                loading: false
+                loading: false,
             }));
-
             fetchProjectCounts(projects);
         } catch (error) {
             setState(prev => ({
