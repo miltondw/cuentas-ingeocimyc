@@ -8,6 +8,7 @@ import Navigation from "./components/atoms/Navigation";
 import ProjectApiques from "./components/lab/pages/ProjectApiques";
 import { ThemeProvider } from '@mui/material/styles';
 import theme from './theme';
+import ClientForm from "./components/client/components/ClientForm";
 // Componentes de carga perezosa
 const Login = lazy(() => import("./api/Login"));
 const Logout = lazy(() => import("./api/Logout"));
@@ -105,6 +106,7 @@ const AppRoutes = () => (
     <Route path="/login" element={<Login />} />
     <Route path="/logout" element={<Logout />} />
     <Route path="/unauthorized" element={<Unauthorized />} />
+    <Route path="/cliente" element={<ClientForm />} />
 
     {/* Rutas protegidas */}
     <Route element={<PrivateRouteWrapper><MainLayout /></PrivateRouteWrapper>}>
