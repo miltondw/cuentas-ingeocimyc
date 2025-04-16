@@ -83,13 +83,10 @@ const PrivateRouteWrapper = ({ children, requiredRoles }) => {
 
   if (loading) return <LoadingFallback />;
   if (!user) return <Navigate to="/login" replace />;
-
   if (requiredRoles && !requiredRoles.includes(user.rol)) {
     return <Navigate to="/unauthorized" replace />;
   }
-
-  // Renderizar Outlet para rutas anidadas
-  return children ? children : <Outlet />;
+  return children || <Outlet />;
 };
 // Gestión de rutas de autenticación
 const AuthRedirect = () => {
@@ -98,9 +95,9 @@ const AuthRedirect = () => {
 };
 
 // Configuración principal de rutas
+// Configuración principal de rutas
 const AppRoutes = () => (
   <Routes>
-
     <Route path="/" element={<AuthRedirect />} />
 
     {/* Rutas públicas */}
@@ -113,7 +110,7 @@ const AppRoutes = () => (
     <Route element={<PrivateRouteWrapper><MainLayout /></PrivateRouteWrapper>}>
 
       {/* Ruta padre para admin */}
-      <Route element={<PrivateRouteWrapper requiredRoles={["admin"]}>
+      <Route element={<PrivateRouteWrapper requiredRoles={["admin"]} />}>
         <Route path="/proyectos" element={<GastosProject />} />
         <Route path="/gastos" element={<TablaGastosEmpresa />} />
         <Route path="/crear-proyecto" element={<FormCreateProject />} />
@@ -121,18 +118,14 @@ const AppRoutes = () => (
         <Route path="/crear-gasto-mes" element={<FormCreateMonth />} />
         <Route path="/crear-gasto-mes/:id" element={<FormCreateMonth />} />
         <Route path="/utilidades" element={<TablaUtilidades />} />
-      </PrivateRouteWrapper>} />
-
+      </Route>
 
       {/* Módulo de Laboratorio */}
       <Route path="/lab/proyectos">
         <Route index element={<ProjectsDashboard />} />
-
-
         <Route path=":projectId">
           <Route index element={<Navigate to="perfiles" replace />} />
           <Route path="perfiles" element={<ProjectProfiles />} />
-
           <Route path="perfil">
             <Route path=":profileId" element={<PerfilesDeSuelo />} />
             <Route path="nuevo" element={<PerfilesDeSuelo />} />

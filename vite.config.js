@@ -15,7 +15,7 @@ export default defineConfig({
       devOptions: {
         enabled: true, // Habilita el Service Worker en desarrollo
       },
-      includeAssets: ["favicon.ico", "icons/*.png"],
+      includeAssets: ["favicon.ico", "logo-ingeocimyc.svg"],
       manifest: {
         name: "Cuentas Ingeocimyc",
         short_name: "Ingeocimyc",
@@ -26,14 +26,9 @@ export default defineConfig({
         start_url: "/",
         icons: [
           {
-            src: "/icons/icon-192x192.png",
+            src: "/logo-ingeocimyc.svg",
             sizes: "192x192",
-            type: "image/png",
-          },
-          {
-            src: "/icons/icon-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
+            type: "image/svg",
           },
         ],
       },
