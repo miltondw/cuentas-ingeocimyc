@@ -31,7 +31,7 @@ export const useResponsiveAppBar = () => {
     const result = {};
     menuConfig.menuItems.forEach((item) => {
       const normalizedUserRole = user?.rol?.toLowerCase();
-      const normalizedItemRoles = item.roles?.map((role) => role.toLowerCase());
+      const normalizedItemRoles = item.roles?.map((rol) => rol.toLowerCase());
 
       if (!item.roles || normalizedItemRoles.includes(normalizedUserRole)) {
         result[item.key] = [...item.items];

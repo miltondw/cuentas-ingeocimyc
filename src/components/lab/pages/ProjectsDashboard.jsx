@@ -333,56 +333,64 @@ const ProjectsDashboard = () => {
                                             <TableCell>
                                                 <Stack direction={isMobile ? "column" : "row"} spacing={1}>
                                                     <Tooltip title="Ver perfiles">
-                                                        <Typography variant="caption" sx={{
-                                                            display: !isMobile && "block",
-                                                            textAlign: "center"
-                                                        }} gutterBottom>Ver perfiles</Typography>
-                                                        <IconButton
-                                                            color="info"
-                                                            onClick={() => handleNavigate(project.proyecto_id, 'viewP')}
-                                                            size="small"
-                                                        >
-                                                            <VisibilityIcon />
-                                                        </IconButton>
+                                                        <Box>
+                                                            <Typography variant="caption" sx={{
+                                                                display: !isMobile && "block",
+                                                                textAlign: "center"
+                                                            }} gutterBottom>Ver perfiles</Typography>
+                                                            <IconButton
+                                                                color="info"
+                                                                onClick={() => handleNavigate(project.proyecto_id, 'viewP')}
+                                                                size="small"
+                                                            >
+                                                                <VisibilityIcon />
+                                                            </IconButton>
+                                                        </Box>
                                                     </Tooltip>
                                                     <Tooltip title="Ver apiques">
-                                                        <Typography variant="caption" sx={{
-                                                            display: !isMobile && "block",
-                                                            textAlign: "center"
-                                                        }} gutterBottom>Ver apiques</Typography>
-                                                        <IconButton
-                                                            color="info"
-                                                            onClick={() => handleNavigate(project.proyecto_id, 'viewA')}
-                                                            size="small"
-                                                        >
-                                                            <VisibilityIcon />
-                                                        </IconButton>
+                                                        <Box>
+                                                            <Typography variant="caption" sx={{
+                                                                display: !isMobile && "block",
+                                                                textAlign: "center"
+                                                            }} gutterBottom>Ver apiques</Typography>
+                                                            <IconButton
+                                                                color="info"
+                                                                onClick={() => handleNavigate(project.proyecto_id, 'viewA')}
+                                                                size="small"
+                                                            >
+                                                                <VisibilityIcon />
+                                                            </IconButton>
+                                                        </Box>
                                                     </Tooltip>
                                                     <Tooltip title="Nuevo perfil">
-                                                        <Typography variant="caption" sx={{
-                                                            display: !isMobile && "block",
-                                                            textAlign: "center"
-                                                        }} gutterBottom>Nuevo Perfil</Typography>
-                                                        <IconButton
-                                                            color="success"
-                                                            onClick={() => handleNavigate(project.proyecto_id, 'newProfile')}
-                                                            size="small"
-                                                        >
-                                                            <AddIcon />
-                                                        </IconButton>
+                                                        <Box>
+                                                            <Typography variant="caption" sx={{
+                                                                display: !isMobile && "block",
+                                                                textAlign: "center"
+                                                            }} gutterBottom>Nuevo Perfil</Typography>
+                                                            <IconButton
+                                                                color="success"
+                                                                onClick={() => handleNavigate(project.proyecto_id, 'newProfile')}
+                                                                size="small"
+                                                            >
+                                                                <AddIcon />
+                                                            </IconButton>
+                                                        </Box>
                                                     </Tooltip>
                                                     <Tooltip title="Nuevo apique">
-                                                        <Typography variant="caption" sx={{
-                                                            display: !isMobile && "block",
-                                                            textAlign: "center"
-                                                        }} gutterBottom>Nuevo Apique</Typography>
-                                                        <IconButton
-                                                            color="warning"
-                                                            onClick={() => handleNavigate(project.proyecto_id, 'newApique')}
-                                                            size="small"
-                                                        >
-                                                            <AddIcon />
-                                                        </IconButton>
+                                                        <Box>
+                                                            <Typography variant="caption" sx={{
+                                                                display: !isMobile && "block",
+                                                                textAlign: "center"
+                                                            }} gutterBottom>Nuevo Apique</Typography>
+                                                            <IconButton
+                                                                color="warning"
+                                                                onClick={() => handleNavigate(project.proyecto_id, 'newApique')}
+                                                                size="small"
+                                                            >
+                                                                <AddIcon />
+                                                            </IconButton>
+                                                        </Box>
                                                     </Tooltip>
                                                 </Stack>
                                             </TableCell>

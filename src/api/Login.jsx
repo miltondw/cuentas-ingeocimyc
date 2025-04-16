@@ -12,7 +12,6 @@ const Login = () => {
 
   const navigate = useNavigate();
   const { login } = useAuth();
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
@@ -21,8 +20,9 @@ const Login = () => {
 
     try {
       const result = await login(email, password);
+      console.log("Resultado del login:", result);
       if (result.success) {
-        navigate("/proyectos");
+        navigate("/lab/proyectos");
       } else {
         // Manejar diferentes tipos de errores
         if (result.status === 429) {
@@ -76,13 +76,16 @@ const Login = () => {
         />
         <Button
           variant="contained"
-          color="primary"
           fullWidth
           type="submit"
           disabled={loading}
           sx={{ mt: 2 }}
         >
-          {loading ? <CircularProgress size={24} /> : 'Iniciar sesión'}
+          {loading ? (
+            <CircularProgress size={24} sx={{ color: 'white' }} />
+          ) : (
+            'Iniciar sesión'
+          )}
         </Button>
       </form>
     </Container>

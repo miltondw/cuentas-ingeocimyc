@@ -10,8 +10,14 @@ const Logout = () => {
 
     useEffect(() => {
         const performLogout = async () => {
-            await logout();
-            navigate('/login');
+            try {
+                await logout();
+                // Limpiar todas las cookies relacionadas
+                document.cookie = 'accessToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                document.cookie = 'refreshToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+            } finally {
+                navigate('/login');
+            }
         };
 
         performLogout();

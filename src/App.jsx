@@ -23,8 +23,18 @@ const ApiquesDeSuelos = lazy(() => import("./components/lab/components/ApiquesDe
 
 // Componentes comunes
 const LoadingFallback = () => (
-  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-    <CircularProgress />
+  <Box sx={{
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100vh',
+    gap: 2
+  }}>
+    <CircularProgress size={60} thickness={4} />
+    <Typography variant="h6" color="textSecondary">
+      Cargando módulos...
+    </Typography>
   </Box>
 );
 
@@ -66,27 +76,29 @@ const MainLayout = () => (
 );
 
 // Componente de ruta privada mejorado
-const PrivateRouteWrapper = ({ children, requiredRole }) => {
+const PrivateRouteWrapper = ({ children, requiredRoles }) => {
   const { user, loading } = useAuth();
 
   if (loading) return <LoadingFallback />;
-
   if (!user) return <Navigate to="/login" replace />;
 
-  if (requiredRole && user.role !== requiredRole) return <Unauthorized />;
+  if (requiredRoles && !requiredRoles.includes(user.rol)) {
+    return <Navigate to="/unauthorized" replace />;
+  }
 
-  return children || <Outlet />;
+  // Renderizar Outlet para rutas anidadas
+  return children ? children : <Outlet />;
 };
-
 // Gestión de rutas de autenticación
 const AuthRedirect = () => {
   const { user } = useAuth();
-  return user ? <Navigate to="/proyectos" replace /> : <Navigate to="/login" replace />;
+  return user ? <Navigate to={user.rol == "admin" ? "/proyectos" : "/lab/proyectos"} replace /> : <Navigate to="/login" replace />;
 };
 
 // Configuración principal de rutas
 const AppRoutes = () => (
   <Routes>
+
     <Route path="/" element={<AuthRedirect />} />
 
     {/* Rutas públicas */}
@@ -96,20 +108,18 @@ const AppRoutes = () => (
 
     {/* Rutas protegidas */}
     <Route element={<PrivateRouteWrapper><MainLayout /></PrivateRouteWrapper>}>
-      {/* Gestión principal */}
-      <Route path="/proyectos" element={<GastosProject />} />
-      <Route path="/gastos" element={<TablaGastosEmpresa />} />
 
-      {/* CRUD Proyectos */}
-      <Route path="/crear-proyecto" element={<FormCreateProject />} />
-      <Route path="/crear-proyecto/:id" element={<FormCreateProject />} />
+      {/* Ruta padre para admin */}
+      <Route element={<PrivateRouteWrapper requiredRoles={["admin"]}>
+        <Route path="/proyectos" element={<GastosProject />} />
+        <Route path="/gastos" element={<TablaGastosEmpresa />} />
+        <Route path="/crear-proyecto" element={<FormCreateProject />} />
+        <Route path="/crear-proyecto/:id" element={<FormCreateProject />} />
+        <Route path="/crear-gasto-mes" element={<FormCreateMonth />} />
+        <Route path="/crear-gasto-mes/:id" element={<FormCreateMonth />} />
+        <Route path="/utilidades" element={<TablaUtilidades />} />
+      </PrivateRouteWrapper>} />
 
-      {/* CRUD Gastos */}
-      <Route path="/crear-gasto-mes" element={<FormCreateMonth />} />
-      <Route path="/crear-gasto-mes/:id" element={<FormCreateMonth />} />
-
-      {/* Administración */}
-      <Route path="/utilidades" element={<TablaUtilidades />} />
 
       {/* Módulo de Laboratorio */}
       <Route path="/lab/proyectos">

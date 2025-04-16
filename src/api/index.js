@@ -10,6 +10,33 @@ const api = axios.create({
   withCredentials: true, // Para enviar y recibir cookies
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Si el error es 401 y no es una solicitud de refresh
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        // Intentar renovar el token
+        const refreshResponse = await api.post("/auth/refresh");
+        if (refreshResponse.status === 200) {
+          // Reintentar la solicitud original con el nuevo token
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        // Redirigir a login si el refresh falla
+        console.error("Error al refrescar el token:", refreshError);
+        localStorage.removeItem("userData");
+        window.location.href = "/login";
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 // Agregar un interceptor para manejar tokens CSRF
 api.interceptors.request.use(
   async (config) => {

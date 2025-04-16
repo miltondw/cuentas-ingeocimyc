@@ -12,39 +12,35 @@ export const AuthProvider = ({ children }) => {
         loading: true
     });
 
-    // Verificar autenticación al cargar
+    // AuthContext.jsx
     useEffect(() => {
         const checkAuth = async () => {
             try {
-                // Intentar verificar el token actual
+                const userData = JSON.parse(localStorage.getItem('userData'));
+                if (!userData) {
+                    setAuthState({ isAuthenticated: false, user: null, loading: false });
+                    return;
+                }
+
                 const response = await api.get('/auth/verify');
                 setAuthState({
                     isAuthenticated: true,
                     user: response.data.user,
                     loading: false
                 });
+
             } catch (error) {
-                // Token inválido o expirado
-                console.error('Error de verificación:', error);
+                console.error('Error al verificar la autenticación:', error);
+                localStorage.removeItem('userData');
                 setAuthState({
                     isAuthenticated: false,
                     user: null,
-                    loading: false
+                    loading: false // Asegurar que loading siempre se establece en false
                 });
             }
         };
 
-        // Si hay datos en localStorage, verificar que sean válidos
-        const userData = JSON.parse(localStorage.getItem('userData') || 'null');
-        if (userData) {
-            checkAuth();
-        } else {
-            setAuthState({
-                isAuthenticated: false,
-                user: null,
-                loading: false
-            });
-        }
+        checkAuth();
     }, []);
 
     // Función para iniciar sesión
