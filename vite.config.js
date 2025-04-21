@@ -1,3 +1,4 @@
+// vite.config.js
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
@@ -8,14 +9,12 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      srcDir: "src",
-      filename: "sw.js",
-      strategies: "injectManifest",
       registerType: "autoUpdate",
       devOptions: {
-        enabled: true, // Habilita el Service Worker en desarrollo
+        enabled: true,
       },
-      includeAssets: ["favicon.ico", "logo-ingeocimyc.svg"],
+      strategies: "generateSW",
+      includeAssets: ["favicon.ico", "logo-ingeocimyc.svg", "icons/*.png"],
       manifest: {
         name: "Cuentas Ingeocimyc",
         short_name: "Ingeocimyc",
@@ -26,9 +25,14 @@ export default defineConfig({
         start_url: "/",
         icons: [
           {
-            src: "/logo-ingeocimyc.svg",
+            src: "/icons/icon-192x192.png",
             sizes: "192x192",
-            type: "image/svg",
+            type: "image/png",
+          },
+          {
+            src: "/icons/icon-512x512.png",
+            sizes: "512x512",
+            type: "image/png",
           },
         ],
       },
@@ -37,12 +41,12 @@ export default defineConfig({
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api-cuentas-zlut\.onrender\.com\/api\/.*/i,
-            handler: "NetworkOnly", // Las solicitudes a la API no se cachean directamente
+            handler: "NetworkOnly",
             options: {
               backgroundSync: {
                 name: "api-sync-queue",
                 options: {
-                  maxRetentionTime: 24 * 60, // Retener solicitudes en cola por 24 horas
+                  maxRetentionTime: 24 * 60,
                 },
               },
             },
