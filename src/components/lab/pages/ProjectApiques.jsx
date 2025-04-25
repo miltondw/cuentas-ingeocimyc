@@ -304,7 +304,7 @@ const ProjectApiques = () => {
             ) : (
                 <Grid2 container spacing={3}>
                     {apiques.map((apique) => (
-                        <Grid2 item xs={12} sm={6} key={apique.apique_id}>
+                        <Grid2 size={{ xs: 12, sm: 6 }} key={apique.apique_id}>
                             <Card>
                                 <CardContent>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>

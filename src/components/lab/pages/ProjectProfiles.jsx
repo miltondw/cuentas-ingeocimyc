@@ -9,7 +9,7 @@ import {
     IconButton,
     Divider,
     Fab,
-    Grid,
+    Grid2,
     Paper,
     Chip,
     useMediaQuery,
@@ -340,9 +340,9 @@ const ProjectProfiles = () => {
                     </Typography>
                 </Paper>
             ) : (
-                <Grid container spacing={3}>
+                <Grid2 container spacing={3}>
                     {profiles.map((profile) => (
-                        <Grid item xs={12} sm={6} key={profile.profile_id}>
+                        <Grid2 size={{ xs: 12, sm: 6 }} key={profile.profile_id}>
                             <Card>
                                 <CardContent>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
@@ -414,9 +414,9 @@ const ProjectProfiles = () => {
                                     </Box>
                                 </CardContent>
                             </Card>
-                        </Grid>
+                        </Grid2>
                     ))}
-                </Grid>
+                </Grid2>
             )}
         </Container>
     );

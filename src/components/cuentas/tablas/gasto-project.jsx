@@ -304,7 +304,7 @@ const GastosProject = () => {
 
         <Grid2 container spacing={2} sx={{ mb: 3 }}>
           {Object.entries(state.filters).map(([key, value]) => (
-            <Grid2 item key={key} xs={12} sm={6} md={3}>
+            <Grid2 key={key} size={{ xs: 12, sm: 6 }} md={3}>
               {key === "estado_cuenta" ? (
                 <TextField
                   select
@@ -336,7 +336,7 @@ const GastosProject = () => {
               )}
             </Grid2>
           ))}
-          <Grid2 item xs={12}>
+          <Grid2 size={{ xs: 12 }}>
             <Button onClick={handleClearFilters} variant="outlined" color="error" fullWidth>
               Limpiar Filtros
             </Button>

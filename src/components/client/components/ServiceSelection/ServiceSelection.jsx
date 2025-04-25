@@ -10,12 +10,17 @@ import {
 } from "@mui/material";
 import ServiceCategory from "./ServiceCategory";
 import PropTypes from "prop-types";
+import { useServiceRequest } from "../ServiceRequestContext";
 
-const ServiceSelection = ({ services, selectedServices, setSelectedServices }) => {
+
+const ServiceSelection = ({ services }) => {
+  const { state } = useServiceRequest();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
 
+
   const categories = [...new Set(services.map((service) => service.category))];
+
 
   const filteredServices = services.filter(
     (service) =>
@@ -25,15 +30,18 @@ const ServiceSelection = ({ services, selectedServices, setSelectedServices }) =
       )
   );
 
+
   const handleCategoryChange = (event) => {
     setSelectedCategory(event.target.value);
   };
+
 
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
         Seleccionar Servicios
       </Typography>
+
 
       <FormControl fullWidth margin="normal">
         <InputLabel id="category-select-label">Categoría</InputLabel>
@@ -53,8 +61,8 @@ const ServiceSelection = ({ services, selectedServices, setSelectedServices }) =
         </Select>
       </FormControl>
 
+
       <TextField
-        slotProps={{ inputLabel: { shrink: true } }}
         fullWidth
         label="Buscar servicio"
         value={searchTerm}
@@ -62,17 +70,18 @@ const ServiceSelection = ({ services, selectedServices, setSelectedServices }) =
         margin="normal"
       />
 
+
       {filteredServices.map((service) => (
         <ServiceCategory
           key={service.id}
           category={service}
-          selectedServices={selectedServices}
-          setSelectedServices={setSelectedServices}
+          selectedServices={state.selectedServices}
         />
       ))}
     </Box>
   );
 };
+
 
 ServiceSelection.propTypes = {
   services: PropTypes.arrayOf(
@@ -87,16 +96,7 @@ ServiceSelection.propTypes = {
       ).isRequired,
     })
   ).isRequired,
-  selectedServices: PropTypes.arrayOf(
-    PropTypes.shape({
-      item: PropTypes.shape({
-        id: PropTypes.number.isRequired,
-        name: PropTypes.string.isRequired,
-      }).isRequired,
-      quantity: PropTypes.number.isRequired,
-    })
-  ).isRequired,
-  setSelectedServices: PropTypes.func.isRequired,
 };
+
 
 export default ServiceSelection;

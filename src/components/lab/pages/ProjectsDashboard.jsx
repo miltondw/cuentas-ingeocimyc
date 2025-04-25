@@ -236,7 +236,7 @@ const ProjectsDashboard = () => {
             {state.showFilters && (
                 <Paper sx={{ mb: 3, p: 2 }}>
                     <Grid2 container spacing={2}>
-                        <Grid2 item xs={12} sm={6} md={3}>
+                        <Grid2 size={{ xs: 12, sm: 6 }} md={3}>
                             <TextField
                                 fullWidth
                                 label="Fecha inicio"
@@ -248,7 +248,7 @@ const ProjectsDashboard = () => {
                                 InputLabelProps={{ shrink: true }}
                             />
                         </Grid2>
-                        <Grid2 item xs={12} sm={6} md={3}>
+                        <Grid2 size={{ xs: 12, sm: 6 }} md={3}>
                             <TextField
                                 fullWidth
                                 label="Fecha fin"
@@ -260,7 +260,7 @@ const ProjectsDashboard = () => {
                                 InputLabelProps={{ shrink: true }}
                             />
                         </Grid2>
-                        <Grid2 item xs={12} sm={6} md={3}>
+                        <Grid2 size={{ xs: 12, sm: 6 }} md={3}>
                             <TextField
                                 fullWidth
                                 label="Solicitante"
@@ -270,7 +270,7 @@ const ProjectsDashboard = () => {
                                 size="small"
                             />
                         </Grid2>
-                        <Grid2 item xs={12} sm={6} md={3}>
+                        <Grid2 size={{ xs: 12, sm: 6 }} md={3}>
                             <TextField
                                 fullWidth
                                 label="Nombre del proyecto"
@@ -280,7 +280,7 @@ const ProjectsDashboard = () => {
                                 size="small"
                             />
                         </Grid2>
-                        <Grid2 item xs={12}>
+                        <Grid2 size={{ xs: 12 }}>
                             <Stack direction="row" spacing={2} justifyContent="flex-end">
                                 <Button
                                     variant="outlined"

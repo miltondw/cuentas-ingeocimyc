@@ -1,105 +1,117 @@
-// InitialInfoForm.jsx
-import { Box, TextField, Grid2, Typography } from "@mui/material";
-import PropTypes from "prop-types";
+import { useCallback } from 'react';
+import { TextField, Grid2, Typography, FormControl, Button } from '@mui/material';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as Yup from 'yup';
+import { useServiceRequest } from '../ServiceRequestContext';
 
-const InitialInfoForm = ({ formData, setFormData }) => {
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
+const InitialInfoForm = () => {
+  const { state, setFormData } = useServiceRequest();
+  const { formData } = state;
+
+  // --- Esquema de Validación Yup ---
+  const validationSchema = Yup.object().shape({
+    name: Yup.string().required("El nombre es requerido"),
+    nameProject: Yup.string().required("El nombre del proyecto es requerido"),
+    location: Yup.string().required("La localización es requerida"),
+    identification: Yup.string().required("La identificación es requerida"),
+    phone: Yup.string().required("El teléfono es requerido"),
+    email: Yup.string().email("Correo electrónico no válido").required("El correo electrónico es requerido"),
+    description: Yup.string().required("La descripción es requerida"),
+  });
+
+
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: yupResolver(validationSchema),
+    defaultValues: formData,
+    mode: 'onChange',
+  });
+
+
+  const onSubmit = useCallback((data) => {
+    console.log("Form submitted, updating context with data:", data);
+    setFormData(data);
+  }, [setFormData]);
 
   return (
-    <Box>
+    // handleSubmit valida y luego llama a nuestro onSubmit si todo está OK
+    <FormControl component="form" noValidate onSubmit={handleSubmit(onSubmit)}>
       <Typography variant="h6" gutterBottom>
-        Información del Solicitante
+        Información Inicial
       </Typography>
       <Grid2 container spacing={2}>
+        {/* Campos del formulario (sin cambios aquí) */}
         <Grid2 size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
             label="Nombre"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
+            {...register("name")}
+            error={!!errors.name}
+            helperText={errors.name?.message}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
             label="Nombre del Proyecto"
-            name="nameProject"
-            value={formData.nameProject}
-            onChange={handleChange}
+            {...register("nameProject")}
+            error={!!errors.nameProject}
+            helperText={errors.nameProject?.message}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
-            label="Localización del Proyecto"
-            name="location"
-            value={formData.location}
-            onChange={handleChange}
+            label="Ubicación"
+            {...register("location")}
+            error={!!errors.location}
+            helperText={errors.location?.message}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
-            label="Identificación CC O NIT"
-            name="identification"
-            value={formData.identification}
-            onChange={handleChange}
+            label="Identificación"
+            {...register("identification")}
+            error={!!errors.identification}
+            helperText={errors.identification?.message}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
             label="Teléfono"
-            name="phone"
-            value={formData.phone}
-            onChange={handleChange}
+            {...register("phone")}
+            error={!!errors.phone}
+            helperText={errors.phone?.message}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
             label="Correo Electrónico"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
+            type="email"
+            {...register("email")}
+            error={!!errors.email}
+            helperText={errors.email?.message}
           />
         </Grid2>
-        <Grid2 size={{ xs: 12, sm: 6 }}>
+        <Grid2 size={{ xs: 12 }} >
           <TextField
             fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
             label="Descripción del Proyecto"
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
+            multiline
+            rows={4}
+            {...register("description")}
+            error={!!errors.description}
+            helperText={errors.description?.message}
           />
         </Grid2>
       </Grid2>
-    </Box>
+      {/* Botón oculto para permitir el envío externo */}
+      <Button color="primary" type="submit" aria-hidden="true" variant="contained" sx={{ width: "50%", margin: "1rem auto", }}  >Guardar</Button>
+    </FormControl>
   );
-};
-
-InitialInfoForm.propTypes = {
-  formData: PropTypes.shape({
-    name: PropTypes.string.isRequired,
-    nameProject: PropTypes.string.isRequired,
-    location: PropTypes.string.isRequired,
-    identification: PropTypes.string.isRequired,
-    phone: PropTypes.string.isRequired,
-    email: PropTypes.string.isRequired,
-    description: PropTypes.string.isRequired,
-  }).isRequired,
-  setFormData: PropTypes.func.isRequired,
 };
 
 export default InitialInfoForm;

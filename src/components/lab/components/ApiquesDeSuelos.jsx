@@ -228,7 +228,7 @@ const ApiquesDeSuelos = () => {
 
             <form onSubmit={handleSubmit}>
                 <Grid2 container spacing={2}>
-                    <Grid2 item xs={12} sm={6}>
+                    <Grid2 size={{ xs: 12, sm: 6 }}>
                         <TextField
                             label="Número de Apique"
                             name="apique"
@@ -239,7 +239,7 @@ const ApiquesDeSuelos = () => {
                             aria-label="Número de apique (requerido)"
                         />
                     </Grid2>
-                    <Grid2 item xs={12} sm={6}>
+                    <Grid2 size={{ xs: 12, sm: 6 }}>
                         <TextField
                             label="Ubicación"
                             name="location"
@@ -248,7 +248,7 @@ const ApiquesDeSuelos = () => {
                             fullWidth
                         />
                     </Grid2>
-                    <Grid2 item xs={12} sm={6}>
+                    <Grid2 size={{ xs: 12, sm: 6 }}>
                         <TextField
                             label="Fecha"
                             name="date"
@@ -259,7 +259,7 @@ const ApiquesDeSuelos = () => {
                             InputLabelProps={{ shrink: true }}
                         />
                     </Grid2>
-                    <Grid2 item xs={12} sm={6}>
+                    <Grid2 size={{ xs: 12, sm: 6 }}>
                         <TextField
                             label="Profundidad (m)"
                             name="depth"
@@ -268,7 +268,7 @@ const ApiquesDeSuelos = () => {
                             fullWidth
                         />
                     </Grid2>
-                    <Grid2 item xs={12} sm={6}>
+                    <Grid2 size={{ xs: 12, sm: 6 }}>
                         <TextField
                             label="Profundidad a la que se tomó (m)"
                             name="depth_tomo"
@@ -279,7 +279,7 @@ const ApiquesDeSuelos = () => {
                             slotProps={{ inputProps: { step: '0.01', min: 0 } }}
                         />
                     </Grid2>
-                    <Grid2 item xs={12} sm={6}>
+                    <Grid2 size={{ xs: 12, sm: 6 }}>
                         <FormControlLabel
                             control={<Checkbox checked={formData.cbr_unaltered} onChange={handleChange} name="cbr_unaltered" />}
                             label="CBR Inalterado"
@@ -287,7 +287,7 @@ const ApiquesDeSuelos = () => {
                         />
                     </Grid2>
                     {formData.cbr_unaltered && (
-                        <Grid2 item xs={12} sm={6}>
+                        <Grid2 size={{ xs: 12, sm: 6 }}>
                             <TextField
                                 label="Molde"
                                 type="number"

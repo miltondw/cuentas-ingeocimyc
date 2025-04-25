@@ -197,7 +197,7 @@ const FormCreateProject = () => {
       <form onSubmit={handleSubmit}>
         <Grid2 container spacing={2}>
           {/* Campos del proyecto */}
-          <Grid2 item xs={12} sm={6}>
+          <Grid2 size={{ xs: 12, sm: 6 }}>
             <TextField
               label="Fecha"
               type="date"
@@ -209,7 +209,7 @@ const FormCreateProject = () => {
             />
           </Grid2>
           {["solicitante", "nombre_proyecto", "obrero"].map((field) => (
-            <Grid2 item xs={12} sm={6} key={field}>
+            <Grid2 size={{ xs: 12, sm: 6 }} key={field}>
               <TextField
                 label={field.replace(/_/g, " ").toUpperCase()}
                 name={field}
@@ -219,7 +219,7 @@ const FormCreateProject = () => {
               />
             </Grid2>
           ))}
-          <Grid2 item xs={12} sm={6}>
+          <Grid2 size={{ xs: 12, sm: 6 }}>
             <TextField
               select
               label="Método de Pago"
@@ -233,7 +233,7 @@ const FormCreateProject = () => {
               <MenuItem value="efectivo">Efectivo</MenuItem>
             </TextField>
           </Grid2>
-          <Grid2 item xs={12} sm={6}>
+          <Grid2 size={{ xs: 12, sm: 6 }}>
             <TextField
               label="COSTO DEL SERVICIO"
               name="costo_servicio"
@@ -242,7 +242,7 @@ const FormCreateProject = () => {
               fullWidth
             />
           </Grid2>
-          <Grid2 item xs={12} sm={6}>
+          <Grid2 size={{ xs: 12, sm: 6 }}>
             <TextField
               label="ABONO"
               name="abono"
@@ -251,7 +251,7 @@ const FormCreateProject = () => {
               fullWidth
             />
           </Grid2>
-          <Grid2 item xs={12}>
+          <Grid2 size={{ xs: 12 }}>
             <FormControlLabel
               control={<Checkbox checked={project.retencionIva} onChange={handleCheckboxChange} />}
               label="¿Aplica Facturacion?"
@@ -259,7 +259,7 @@ const FormCreateProject = () => {
           </Grid2>
           {project.retencionIva && (
             ["factura", "valor_retencion"].map((field) => (
-              <Grid2 item xs={12} sm={6} key={field}>
+              <Grid2 size={{ xs: 12, sm: 6 }} key={field}>
                 <TextField
                   label={field.replace(/_/g, " ").toUpperCase()}
                   name={field}
@@ -277,7 +277,7 @@ const FormCreateProject = () => {
         <Typography variant="h4" sx={{ mt: 3, mb: 2 }}>Gastos</Typography>
         <Grid2 container spacing={2} sx={{ mb: 2, border: "1px solid #ccc", p: 2, borderRadius: 1 }}>
           {["camioneta", "campo", "obreros", "comidas", "otros", "peajes", "combustible", "hospedaje"].map((field) => (
-            <Grid2 item xs={12} sm={3} key={field}>
+            <Grid2 size={{ xs: 12, sm: 3 }} key={field}>
               <TextField
                 label={field.toUpperCase()}
                 name={field}
@@ -290,7 +290,7 @@ const FormCreateProject = () => {
 
           {project.gastos.extras.map((extra, index) => (
             <Grid2 container spacing={1} key={index} sx={{ mb: 1 }}>
-              <Grid2 item xs={5}>
+              <Grid2 size={{ xs: 5 }}>
                 <TextField
                   label="Nombre del Campo"
                   name="field"
@@ -299,7 +299,7 @@ const FormCreateProject = () => {
                   fullWidth
                 />
               </Grid2>
-              <Grid2 item xs={5}>
+              <Grid2 size={{ xs: 5 }}>
                 <TextField
                   label="Valor"
                   name="value"
@@ -308,7 +308,7 @@ const FormCreateProject = () => {
                   fullWidth
                 />
               </Grid2>
-              <Grid2 item xs={2}>
+              <Grid2 size={{ xs: 2 }}>
                 <IconButton onClick={() => handleRemoveExtra(index)}>
                   <DeleteIcon />
                 </IconButton>
@@ -316,7 +316,7 @@ const FormCreateProject = () => {
             </Grid2>
           ))}
 
-          <Grid2 item xs={12}>
+          <Grid2 size={{ xs: 12 }}>
             <Button variant="outlined" onClick={handleAddExtra}>
               Agregar campo extra
             </Button>
