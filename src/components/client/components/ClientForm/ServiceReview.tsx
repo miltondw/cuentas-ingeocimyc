@@ -1,3 +1,4 @@
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -16,16 +17,21 @@ import {
 } from "@mui/material";
 import { useServiceRequest } from "../ServiceRequestContext";
 
+interface FieldLabels {
+  [key: string]: string;
+}
 
-const ServiceReview = () => {
+interface AdditionalFieldLabels {
+  [key: string]: string;
+}
+
+const ServiceReview: React.FC = () => {
   const { state } = useServiceRequest();
   const navigate = useNavigate();
 
-
   const { formData, selectedServices } = state;
 
-
-  const fieldLabels = {
+  const fieldLabels: FieldLabels = {
     name: "Nombre",
     nameProject: "Nombre del proyecto",
     location: "Ubicación",
@@ -35,8 +41,7 @@ const ServiceReview = () => {
     description: "Descripción",
   };
 
-
-  const additionalFieldLabels = {
+  const additionalFieldLabels: AdditionalFieldLabels = {
     tipoMuestra: "Tipo de muestra",
     tamanoCilindro: "Tamaño del cilindro",
     estructuraRealizada: "Estructura realizada",
@@ -47,23 +52,27 @@ const ServiceReview = () => {
     edadEnsayo: "Edad del ensayo",
   };
 
-
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" gutterBottom>
-        Revisar Solicitud
+    <Box sx={{ p: 2 }}>
+      <Typography variant="h4" gutterBottom>
+        Revisar Solicitud de Servicio
       </Typography>
 
-
-      <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
-        Información del Solicitante
+      <Typography variant="h6" gutterBottom>
+        Información del Cliente
       </Typography>
-      <TableContainer component={Paper} sx={{ mb: 3 }}>
-        <Table>
+      <TableContainer component={Paper}>
+        <Table aria-label="Información del cliente">
+          <TableHead>
+            <TableRow>
+              <TableCell>Campo</TableCell>
+              <TableCell>Valor</TableCell>
+            </TableRow>
+          </TableHead>
           <TableBody>
             {Object.entries(formData).map(([field, value]) => (
               <TableRow key={field}>
-                <TableCell><b>{fieldLabels[field] || field}</b></TableCell>
+                <TableCell>{fieldLabels[field] || field}</TableCell>
                 <TableCell>{value}</TableCell>
               </TableRow>
             ))}
@@ -71,12 +80,11 @@ const ServiceReview = () => {
         </Table>
       </TableContainer>
 
-
-      <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
+      <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
         Servicios Seleccionados
       </Typography>
       <TableContainer component={Paper}>
-        <Table>
+        <Table aria-label="Servicios seleccionados">
           <TableHead>
             <TableRow>
               <TableCell>Código</TableCell>
@@ -94,14 +102,16 @@ const ServiceReview = () => {
                 <TableCell>
                   {service.additionalInfo ? (
                     <List dense>
-                      {Object.entries(service.additionalInfo).map(([field, value]) => (
-                        <ListItem key={field} sx={{ pl: 4 }}>
-                          <ListItemText
-                            primary={additionalFieldLabels[field] || field}
-                            secondary={value || "No especificado"}
-                          />
-                        </ListItem>
-                      ))}
+                      {Object.entries(service.additionalInfo).map(
+                        ([field, value]) => (
+                          <ListItem key={field} sx={{ pl: 4 }}>
+                            <ListItemText
+                              primary={additionalFieldLabels[field] || field}
+                              secondary={String(value || "No especificado")}
+                            />
+                          </ListItem>
+                        )
+                      )}
                     </List>
                   ) : (
                     "-"
@@ -113,7 +123,6 @@ const ServiceReview = () => {
         </Table>
       </TableContainer>
 
-
       <Button
         variant="outlined"
         onClick={() => navigate("/cliente", { state: { step: 1 } })}
@@ -124,6 +133,5 @@ const ServiceReview = () => {
     </Box>
   );
 };
-
 
 export default ServiceReview;

@@ -1,11 +1,21 @@
-import { useCallback } from 'react';
-import { TextField, Grid2, Typography, FormControl, Button } from '@mui/material';
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as Yup from 'yup';
-import { useServiceRequest } from '../ServiceRequestContext';
+import React, { useCallback } from "react";
+import { TextField, Grid2, Typography, Button, Box } from "@mui/material";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as Yup from "yup";
+import { useServiceRequest } from "../ServiceRequestContext";
 
-const InitialInfoForm = () => {
+interface FormData {
+  name: string;
+  nameProject: string;
+  location: string;
+  identification: string;
+  phone: string;
+  email: string;
+  description: string;
+}
+
+const InitialInfoForm: React.FC = () => {
   const { state, setFormData } = useServiceRequest();
   const { formData } = state;
 
@@ -16,31 +26,36 @@ const InitialInfoForm = () => {
     location: Yup.string().required("La localización es requerida"),
     identification: Yup.string().required("La identificación es requerida"),
     phone: Yup.string().required("El teléfono es requerido"),
-    email: Yup.string().email("Correo electrónico no válido").required("El correo electrónico es requerido"),
+    email: Yup.string()
+      .email("Correo electrónico no válido")
+      .required("El correo electrónico es requerido"),
     description: Yup.string().required("La descripción es requerida"),
   });
 
-
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormData>({
     resolver: yupResolver(validationSchema),
     defaultValues: formData,
-    mode: 'onChange',
+    mode: "onChange",
   });
 
-
-  const onSubmit = useCallback((data) => {
-    console.log("Form submitted, updating context with data:", data);
-    setFormData(data);
-  }, [setFormData]);
+  const onSubmit: SubmitHandler<FormData> = useCallback(
+    (data) => {
+      console.log("Form submitted, updating context with data:", data);
+      setFormData(data);
+    },
+    [setFormData]
+  );
 
   return (
-    // handleSubmit valida y luego llama a nuestro onSubmit si todo está OK
-    <FormControl component="form" noValidate onSubmit={handleSubmit(onSubmit)}>
+    <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
       <Typography variant="h6" gutterBottom>
-        Información Inicial
+        Información Inicial del Cliente
       </Typography>
       <Grid2 container spacing={2}>
-        {/* Campos del formulario (sin cambios aquí) */}
         <Grid2 size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
@@ -48,6 +63,7 @@ const InitialInfoForm = () => {
             {...register("name")}
             error={!!errors.name}
             helperText={errors.name?.message}
+            aria-invalid={!!errors.name ? "true" : "false"}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
@@ -57,6 +73,7 @@ const InitialInfoForm = () => {
             {...register("nameProject")}
             error={!!errors.nameProject}
             helperText={errors.nameProject?.message}
+            aria-invalid={!!errors.nameProject ? "true" : "false"}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
@@ -66,6 +83,7 @@ const InitialInfoForm = () => {
             {...register("location")}
             error={!!errors.location}
             helperText={errors.location?.message}
+            aria-invalid={!!errors.location ? "true" : "false"}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
@@ -75,6 +93,7 @@ const InitialInfoForm = () => {
             {...register("identification")}
             error={!!errors.identification}
             helperText={errors.identification?.message}
+            aria-invalid={!!errors.identification ? "true" : "false"}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
@@ -84,6 +103,7 @@ const InitialInfoForm = () => {
             {...register("phone")}
             error={!!errors.phone}
             helperText={errors.phone?.message}
+            aria-invalid={!!errors.phone ? "true" : "false"}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
@@ -94,9 +114,10 @@ const InitialInfoForm = () => {
             {...register("email")}
             error={!!errors.email}
             helperText={errors.email?.message}
+            aria-invalid={!!errors.email ? "true" : "false"}
           />
         </Grid2>
-        <Grid2 size={{ xs: 12 }} >
+        <Grid2 size={{ xs: 12 }}>
           <TextField
             fullWidth
             label="Descripción del Proyecto"
@@ -105,12 +126,22 @@ const InitialInfoForm = () => {
             {...register("description")}
             error={!!errors.description}
             helperText={errors.description?.message}
+            aria-invalid={!!errors.description ? "true" : "false"}
           />
         </Grid2>
       </Grid2>
       {/* Botón oculto para permitir el envío externo */}
-      <Button color="primary" type="submit" aria-hidden="true" variant="contained" sx={{ width: "50%", margin: "1rem auto", }}  >Guardar</Button>
-    </FormControl>
+      <Button
+        color="primary"
+        type="submit"
+        aria-hidden="true"
+        variant="contained"
+        sx={{ width: 0, height: 0 }}
+        onClick={handleSubmit(onSubmit)}
+      >
+        Enviar
+      </Button>
+    </Box>
   );
 };
 
