@@ -1,28 +1,50 @@
+// sw.js
 import { precacheAndRoute } from "workbox-precaching";
-import { registerRoute, Route } from "workbox-routing";
-import { NetworkOnly } from "workbox-strategies";
+import { registerRoute } from "workbox-routing";
+import {
+  CacheFirst,
+  NetworkFirst,
+  StaleWhileRevalidate,
+} from "workbox-strategies";
 import { BackgroundSyncPlugin } from "workbox-background-sync";
 
-// Cachear los recursos generados por Vite
 precacheAndRoute(self.__WB_MANIFEST);
 
-// Configurar sincronización en segundo plano para las solicitudes a la API
-const apiRoute = new Route(
+// Cachear imágenes con CacheFirst
+registerRoute(
+  ({ request }) => request.destination === "image",
+  new CacheFirst({
+    cacheName: "images",
+  })
+);
+
+// Cachear CSS y JavaScript con StaleWhileRevalidate
+registerRoute(
+  ({ request }) =>
+    request.destination === "style" || request.destination === "script",
+  new StaleWhileRevalidate({
+    cacheName: "static-resources",
+  })
+);
+
+// Cachear datos de la API con NetworkFirst y BackgroundSync
+registerRoute(
   ({ url }) => url.pathname.startsWith("/api/"),
-  new NetworkOnly({
+  new NetworkFirst({
+    cacheName: "api-data",
     plugins: [
       new BackgroundSyncPlugin("api-sync-queue", {
-        maxRetentionTime: 24 * 60, // Retener por 24 horas
+        maxRetentionTime: 24 * 60, // 24 horas
       }),
     ],
   })
 );
 
-registerRoute(apiRoute);
-
-// Escuchar eventos de sincronización
 self.addEventListener("sync", (event) => {
   if (event.tag === "api-sync-queue") {
-    console.log("Sincronizando datos encolados...");
+    event.waitUntil(
+      // Aquí iría la lógica para reenviar las peticiones fallidas
+      console.log("Sincronizando datos encolados...")
+    );
   }
 });

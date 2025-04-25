@@ -136,7 +136,7 @@ const InitialInfoForm: React.FC = () => {
         type="submit"
         aria-hidden="true"
         variant="contained"
-        sx={{ width: 0, height: 0 }}
+        sx={{ width: "25%", m: "auto 2rem" }}
         onClick={handleSubmit(onSubmit)}
       >
         Enviar

@@ -130,7 +130,7 @@ const ClientForm: React.FC = () => {
   };
 
   return (
-    <Box sx={{ width: "90%", margin: "auto", mt: 2 }}>
+    <Box sx={{ width: "80%", margin: "auto", mt: 2 }}>
       <Stepper activeStep={activeStep} alternativeLabel>
         {steps.map((label) => (
           <Step key={label}>

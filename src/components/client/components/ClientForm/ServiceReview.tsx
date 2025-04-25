@@ -32,13 +32,13 @@ const ServiceReview: React.FC = () => {
   const { formData, selectedServices } = state;
 
   const fieldLabels: FieldLabels = {
-    name: "Nombre",
+    name: "Solicitante",
     nameProject: "Nombre del proyecto",
     location: "Ubicación",
     identification: "Identificación",
     phone: "Teléfono",
     email: "Correo electrónico",
-    description: "Descripción",
+    description: "Descripción del servicio",
   };
 
   const additionalFieldLabels: AdditionalFieldLabels = {

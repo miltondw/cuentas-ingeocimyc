@@ -185,11 +185,78 @@ const App = () => {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+  //Install app
+  const [installPrompt, setInstallPrompt] = useState(null);
 
+  useEffect(() => {
+    // Detectar si se está ejecutando en un navegador móvil
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+
+    // Verificar si la PWA ya está instalada
+    const isInstalled = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || document.referrer.startsWith('android-app://');
+
+    // Escuchar el evento beforeinstallprompt
+    const handleBeforeInstallPrompt = (event) => {
+      event.preventDefault(); // Evitar el comportamiento predeterminado del navegador
+      if (isMobile && !isInstalled) {
+        setInstallPrompt(event); // Guardar el evento para usarlo más tarde
+      }
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = () => {
+    if (installPrompt) {
+      installPrompt.prompt(); // Mostrar el diálogo de instalación
+      installPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('Usuario aceptó la instalación');
+        } else {
+          console.log('Usuario rechazó la instalación');
+        }
+        setInstallPrompt(null); // Limpiar el prompt después de la instalación
+      });
+    }
+  };
+  // App.jsx
+  useEffect(() => {
+    const mostrarActualizacion = () => {
+      if (window.confirm('Hay una nueva versión disponible. ¿Quieres actualizar?')) {
+        window.location.reload();
+      }
+    };
+
+    navigator.serviceWorker.addEventListener('updatefound', () => {
+      const swActual = navigator.serviceWorker.controller;
+      const swNuevo = navigator.serviceWorker.waiting;
+
+      if (!swNuevo) return;
+
+      swNuevo.addEventListener('statechange', () => {
+        if (swNuevo.state === 'installed' && swActual) {
+          mostrarActualizacion();
+        }
+      });
+    });
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  }, []);
   return (
     <ThemeProvider theme={theme}>
       <AuthProvider>
         <Router>
+          {installPrompt && (
+            <button onClick={handleInstallClick}>
+              Instalar la aplicación
+            </button>
+          )}
           {isOffline && (
             <Alert severity="warning" sx={{ m: 2 }}>
               Estás sin conexión. Los datos se sincronizarán cuando tengas señal.
