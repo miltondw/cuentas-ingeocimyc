@@ -4,6 +4,7 @@
       "source": "/api/(.*)",
       "destination": "https://api-cuentas-zlut.onrender.com/api/$1"
     },
+    { "source": "/dev-dist/sw.js", "destination": "/dev-dist/sw.js" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "build": {

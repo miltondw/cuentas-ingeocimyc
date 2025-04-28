@@ -5,7 +5,7 @@ import { Suspense, lazy, useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "./api/AuthContext";
 import { CircularProgress, Box, Typography, Container, Alert, Button } from "@mui/material";
 import Navigation from "./components/atoms/Navigation";
-import ProjectApiques from "./components/lab/pages/ProjectApiques";
+import ProjectApiques from "./components/lab/pages/ProjectApiques/ProjectApiques";
 import { ThemeProvider } from '@mui/material/styles';
 import theme from './theme';
 import ClientForm from "./components/client/components/ClientForm/ClientForm";
@@ -19,10 +19,10 @@ const TablaGastosEmpresa = lazy(() => import("./components/cuentas/tablas/gasto-
 const FormCreateMonth = lazy(() => import("./components/cuentas/forms/CreateMonth"));
 const FormCreateProject = lazy(() => import("./components/cuentas/forms/CreateProject"));
 const TablaUtilidades = lazy(() => import("./components/cuentas/tablas/TablaUtilidades"));
-const PerfilesDeSuelo = lazy(() => import("./components/lab/components/PerfilDeSuelos"));
+const PerfilesDeSuelo = lazy(() => import("./components/lab/components/PerfilDeSuelos/PerfilDeSuelos"));
 const ProjectProfiles = lazy(() => import("./components/lab/pages/ProjectProfiles"));
 const ProjectsDashboard = lazy(() => import("./components/lab/pages/ProjectsDashboard"));
-const ApiquesDeSuelos = lazy(() => import("./components/lab/components/ApiquesDeSuelos"));
+const ApiquesDeSuelos = lazy(() => import("./components/lab/components/ApiquesDeSuelos/ApiquesDeSuelos"));
 
 // Componentes comunes
 const LoadingFallback = () => (
@@ -237,7 +237,7 @@ const App = () => {
     });
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
+      navigator.serviceWorker.register('/dev-dist/sw.js');
     }
   }, []);
   return (

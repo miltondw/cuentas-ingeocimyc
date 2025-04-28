@@ -29,7 +29,7 @@ registerRoute(
 
 // Cachear datos de la API con NetworkFirst y BackgroundSync
 registerRoute(
-  ({ url }) => url.pathname.startsWith("/api/"),
+  ({ url }) => url.pathname.startsWith("/src/api/"),
   new NetworkFirst({
     cacheName: "api-data",
     plugins: [
