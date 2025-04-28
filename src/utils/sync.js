@@ -1,4 +1,4 @@
-import api from "../api";
+import api from "@api";
 import { getPendingRequests, deleteRequest } from "./offlineStorage";
 
 export async function syncPendingRequests() {

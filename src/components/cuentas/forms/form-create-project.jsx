@@ -13,7 +13,7 @@ import {
 import Grid2 from "@mui/material/Grid2";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate, useParams } from "react-router-dom";
-import api from "../../../api";
+import api from "@api";
 
 // Datos iniciales
 const defaultGasto = {

@@ -27,7 +27,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import api from '../../../api';
+import api from '@api';
 
 const ApiquesDeSuelos = () => {
     const { projectId, apiqueId } = useParams();

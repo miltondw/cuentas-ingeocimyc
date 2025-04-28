@@ -24,7 +24,7 @@ import WaterDropIcon from '@mui/icons-material/WaterDrop';
 import LandscapeIcon from '@mui/icons-material/Landscape';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import HardnessIcon from '@mui/icons-material/Terrain';
-import api from '../../../api';
+import api from '@api';
 
 const ProjectProfiles = () => {
     const [profiles, setProfiles] = useState([]);

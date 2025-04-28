@@ -29,7 +29,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import LandscapeIcon from "@mui/icons-material/Landscape";
 import BlurCircularIcon from '@mui/icons-material/BlurCircular';
-import api from "../../../api";
+import api from "@api";
 import { cacheProjects, getCachedProjects } from "../../../utils/offlineStorage";
 
 // Table column definitions

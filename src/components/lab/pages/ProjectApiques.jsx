@@ -23,7 +23,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import LayersIcon from '@mui/icons-material/Layers';
 import ScienceIcon from '@mui/icons-material/Science';
-import api from '../../../api';
+import api from '@api';
 
 const ProjectApiques = () => {
     const [apiques, setApiques] = useState([]);

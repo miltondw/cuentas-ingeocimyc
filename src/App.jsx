@@ -9,7 +9,6 @@ import ProjectApiques from "./components/lab/pages/ProjectApiques";
 import { ThemeProvider } from '@mui/material/styles';
 import theme from './theme';
 import ClientForm from "./components/client/components/ClientForm/ClientForm";
-import ClientDashboard from "./components/client/pages/ClientDashboard";
 import { syncPendingRequests } from "./utils/sync";
 import { ServiceRequestProvider } from "./components/client/components/ServiceRequestContext";
 // Componentes de carga perezosa
@@ -17,8 +16,8 @@ const Login = lazy(() => import("./api/Login"));
 const Logout = lazy(() => import("./api/Logout"));
 const GastosProject = lazy(() => import("./components/cuentas/tablas/gasto-project"));
 const TablaGastosEmpresa = lazy(() => import("./components/cuentas/tablas/gasto-mes"));
-const FormCreateMonth = lazy(() => import("./components/cuentas/forms/form-create-month"));
-const FormCreateProject = lazy(() => import("./components/cuentas/forms/form-create-project"));
+const FormCreateMonth = lazy(() => import("./components/cuentas/forms/CreateMonth"));
+const FormCreateProject = lazy(() => import("./components/cuentas/forms/CreateProject"));
 const TablaUtilidades = lazy(() => import("./components/cuentas/tablas/TablaUtilidades"));
 const PerfilesDeSuelo = lazy(() => import("./components/lab/components/PerfilDeSuelos"));
 const ProjectProfiles = lazy(() => import("./components/lab/pages/ProjectProfiles"));
@@ -119,14 +118,7 @@ const AppRoutes = () => (
         </ServiceRequestProvider>
       }
     />
-    <Route
-      path="/dashboard-cliente"
-      element={
 
-        <ClientDashboard />
-
-      }
-    />
     {/* Rutas protegidas */}
     <Route element={<PrivateRouteWrapper><MainLayout /></PrivateRouteWrapper>}>
 

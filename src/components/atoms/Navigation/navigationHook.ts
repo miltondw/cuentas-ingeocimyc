@@ -1,39 +1,48 @@
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../../api/AuthContext";
-import { menuConfig } from "./menuConfig";
+import { menuConfig, MenuItemConfig } from "./menuConfig";
+import { useAuth } from "@api/AuthContext";
 
 export const useResponsiveAppBar = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth(); // Asegura el tipo AuthContextType
 
   // Estados para manejar menús
-  const [anchorElNav, setAnchorElNav] = useState(null);
-  const [anchorElUser, setAnchorElUser] = useState(null);
+  const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null);
+  const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
 
   // Crear estados dinámicos basados en la configuración
-  const initialMenuState = menuConfig.menuItems.reduce((acc, item) => {
-    acc[item.key] = false;
-    return acc;
-  }, {});
+  const initialMenuState: Record<string, boolean> = menuConfig.menuItems.reduce(
+    (acc: Record<string, boolean>, item) => {
+      acc[item.key] = false;
+      return acc;
+    },
+    {}
+  );
 
   const [openSubMenuMobile, setOpenSubMenuMobile] = useState(initialMenuState);
   const [openSubMenuDesktop, setOpenSubMenuDesktop] =
     useState(initialMenuState);
-  const [anchorSubMenuDesktop, setAnchorSubMenuDesktop] = useState(
-    menuConfig.menuItems.reduce((acc, item) => {
+  const [anchorSubMenuDesktop, setAnchorSubMenuDesktop] = useState<
+    Record<string, null | HTMLElement>
+  >(
+    menuConfig.menuItems.reduce((acc: Record<string, null>, item) => {
       acc[item.key] = null;
       return acc;
-    }, {})
+    }, {} as Record<string, null>)
   );
 
-  const generatePages = useCallback(() => {
-    const result = {};
+  const generatePages = useCallback((): Record<string, MenuItemConfig[]> => {
+    const result: Record<string, MenuItemConfig[]> = {};
     menuConfig.menuItems.forEach((item) => {
       const normalizedUserRole = user?.rol?.toLowerCase();
       const normalizedItemRoles = item.roles?.map((rol) => rol.toLowerCase());
 
-      if (!item.roles || normalizedItemRoles.includes(normalizedUserRole)) {
+      if (
+        !item.roles ||
+        (normalizedItemRoles &&
+          normalizedItemRoles.includes(normalizedUserRole))
+      ) {
         result[item.key] = [...item.items];
         if (item.adminItems && normalizedUserRole === "admin") {
           result[item.key].push(...item.adminItems);
@@ -43,17 +52,20 @@ export const useResponsiveAppBar = () => {
     return result;
   }, [user]);
 
-  const [pages, setPages] = useState(generatePages());
+  const [pages, setPages] = useState<Record<string, MenuItemConfig[]>>(
+    generatePages()
+  );
+
   useEffect(() => {
     setPages(generatePages());
   }, [user, generatePages]);
 
   // Móvil: Manejo de menús
-  const handleOpenMobileMenu = (event) => {
+  const handleOpenMobileMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorElNav(event.currentTarget);
   };
 
-  const handleToggleSubMenuMobile = useCallback((menu) => {
+  const handleToggleSubMenuMobile = useCallback((menu: string) => {
     setOpenSubMenuMobile((prev) => ({
       ...prev,
       [menu]: !prev[menu],
@@ -62,7 +74,7 @@ export const useResponsiveAppBar = () => {
 
   // Escritorio: Manejo de submenús
   const handleToggleSubMenuDesktop = useCallback(
-    (menu) => (event) => {
+    (menu: string) => (event: React.MouseEvent<HTMLElement>) => {
       setAnchorSubMenuDesktop((prev) => ({
         ...prev,
         [menu]: event.currentTarget,
@@ -75,14 +87,13 @@ export const useResponsiveAppBar = () => {
     []
   );
 
-  const handleCloseSubMenuDesktop = useCallback((menu) => {
+  const handleCloseSubMenuDesktop = useCallback((menu: string) => {
     setOpenSubMenuDesktop((prev) => ({
       ...prev,
       [menu]: false,
     }));
   }, []);
 
-  // Cierre general
   const handleCloseAll = useCallback(() => {
     setAnchorElNav(null);
     setOpenSubMenuMobile(initialMenuState);
@@ -105,7 +116,7 @@ export const useResponsiveAppBar = () => {
     if (!user || !user.name) return "?";
     return user.name
       .split(" ")
-      .map((word) => word[0])
+      .map((word: string) => word[0])
       .join("")
       .toUpperCase()
       .substring(0, 2);

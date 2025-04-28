@@ -23,7 +23,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import WaterDropIcon from '@mui/icons-material/WaterDrop';
 import LayersIcon from '@mui/icons-material/Layers';
-import api from "../../../api";
+import api from "@api";
 
 const DEPTH_INCREMENT = 0.45;
 const DEPTH_LEVELS = 14;

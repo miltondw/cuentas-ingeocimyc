@@ -21,7 +21,7 @@ import {
 } from "@mui/material";
 import { Link } from "react-router-dom";
 import DeleteIcon from "@mui/icons-material/Delete";
-import api from "../../../api";
+import api from "@api";
 
 const formatNumber = (value) => new Intl.NumberFormat("es-ES").format(value);
 

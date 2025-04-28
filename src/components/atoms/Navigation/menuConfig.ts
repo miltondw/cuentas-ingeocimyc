@@ -1,4 +1,21 @@
-export const menuConfig = {
+export interface MenuItemConfig {
+  title: string;
+  link: string;
+}
+
+export interface MenuConfigItem {
+  key: string;
+  label: string;
+  items: MenuItemConfig[];
+  adminItems?: MenuItemConfig[];
+  roles?: string[];
+}
+
+export interface MenuConfig {
+  menuItems: MenuConfigItem[];
+}
+
+export const menuConfig: MenuConfig = {
   menuItems: [
     {
       key: "create",

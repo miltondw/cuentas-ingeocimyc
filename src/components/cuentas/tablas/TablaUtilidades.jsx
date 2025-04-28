@@ -14,7 +14,7 @@ import {
   TableSortLabel,
   TableContainer,
 } from "@mui/material";
-import api from "../../../api";
+import api from "@api";
 
 const formatNumber = (value) =>
   new Intl.NumberFormat("es-ES", { maximumFractionDigits: 2 }).format(

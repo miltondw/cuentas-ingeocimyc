@@ -15,7 +15,7 @@ import ServiceSelection from "../ServiceSelection/ServiceSelection";
 import ServiceReview from "./ServiceReview";
 import ConfirmationModal from "./ConfirmationModal";
 import { useServiceRequest } from "../ServiceRequestContext";
-import api from "../../../../api";
+import api from "@api";
 
 const steps = [
   "Información inicial",
