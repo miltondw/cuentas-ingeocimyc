@@ -53,7 +53,7 @@ const ClientForm: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { state, submitForm, validateForm } = useServiceRequest();
-  const { error, formIsValid } = state;
+  const { error } = state;
 
   const locationState = location.state as LocationState | null;
 
@@ -169,11 +169,6 @@ const ClientForm: React.FC = () => {
   }, [activeStep, services, loading, locationState?.editCategory]);
 
   // Determina si el botón "Siguiente" está deshabilitado
-  const isNextDisabled = useMemo(() => {
-    if (activeStep === 0) return !formIsValid;
-    if (activeStep === 1) return state.selectedServices.length === 0;
-    return false;
-  }, [activeStep, formIsValid, state.selectedServices]);
 
   return (
     <Box sx={{ maxWidth: "1200px", mx: "auto", p: { xs: 2, md: 3 } }}>

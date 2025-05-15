@@ -61,162 +61,240 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
     return null;
   };
 
+  // Renderizar campos en el orden deseado
   return (
     <Box>
-      {service.additionalInfo?.map((info: AdditionalInfo, i: number) => {
-        if (
-          info.dependsOnField &&
-          itemAdditionalInfo[info.dependsOnField] !== info.dependsOnValue
-        ) {
-          return null;
-        }
-        switch (info.type) {
-          case "text":
-          case "number":
-            return (
-              <TextField
-                key={i}
-                fullWidth
-                label={info.label}
+      {/* 1. Tipo de muestra (siempre visible como primer campo) */}
+      {service.additionalInfo
+        ?.filter((info) => info.field === "tipoMuestra")
+        .map((info: AdditionalInfo, i: number) => (
+          <FormControl
+            fullWidth
+            margin="normal"
+            required={info.required}
+            key={i}
+          >
+            <InputLabel id={`${info.field}-label`}>{info.label}</InputLabel>
+            <Select
+              labelId={`${info.field}-label`}
+              value={itemAdditionalInfo[info.field] ?? ""}
+              label={info.label}
+              onChange={(e) =>
+                handleChange(info.field, e.target.value as string)
+              }
+              aria-label={info.label}
+            >
+              {info.options?.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        ))}
+
+      {/* 2. Tamaño del cilindro (visible solo si tipoMuestra es "Cilindro") */}
+      {service.additionalInfo
+        ?.filter((info) => info.field === "tamanoCilindro")
+        .map((info: AdditionalInfo, i: number) => {
+          const showField =
+            !info.dependsOnField ||
+            (info.dependsOnField &&
+              info.dependsOnValue !== undefined &&
+              itemAdditionalInfo[info.dependsOnField] === info.dependsOnValue);
+          if (!showField) return null;
+          return (
+            <FormControl
+              fullWidth
+              margin="normal"
+              required={info.required}
+              key={i}
+            >
+              <InputLabel id={`${info.field}-label`}>{info.label}</InputLabel>
+              <Select
+                labelId={`${info.field}-label`}
                 value={itemAdditionalInfo[info.field] ?? ""}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  handleChange(
-                    info.field,
-                    info.type === "number"
-                      ? parseFloat(e.target.value) || 0
-                      : e.target.value
-                  )
+                label={info.label}
+                onChange={(e) =>
+                  handleChange(info.field, e.target.value as string)
                 }
-                margin="normal"
-                type={info.type}
-                required={info.required}
                 aria-label={info.label}
-              />
-            );
-          case "select":
-            return (
-              <FormControl
-                fullWidth
-                margin="normal"
-                required={info.required}
-                key={i}
               >
-                <InputLabel id={`${info.field}-label`}>{info.label}</InputLabel>
-                <Select
-                  labelId={`${info.field}-label`}
+                {info.options?.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          );
+        })}
+
+      {/* 3. Otros campos (independientes del tipo de muestra) */}
+      {service.additionalInfo
+        ?.filter(
+          (info) => !["tipoMuestra", "tamanoCilindro"].includes(info.field)
+        )
+        .map((info: AdditionalInfo, i: number) => {
+          const showField =
+            !info.dependsOnField ||
+            (info.dependsOnField &&
+              info.dependsOnValue !== undefined &&
+              itemAdditionalInfo[info.dependsOnField] === info.dependsOnValue);
+          if (!showField) return null;
+
+          switch (info.type) {
+            case "text":
+            case "number":
+              return (
+                <TextField
+                  key={i}
+                  fullWidth
+                  label={info.label}
                   value={itemAdditionalInfo[info.field] ?? ""}
-                  label={info.label}
-                  onChange={(e) =>
-                    handleChange(info.field, e.target.value as string)
-                  }
-                  aria-label={info.label}
-                >
-                  {info.options?.map((option) => (
-                    <MenuItem key={option} value={option}>
-                      {option}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            );
-          case "select-multiple":
-            return (
-              <FormControl
-                fullWidth
-                margin="normal"
-                required={info.required}
-                key={i}
-              >
-                <InputLabel id={`${info.field}-label`}>{info.label}</InputLabel>
-                <Select
-                  labelId={`${info.field}-label`}
-                  multiple
-                  value={
-                    Array.isArray(itemAdditionalInfo[info.field])
-                      ? (itemAdditionalInfo[info.field] as string[])
-                      : typeof itemAdditionalInfo[info.field] === "string" &&
-                        itemAdditionalInfo[info.field]
-                      ? [String(itemAdditionalInfo[info.field])]
-                      : []
-                  }
-                  label={info.label}
-                  onChange={(e) =>
-                    handleMultiSelectChange(
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    handleChange(
                       info.field,
-                      e.target.value as string[]
+                      info.type === "number"
+                        ? parseFloat(e.target.value) || 0
+                        : e.target.value
                     )
                   }
-                  renderValue={(selected: string[]) => selected.join(", ")}
+                  margin="normal"
+                  type={info.type}
+                  required={info.required}
                   aria-label={info.label}
+                />
+              );
+            case "select":
+              return (
+                <FormControl
+                  fullWidth
+                  margin="normal"
+                  required={info.required}
+                  key={i}
                 >
-                  {info.options?.map((option) => (
-                    <MenuItem key={option} value={option}>
-                      {option}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            );
-          case "checkbox":
-            return (
-              <FormControlLabel
-                key={i}
-                control={
-                  <Checkbox
-                    checked={!!itemAdditionalInfo[info.field]}
+                  <InputLabel id={`${info.field}-label`}>
+                    {info.label}
+                  </InputLabel>
+                  <Select
+                    labelId={`${info.field}-label`}
+                    value={itemAdditionalInfo[info.field] ?? ""}
+                    label={info.label}
                     onChange={(e) =>
-                      handleCheckboxChange(info.field, e.target.checked)
+                      handleChange(info.field, e.target.value as string)
                     }
                     aria-label={info.label}
-                  />
-                }
-                label={info.label}
-              />
-            );
-          case "radio":
-            return (
-              <FormControl
-                component="fieldset"
-                fullWidth
-                margin="normal"
-                required={info.required}
-                key={i}
-              >
-                <FormLabel component="legend">{info.label}</FormLabel>
-                <RadioGroup
-                  aria-label={info.label}
-                  name={info.field}
-                  value={itemAdditionalInfo[info.field] ?? ""}
-                  onChange={(e) => handleChange(info.field, e.target.value)}
+                  >
+                    {info.options?.map((option) => (
+                      <MenuItem key={option} value={option}>
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              );
+            case "select-multiple":
+              return (
+                <FormControl
+                  fullWidth
+                  margin="normal"
+                  required={info.required}
+                  key={i}
                 >
-                  {info.options?.map((option) => (
-                    <FormControlLabel
-                      key={option}
-                      value={option}
-                      control={<Radio />}
-                      label={option}
-                    />
-                  ))}
-                </RadioGroup>
-              </FormControl>
-            );
-          case "date":
-            return (
-              <FormControl fullWidth margin="normal" key={i}>
-                <LocalizationProvider dateAdapter={AdapterDayjs}>
-                  <DatePicker
+                  <InputLabel id={`${info.field}-label`}>
+                    {info.label}
+                  </InputLabel>
+                  <Select
+                    labelId={`${info.field}-label`}
+                    multiple
+                    value={
+                      Array.isArray(itemAdditionalInfo[info.field])
+                        ? (itemAdditionalInfo[info.field] as string[])
+                        : typeof itemAdditionalInfo[info.field] === "string" &&
+                          itemAdditionalInfo[info.field]
+                        ? [String(itemAdditionalInfo[info.field])]
+                        : []
+                    }
                     label={info.label}
-                    value={getDateValue(itemAdditionalInfo[info.field])}
-                    onChange={(date) => handleDateChange(info.field, date)}
-                    slotProps={{ textField: { "aria-label": info.label } }}
-                  />
-                </LocalizationProvider>
-              </FormControl>
-            );
-          default:
-            return null;
-        }
-      })}
+                    onChange={(e) =>
+                      handleMultiSelectChange(
+                        info.field,
+                        e.target.value as string[]
+                      )
+                    }
+                    renderValue={(selected: string[]) => selected.join(", ")}
+                    aria-label={info.label}
+                  >
+                    {info.options?.map((option) => (
+                      <MenuItem key={option} value={option}>
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              );
+            case "checkbox":
+              return (
+                <FormControlLabel
+                  key={i}
+                  control={
+                    <Checkbox
+                      checked={!!itemAdditionalInfo[info.field]}
+                      onChange={(e) =>
+                        handleCheckboxChange(info.field, e.target.checked)
+                      }
+                      aria-label={info.label}
+                    />
+                  }
+                  label={info.label}
+                />
+              );
+            case "radio":
+              return (
+                <FormControl
+                  component="fieldset"
+                  fullWidth
+                  margin="normal"
+                  required={info.required}
+                  key={i}
+                >
+                  <FormLabel component="legend">{info.label}</FormLabel>
+                  <RadioGroup
+                    aria-label={info.label}
+                    name={info.field}
+                    value={itemAdditionalInfo[info.field] ?? ""}
+                    onChange={(e) => handleChange(info.field, e.target.value)}
+                  >
+                    {info.options?.map((option) => (
+                      <FormControlLabel
+                        key={option}
+                        value={option}
+                        control={<Radio />}
+                        label={option}
+                      />
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+              );
+            case "date":
+              return (
+                <FormControl fullWidth margin="normal" key={i}>
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <DatePicker
+                      label={info.label}
+                      value={getDateValue(itemAdditionalInfo[info.field])}
+                      onChange={(date) => handleDateChange(info.field, date)}
+                      slotProps={{ textField: { "aria-label": info.label } }}
+                      format="DD-MM-YYYY"
+                    />
+                  </LocalizationProvider>
+                </FormControl>
+              );
+            default:
+              return null;
+          }
+        })}
     </Box>
   );
 };

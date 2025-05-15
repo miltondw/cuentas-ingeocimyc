@@ -12,7 +12,7 @@ export interface AdditionalInfo {
   label: string;
   required?: boolean;
   options?: string[];
-  dependsOnValue?: string;
+  dependsOnValue?: string | number | boolean; // Ajustado para soportar más tipos
   question?: string;
 }
 
@@ -42,6 +42,7 @@ export interface AdditionalInfoFormProps {
     React.SetStateAction<Record<string, string | number | boolean | string[]>>
   >;
 }
+
 export interface Service {
   id: number;
   code: string;
