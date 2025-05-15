@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -9,16 +9,25 @@ import {
   TextField,
   Alert,
   Snackbar,
-  SnackbarCloseReason,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tooltip,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
-import AdditionalInfoForm from "./AdditionalInfoForm";
+import InfoIcon from "@mui/icons-material/Info";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AdditionalInfoFormWrapper from "./AdditionalInfoFormWrapper";
 import { useServiceRequest } from "../ServiceRequestContext";
-import { ServiceItem as ServiceItemType } from "../types"; // Adjust path to your types file
+import { ServiceItem as ServiceItemType } from "../types";
+import { useLocation, useNavigate } from "react-router-dom";
+import { v4 as uuidv4 } from "uuid";
 
 interface ServiceItemProps {
   item: ServiceItemType;
+  category: string;
 }
 
 interface Notification {
@@ -27,175 +36,437 @@ interface Notification {
   severity: "success" | "error" | "warning" | "info";
 }
 
-const ServiceItem: React.FC<ServiceItemProps> = ({ item }) => {
-  const { state, setSelectedServices, setAdditionalInfo } = useServiceRequest();
-  const selectedService = state.selectedServices.find(
-    (service) => service.item.id === item.id
-  );
-  const selectedServiceIndex = state.selectedServices.findIndex(
-    (service) => service.item.id === item.id
-  );
-  const [quantity, setQuantity] = useState<number>(
-    selectedService?.quantity || 1
-  );
-  const [itemAdditionalInfo, setItemAdditionalInfo] = useState<{
-    [key: string]: any;
-  }>(selectedService?.additionalInfo || {});
+const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
+  const {
+    state,
+    addSelectedService,
+    removeSelectedService,
+    updateAdditionalInfo,
+    validateForm,
+  } = useServiceRequest();
+  const { loading, error } = state;
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const [quantity, setQuantity] = useState<number>(1);
   const [showAdditionalInfo, setShowAdditionalInfo] = useState<boolean>(false);
   const [notification, setNotification] = useState<Notification>({
     open: false,
     message: "",
     severity: "success",
   });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  const [initialAdditionalInfo, setInitialAdditionalInfo] = useState<
+    Record<string, any>
+  >({});
 
-  const isSelected = !!selectedService;
+  const hasAdditionalInfoFields =
+    item.additionalInfo && item.additionalInfo.length > 0;
 
-  const updateQuantity = useCallback(() => {
-    if (isSelected) {
-      setSelectedServices(
-        state.selectedServices.map((service) =>
-          service.item.id === item.id ? { ...service, quantity } : service
-        )
-      );
-    }
-  }, [
-    quantity,
-    state.selectedServices,
-    setSelectedServices,
-    item.id,
-    isSelected,
-  ]);
+  const selectedInstances = useMemo(
+    () =>
+      state.selectedServices.filter((service) => service.item.id === item.id),
+    [state.selectedServices, item.id]
+  );
+
+  const totalQuantity = useMemo(
+    () =>
+      selectedInstances.reduce(
+        (sum, service) => sum + (service.quantity || 1),
+        0
+      ),
+    [selectedInstances]
+  );
+
+  const isServiceAdded = useMemo(
+    () => selectedInstances.length > 0,
+    [selectedInstances]
+  );
 
   useEffect(() => {
-    updateQuantity();
-  }, [updateQuantity]);
+    const { editServiceId, editInstanceId, editAdditionalInfo } =
+      location.state || {};
+    if (editServiceId && editInstanceId && !showAdditionalInfo) {
+      const serviceToEdit = state.selectedServices.find(
+        (service) => service.id === editServiceId && service.item.id === item.id
+      );
+      if (serviceToEdit) {
+        const instanceToEdit = serviceToEdit.instances.find(
+          (instance) => instance.id === editInstanceId
+        );
+        if (instanceToEdit) {
+          setInitialAdditionalInfo({
+            ...instanceToEdit.additionalInfo,
+            ...(editAdditionalInfo || {}),
+          });
+          setShowAdditionalInfo(true);
+        }
+      }
+    }
+  }, [state.selectedServices, item.id, location.state, showAdditionalInfo]);
 
-  const handleAddService = useCallback(() => {
-    setSelectedServices([
-      ...state.selectedServices,
-      { item, quantity, additionalInfo: {} },
-    ]);
-    setNotification({
-      open: true,
-      message: "Servicio agregado",
-      severity: "success",
-    });
-  }, [state.selectedServices, setSelectedServices, item, quantity]);
+  const handleSaveAdditionalInfo = useCallback(
+    async (
+      instances: Array<{
+        id: string;
+        additionalInfo: Record<string, string | number | boolean | string[]>;
+      }>
+    ) => {
+      try {
+        const isValid = await validateForm();
+        if (!isValid) {
+          setNotification({
+            open: true,
+            message: "Por favor completa todos los campos requeridos",
+            severity: "warning",
+          });
+          return;
+        }
 
-  const handleRemoveService = useCallback(() => {
-    setSelectedServices(
-      state.selectedServices.filter((service) => service.item.id !== item.id)
-    );
-    setNotification({
-      open: true,
-      message: "Servicio eliminado",
-      severity: "success",
-    });
-  }, [state.selectedServices, setSelectedServices, item.id]);
+        const editServiceId = location.state?.editServiceId;
+        if (editServiceId) {
+          updateAdditionalInfo(
+            editServiceId,
+            instances[0].id,
+            instances[0].additionalInfo,
+            instances
+          );
+          setNotification({
+            open: true,
+            message: "Servicio actualizado",
+            severity: "success",
+          });
+        } else {
+          const newServiceId = uuidv4();
+          addSelectedService(
+            item,
+            instances.length,
+            category,
+            newServiceId,
+            instances
+          );
+          setNotification({
+            open: true,
+            message: `Servicio agregado (${instances.length} instancia${
+              instances.length > 1 ? "s" : ""
+            })`,
+            severity: "success",
+          });
+        }
 
-  const handleQuantityChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const newQuantity = parseInt(event.target.value, 10);
-      setQuantity(isNaN(newQuantity) ? 1 : newQuantity);
+        setShowAdditionalInfo(false);
+        setQuantity(1);
+        navigate(location.pathname, { replace: true, state: { step: 1 } });
+      } catch (error) {
+        setNotification({
+          open: true,
+          message: "Error al guardar el servicio",
+          severity: "error",
+        });
+      }
     },
-    []
+    [
+      addSelectedService,
+      updateAdditionalInfo,
+      item,
+      category,
+      location,
+      navigate,
+      validateForm,
+    ]
   );
 
   const handleOpenAdditionalInfo = useCallback(() => {
     setShowAdditionalInfo(true);
   }, []);
 
-  const handleSaveAdditionalInfo = useCallback(() => {
-    setAdditionalInfo(selectedServiceIndex, itemAdditionalInfo);
+  const handleCancelAdditionalInfo = useCallback(() => {
     setShowAdditionalInfo(false);
+    setQuantity(1);
+  }, []);
+
+  const handleAddService = useCallback(async () => {
+    const isValid = await validateForm();
+    if (!isValid) {
+      setNotification({
+        open: true,
+        message: "Por favor completa todos los campos requeridos",
+        severity: "warning",
+      });
+      return;
+    }
+
+    addSelectedService(item, quantity, category);
     setNotification({
       open: true,
-      message: "Información adicional guardada",
+      message: `Servicio agregado (${quantity} instancia${
+        quantity > 1 ? "s" : ""
+      })`,
       severity: "success",
     });
-  }, [setAdditionalInfo, selectedServiceIndex, itemAdditionalInfo]);
+    setQuantity(1);
+  }, [addSelectedService, item, category, quantity, validateForm]);
 
-  const handleCancelAdditionalInfo = useCallback(() => {
-    setItemAdditionalInfo(selectedService?.additionalInfo || {});
-    setShowAdditionalInfo(false);
-  }, [selectedService?.additionalInfo]);
+  const handleConfirmDelete = useCallback(() => {
+    if (selectedInstances.length === 1) {
+      removeSelectedService(selectedInstances[0].id);
+      setNotification({
+        open: true,
+        message: "Servicio eliminado",
+        severity: "success",
+      });
+    }
+    setDeleteDialogOpen(false);
+  }, [selectedInstances, removeSelectedService]);
 
-  const handleCloseNotification = useCallback(
-    (event: React.SyntheticEvent | Event, reason?: SnackbarCloseReason) => {
-      if (reason === "clickaway") {
-        event.preventDefault(); // Use the event parameter
-        return;
-      }
-      setNotification({ ...notification, open: false });
+  const handleQuantityChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const newQuantity = parseInt(event.target.value, 10);
+      setQuantity(isNaN(newQuantity) ? 1 : Math.max(1, newQuantity));
     },
-    [notification]
+    []
   );
 
+  const handleIncrementQuantity = useCallback(() => {
+    setQuantity((prev) => prev + 1);
+  }, []);
+
+  const handleDecrementQuantity = useCallback(() => {
+    setQuantity((prev) => Math.max(1, prev - 1));
+  }, []);
+
+  const handleCloseNotification = useCallback((_: unknown, reason?: string) => {
+    if (reason === "clickaway") return;
+    setNotification((prev) => ({ ...prev, open: false }));
+  }, []);
+
   return (
-    <Card>
-      <CardContent>
+    <Card
+      sx={{
+        m: 1,
+        border: isServiceAdded ? "2px solid" : undefined,
+        borderColor: isServiceAdded ? "primary.main" : undefined,
+      }}
+    >
+      <CardContent sx={{ m: 1 }}>
         <Typography variant="h6">{item.name}</Typography>
         <Typography variant="subtitle2" color="text.secondary">
           {item.code}
         </Typography>
-
-        <Box sx={{ display: "flex", alignItems: "center", mt: 2 }}>
-          <Typography variant="body1" mr={1}>
-            Cantidad:
+        {isServiceAdded && (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Seleccionado: {totalQuantity} instancia
+            {totalQuantity !== 1 ? "s" : ""}
           </Typography>
-          <TextField
-            type="number"
-            value={quantity}
-            onChange={handleQuantityChange}
-            inputProps={{ min: 1 }}
-            sx={{ width: "60px", mr: 2 }}
-          />
-          {isSelected ? (
-            <IconButton onClick={handleRemoveService}>
-              <RemoveIcon />
-            </IconButton>
+        )}
+        {error && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {error}
+          </Alert>
+        )}
+        <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 1 }}>
+          {hasAdditionalInfoFields ? (
+            <>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                  flexWrap: "wrap",
+                  mb: 1,
+                }}
+              >
+                <Typography variant="body1">Cantidad:</Typography>
+                <Tooltip title="Reducir cantidad">
+                  <IconButton
+                    onClick={handleDecrementQuantity}
+                    size="small"
+                    disabled={loading}
+                    aria-label={`Reducir cantidad de ${item.name}`}
+                  >
+                    <RemoveIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <TextField
+                  type="number"
+                  value={quantity}
+                  onChange={handleQuantityChange}
+                  inputProps={{ min: 1 }}
+                  sx={{ width: "60px" }}
+                  disabled={loading}
+                  aria-label={`Cantidad de ${item.name}`}
+                />
+                <Tooltip title="Aumentar cantidad">
+                  <IconButton
+                    onClick={handleIncrementQuantity}
+                    size="small"
+                    disabled={loading}
+                    aria-label={`Aumentar cantidad de ${item.name}`}
+                  >
+                    <AddIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Tooltip
+                title={isServiceAdded ? "Editar detalles" : "Añadir detalles"}
+              >
+                <Button
+                  onClick={handleOpenAdditionalInfo}
+                  variant="contained"
+                  color="primary"
+                  startIcon={<InfoIcon />}
+                  fullWidth
+                  disabled={loading}
+                  aria-label={
+                    isServiceAdded
+                      ? `Editar detalles de ${item.name}`
+                      : `Añadir detalles a ${item.name}`
+                  }
+                >
+                  {isServiceAdded ? "Editar Detalles" : "Añadir Detalles"}
+                </Button>
+              </Tooltip>
+              {showAdditionalInfo && (
+                <AdditionalInfoFormWrapper
+                  open={showAdditionalInfo}
+                  quantity={quantity}
+                  service={item}
+                  initialAdditionalInfo={initialAdditionalInfo}
+                  serviceId={location.state?.editServiceId}
+                  instanceId={location.state?.editInstanceId}
+                  onClose={handleCancelAdditionalInfo}
+                  onSave={handleSaveAdditionalInfo}
+                />
+              )}
+              {isServiceAdded && !showAdditionalInfo && (
+                <Tooltip title="Eliminar servicio">
+                  <Button
+                    onClick={() => setDeleteDialogOpen(true)}
+                    variant="outlined"
+                    color="error"
+                    fullWidth
+                    disabled={loading}
+                    sx={{ mt: 1 }}
+                    startIcon={<DeleteIcon />}
+                    aria-label={`Eliminar servicio ${item.name}`}
+                  >
+                    Eliminar Servicio
+                  </Button>
+                </Tooltip>
+              )}
+            </>
           ) : (
-            <IconButton onClick={handleAddService}>
-              <AddIcon />
-            </IconButton>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+                flexWrap: "wrap",
+              }}
+            >
+              <Typography variant="body1">Cantidad:</Typography>
+              <Tooltip title="Reducir cantidad">
+                <IconButton
+                  onClick={handleDecrementQuantity}
+                  size="small"
+                  disabled={loading}
+                  aria-label={`Reducir cantidad de ${item.name}`}
+                >
+                  <RemoveIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <TextField
+                type="number"
+                value={quantity}
+                onChange={handleQuantityChange}
+                inputProps={{ min: 1 }}
+                sx={{ width: "60px" }}
+                disabled={loading}
+                aria-label={`Cantidad de ${item.name}`}
+              />
+              <Tooltip title="Aumentar cantidad">
+                <IconButton
+                  onClick={handleIncrementQuantity}
+                  size="small"
+                  disabled={loading}
+                  aria-label={`Aumentar cantidad de ${item.name}`}
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              {isServiceAdded ? (
+                <Tooltip title="Eliminar servicio">
+                  <Button
+                    onClick={() => setDeleteDialogOpen(true)}
+                    variant="contained"
+                    color="error"
+                    disabled={loading}
+                    startIcon={<DeleteIcon />}
+                    aria-label={`Eliminar servicio ${item.name}`}
+                  >
+                    Eliminar Servicio
+                  </Button>
+                </Tooltip>
+              ) : (
+                <Tooltip title="Agregar servicio">
+                  <Button
+                    onClick={handleAddService}
+                    variant="contained"
+                    disabled={loading}
+                    aria-label={`Agregar servicio ${item.name}`}
+                  >
+                    Agregar Servicio
+                  </Button>
+                </Tooltip>
+              )}
+            </Box>
           )}
         </Box>
-
-        {item.additionalInfo && item.additionalInfo.length > 0 && (
-          <Button onClick={handleOpenAdditionalInfo} sx={{ mt: 2 }}>
-            Añadir Información Adicional
-          </Button>
-        )}
-
-        {showAdditionalInfo && (
-          <Box sx={{ mt: 2 }}>
-            <AdditionalInfoForm
-              service={item}
-              itemAdditionalInfo={itemAdditionalInfo}
-              setItemAdditionalInfo={setItemAdditionalInfo}
-            />
-            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
-              <Button onClick={handleSaveAdditionalInfo}>Guardar</Button>
-              <Button onClick={handleCancelAdditionalInfo}>Cancelar</Button>
-            </Box>
-          </Box>
-        )}
-
         <Snackbar
           open={notification.open}
-          autoHideDuration={6000}
+          autoHideDuration={4000}
           onClose={handleCloseNotification}
-          aria-describedby="service-notification"
+          aria-live="polite"
         >
           <Alert
             onClose={handleCloseNotification}
             severity={notification.severity}
             sx={{ width: "100%" }}
-            id="service-notification"
           >
             {notification.message}
           </Alert>
         </Snackbar>
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
+          aria-labelledby="delete-service-dialog-title"
+        >
+          <DialogTitle id="delete-service-dialog-title">
+            Confirmar Eliminación
+          </DialogTitle>
+          <DialogContent>
+            <Typography>
+              ¿Estás seguro de que deseas eliminar el servicio "{item.name}"?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setDeleteDialogOpen(false)}
+              aria-label="Cancelar eliminación"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmDelete}
+              color="error"
+              variant="contained"
+              disabled={loading}
+              aria-label="Confirmar eliminación"
+            >
+              Eliminar
+            </Button>
+          </DialogActions>
+        </Dialog>
       </CardContent>
     </Card>
   );

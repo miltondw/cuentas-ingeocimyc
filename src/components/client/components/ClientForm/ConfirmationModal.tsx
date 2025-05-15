@@ -5,142 +5,70 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  List,
-  ListItem,
-  ListItemText,
   Typography,
-  CircularProgress,
 } from "@mui/material";
-import PropTypes from "prop-types";
-import { useServiceRequest } from "../ServiceRequestContext";
 
 interface ConfirmationModalProps {
   open: boolean;
-  onClose: () => void;
   onConfirm: () => void;
-  loading?: boolean;
+  onCancel: () => void;
+  instances?: Array<{
+    id: string;
+    additionalInfo: Record<string, string | number | boolean | string[]>;
+  }>;
+  title?: string;
+  message?: string;
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   open,
-  onClose,
   onConfirm,
-  loading = false,
+  onCancel,
+  instances = [],
+  title = "Confirmar Guardado",
+  message = "¿Estás seguro de guardar los datos?",
 }) => {
-  const { state } = useServiceRequest();
-  const { formData, selectedServices } = state;
+  // Verificar que instances no sea undefined o null y que additionalInfo sea válido
+  const hasValidInstances = instances.every((instance) => {
+    return (
+      instance &&
+      instance.additionalInfo &&
+      typeof instance.additionalInfo === "object" &&
+      Object.keys(instance.additionalInfo).length > 0
+    );
+  });
 
-  // Etiquetas para los campos de formData
-  const fieldLabels: { [key: string]: string } = {
-    name: "Nombre",
-    nameProject: "Nombre del proyecto",
-    location: "Ubicación",
-    identification: "Identificación",
-    phone: "Teléfono",
-    email: "Correo electrónico",
-    description: "Descripción",
-  };
-
-  // Etiquetas para los campos de additionalInfo
-  const additionalFieldLabels: { [key: string]: string } = {
-    tipoMuestra: "Tipo de muestra",
-    tamanoCilindro: "Tamaño del cilindro",
-    estructuraRealizada: "Estructura realizada",
-    resistenciaDiseno: "Resistencia de diseño",
-    dosificacionEmpleada: "Dosificación empleada",
-    identificacionMuestra: "Identificación de la muestra",
-    fechaFundida: "Fecha de fundición",
-    edadEnsayo: "Edad del ensayo",
-  };
+  // Ejemplo de uso de Object.keys (ajusta según tu lógica real en la línea 70)
+  const additionalInfoKeys =
+    instances.length > 0 ? Object.keys(instances[0].additionalInfo || {}) : [];
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      aria-labelledby="confirmation-dialog-title"
-    >
-      <DialogTitle id="confirmation-dialog-title">
-        Confirmar Solicitud
-      </DialogTitle>
+    <Dialog open={open} onClose={onCancel}>
+      <DialogTitle>{title}</DialogTitle>
       <DialogContent>
-        <Typography variant="h6" gutterBottom>
-          Información del Cliente
-        </Typography>
-        <List dense>
-          {Object.entries(formData).map(([field, value]) => (
-            <ListItem key={field}>
-              <ListItemText
-                primary={fieldLabels[field] || field}
-                secondary={value}
-              />
-            </ListItem>
-          ))}
-        </List>
-
-        <Typography variant="h6" gutterBottom>
-          Servicios Seleccionados
-        </Typography>
-        <List dense>
-          {selectedServices.length > 0 ? (
-            selectedServices.map((service) => (
-              <ListItem key={service.item.id}>
-                <ListItemText
-                  primary={`${service.item.name} (Cantidad: ${service.quantity})`}
-                  secondary={
-                    <>
-                      {service.additionalInfo && (
-                        <List dense>
-                          {Object.entries(service.additionalInfo).map(
-                            ([field, value]) => (
-                              <ListItem key={field} sx={{ pl: 4 }}>
-                                <ListItemText
-                                  primary={
-                                    additionalFieldLabels[field] || field
-                                  }
-                                  secondary={
-                                    value ? String(value) : "No especificado"
-                                  }
-                                />
-                              </ListItem>
-                            )
-                          )}
-                        </List>
-                      )}
-                    </>
-                  }
-                />
-              </ListItem>
-            ))
-          ) : (
-            <ListItem>
-              <ListItemText primary="No hay servicios seleccionados" />
-            </ListItem>
-          )}
-        </List>
+        <Typography>{message}</Typography>
+        {instances.length > 0 && (
+          <Typography>
+            Se guardarán {instances.length} instancia(s) con los siguientes
+            campos: {additionalInfoKeys.join(", ")}
+          </Typography>
+        )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
+        <Button onClick={onCancel} color="secondary">
           Cancelar
         </Button>
         <Button
+          onClick={onConfirm}
           variant="contained"
           color="primary"
-          onClick={onConfirm}
-          disabled={loading}
-          startIcon={loading && <CircularProgress size={20} />}
+          disabled={!hasValidInstances}
         >
-          Confirmar
+          Guardar
         </Button>
       </DialogActions>
     </Dialog>
   );
-};
-
-ConfirmationModal.propTypes = {
-  open: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  onConfirm: PropTypes.func.isRequired,
-  loading: PropTypes.bool,
 };
 
 export default ConfirmationModal;

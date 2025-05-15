@@ -202,10 +202,17 @@ const ProjectProfiles = () => {
                                         <Typography variant="h6" component="div">
                                             Sondeo #{profile.sounding_number}
                                         </Typography>
+
+                                        {
+                                            profile?.location ?? (
+                                                <Typography variant="h6" component="div">
+                                                    Ubicación del Sondeo: {profile.location}
+                                                </Typography>
+                                            )
+                                        }
                                         <Typography variant="body2" color="text.secondary">
                                             Fecha: {formatDate(profile.profile_date)}
                                         </Typography>
-
                                         {profile.water_level && profile.water_level !== "ninguno" && (
                                             <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                                                 <WaterDropIcon color="primary" fontSize="small" />
@@ -214,7 +221,6 @@ const ProjectProfiles = () => {
                                                 </Typography>
                                             </Box>
                                         )}
-
                                         <Chip
                                             size="small"
                                             label={`${profile.samples_number || 0} muestras`}
@@ -349,6 +355,13 @@ const ProjectProfiles = () => {
                                         <Typography variant="h6" component="div">
                                             Sondeo #{profile.sounding_number}
                                         </Typography>
+                                        {
+                                            profile?.location ?? (
+                                                <Typography variant="h6" component="div">
+                                                    Ubicación del Sondeo: {profile.location}
+                                                </Typography>
+                                            )
+                                        }
                                         <Box>
                                             <IconButton
                                                 size="small"

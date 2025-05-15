@@ -1,5 +1,5 @@
-// types.ts (or place in a shared types file)
 export interface AdditionalInfo {
+  dependsOnField?: string;
   field: string;
   type:
     | "text"
@@ -12,10 +12,7 @@ export interface AdditionalInfo {
   label: string;
   required?: boolean;
   options?: string[];
-  dependsOn?: {
-    field: string;
-    value: string;
-  };
+  dependsOnValue?: string;
   question?: string;
 }
 
@@ -37,14 +34,14 @@ export interface ServiceResponse {
   success: boolean;
   services: ServiceCategory[];
 }
+
 export interface AdditionalInfoFormProps {
   service: ServiceItem;
-  itemAdditionalInfo: { [key: string]: any };
+  itemAdditionalInfo: Record<string, string | number | boolean | string[]>;
   setItemAdditionalInfo: React.Dispatch<
-    React.SetStateAction<{ [key: string]: any }>
+    React.SetStateAction<Record<string, string | number | boolean | string[]>>
   >;
 }
-
 export interface Service {
   id: number;
   code: string;
@@ -55,4 +52,13 @@ export interface Service {
 export interface ServiceSelectionProps {
   services: Service[];
   loading?: boolean;
+  editCategory?: string;
+}
+
+export interface SelectedService {
+  id: string;
+  item: ServiceItem;
+  quantity: number;
+  additionalInfo: Record<string, string | number | boolean | string[]>;
+  category?: string;
 }

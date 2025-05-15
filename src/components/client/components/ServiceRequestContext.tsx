@@ -3,9 +3,12 @@ import React, {
   useContext,
   useReducer,
   useCallback,
+  useEffect,
 } from "react";
+import { ServiceItem } from "./types";
+import { v4 as uuidv4 } from "uuid";
+import { debounce } from "@mui/material";
 
-// Define tipos para el estado
 interface FormData {
   name: string;
   nameProject: string;
@@ -14,13 +17,18 @@ interface FormData {
   phone: string;
   email: string;
   description: string;
-  status: string; //  'pending' | 'completed' | ...
+  status: string;
 }
 
 interface SelectedService {
-  item: any; //  TODO: Define un tipo más específico para 'item'
+  id: string;
+  item: ServiceItem;
   quantity: number;
-  additionalInfo: any; //  TODO: Define un tipo más específico si es posible
+  instances: Array<{
+    id: string;
+    additionalInfo: Record<string, string | number | boolean | string[]>;
+  }>;
+  category?: string;
 }
 
 interface ServiceRequestState {
@@ -28,23 +36,30 @@ interface ServiceRequestState {
   selectedServices: SelectedService[];
   loading: boolean;
   error: string | null;
+  formIsValid: boolean;
 }
 
-// Define el tipo para las acciones
 type ServiceRequestAction =
   | { type: "SET_FORM_DATA"; payload: Partial<FormData> }
-  | { type: "SET_SELECTED_SERVICES"; payload: SelectedService[] }
+  | { type: "SET_FORM_VALIDITY"; payload: boolean }
+  | { type: "ADD_SELECTED_SERVICE"; payload: SelectedService }
   | {
-      type: "SET_ADDITIONAL_INFO";
-      payload: { index: number; additionalInfo: any };
+      type: "UPDATE_ADDITIONAL_INFO";
+      payload: {
+        serviceId: string;
+        instanceId: string;
+        additionalInfo: Record<string, string | number | boolean | string[]>;
+        instances?: Array<{
+          id: string;
+          additionalInfo: Record<string, string | number | boolean | string[]>;
+        }>;
+      };
     }
+  | { type: "REMOVE_SELECTED_SERVICE"; payload: string }
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "SET_ERROR"; payload: string | null }
-  | { type: "RESET" };
-
-const ServiceRequestContext = createContext<ServiceRequestContextType | null>(
-  null
-);
+  | { type: "RESET" }
+  | { type: "RESTORE_STATE"; payload: ServiceRequestState };
 
 const initialState: ServiceRequestState = {
   formData: {
@@ -55,11 +70,12 @@ const initialState: ServiceRequestState = {
     phone: "",
     email: "",
     description: "",
-    status: "pending",
+    status: "pendiente",
   },
   selectedServices: [],
   loading: false,
   error: null,
+  formIsValid: false,
 };
 
 const serviceRequestReducer = (
@@ -68,107 +84,256 @@ const serviceRequestReducer = (
 ): ServiceRequestState => {
   switch (action.type) {
     case "SET_FORM_DATA":
+      return { ...state, formData: { ...state.formData, ...action.payload } };
+    case "SET_FORM_VALIDITY":
+      return { ...state, formIsValid: action.payload };
+    case "ADD_SELECTED_SERVICE": {
+      if (state.selectedServices.some((s) => s.id === action.payload.id)) {
+        return state;
+      }
       return {
         ...state,
-        formData: { ...state.formData, ...action.payload },
+        selectedServices: [...state.selectedServices, action.payload],
       };
-    case "SET_SELECTED_SERVICES":
+    }
+    case "UPDATE_ADDITIONAL_INFO": {
       return {
         ...state,
-        selectedServices: action.payload,
-      };
-    case "SET_ADDITIONAL_INFO":
-      return {
-        ...state,
-        selectedServices: state.selectedServices.map((service, i) =>
-          i === action.payload.index
-            ? { ...service, additionalInfo: action.payload.additionalInfo }
+        selectedServices: state.selectedServices.map((service) =>
+          service.id === action.payload.serviceId
+            ? {
+                ...service,
+                instances:
+                  action.payload.instances ||
+                  service.instances.map((instance) =>
+                    instance.id === action.payload.instanceId
+                      ? {
+                          ...instance,
+                          additionalInfo: action.payload.additionalInfo,
+                        }
+                      : instance
+                  ),
+                quantity: action.payload.instances
+                  ? action.payload.instances.length
+                  : service.quantity,
+              }
             : service
         ),
       };
+    }
+    case "REMOVE_SELECTED_SERVICE":
+      return {
+        ...state,
+        selectedServices: state.selectedServices.filter(
+          (service) => service.id !== action.payload
+        ),
+      };
     case "SET_LOADING":
-      return {
-        ...state,
-        loading: action.payload,
-      };
+      return { ...state, loading: action.payload };
     case "SET_ERROR":
-      return {
-        ...state,
-        error: action.payload,
-      };
+      return { ...state, error: action.payload };
     case "RESET":
       return initialState;
+    case "RESTORE_STATE":
+      return { ...initialState, ...action.payload };
     default:
       return state;
   }
 };
 
-// Define el tipo para el contexto
 interface ServiceRequestContextType {
   state: ServiceRequestState;
   setFormData: (formData: Partial<FormData>) => void;
-  setSelectedServices: (services: SelectedService[]) => void;
-  setAdditionalInfo: (index: number, additionalInfo: any) => void;
+  addSelectedService: (
+    item: ServiceItem,
+    quantity: number,
+    category?: string,
+    serviceId?: string,
+    instances?: Array<{
+      id: string;
+      additionalInfo: Record<string, string | number | boolean | string[]>;
+    }>
+  ) => void;
+  updateAdditionalInfo: (
+    serviceId: string,
+    instanceId: string,
+    additionalInfo: Record<string, string | number | boolean | string[]>,
+    instances?: Array<{
+      id: string;
+      additionalInfo: Record<string, string | number | boolean | string[]>;
+    }>
+  ) => void;
+  removeSelectedService: (id: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   reset: () => void;
+  setFormValidity: (isValid: boolean) => void;
+  validateForm: () => Promise<boolean>;
+  submitForm: () => Promise<void>;
 }
+
+const ServiceRequestContext = createContext<ServiceRequestContextType | null>(
+  null
+);
 
 export const ServiceRequestProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const [state, dispatch] = useReducer(serviceRequestReducer, initialState);
 
-  const setFormData = useCallback(
-    (formData: Partial<FormData>) => {
-      dispatch({ type: "SET_FORM_DATA", payload: formData });
-    },
-    [dispatch]
+  // Persistencia en localStorage con debounce
+  const saveState = useCallback(
+    debounce((state: ServiceRequestState) => {
+      localStorage.setItem("serviceRequestState", JSON.stringify(state));
+    }, 500),
+    []
   );
 
-  const setSelectedServices = useCallback(
-    (services: SelectedService[]) => {
-      dispatch({ type: "SET_SELECTED_SERVICES", payload: services });
-    },
-    [dispatch]
+  useEffect(() => {
+    const savedState = localStorage.getItem("serviceRequestState");
+    if (savedState) {
+      try {
+        dispatch({ type: "RESTORE_STATE", payload: JSON.parse(savedState) });
+      } catch (error) {
+        console.error("Error restoring state:", error);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    saveState(state);
+  }, [state, saveState]);
+
+  const setFormData = useCallback((formData: Partial<FormData>) => {
+    dispatch({ type: "SET_FORM_DATA", payload: formData });
+  }, []);
+
+  const setFormValidity = useCallback((isValid: boolean) => {
+    dispatch({ type: "SET_FORM_VALIDITY", payload: isValid });
+  }, []);
+
+  const createInstances = useCallback(
+    (quantity: number) =>
+      Array.from({ length: quantity }, () => ({
+        id: uuidv4(),
+        additionalInfo: {},
+      })),
+    []
   );
 
-  const setAdditionalInfo = useCallback(
-    (index: number, additionalInfo: any) => {
+  const addSelectedService = useCallback(
+    (
+      item: ServiceItem,
+      quantity: number,
+      category?: string,
+      serviceId?: string,
+      instances?: Array<{
+        id: string;
+        additionalInfo: Record<string, string | number | boolean | string[]>;
+      }>
+    ) => {
+      if (quantity < 1) return;
+      const newId = serviceId || uuidv4();
+      const serviceInstances = instances || createInstances(quantity);
       dispatch({
-        type: "SET_ADDITIONAL_INFO",
-        payload: { index, additionalInfo },
+        type: "ADD_SELECTED_SERVICE",
+        payload: {
+          id: newId,
+          item,
+          quantity: serviceInstances.length,
+          instances: serviceInstances,
+          category,
+        },
       });
     },
-    [dispatch]
+    [createInstances]
   );
 
-  const setLoading = useCallback(
-    (loading: boolean) => {
-      dispatch({ type: "SET_LOADING", payload: loading });
+  const updateAdditionalInfo = useCallback(
+    (
+      serviceId: string,
+      instanceId: string,
+      additionalInfo: Record<string, string | number | boolean | string[]>,
+      instances?: Array<{
+        id: string;
+        additionalInfo: Record<string, string | number | boolean | string[]>;
+      }>
+    ) => {
+      dispatch({
+        type: "UPDATE_ADDITIONAL_INFO",
+        payload: { serviceId, instanceId, additionalInfo, instances },
+      });
     },
-    [dispatch]
+    []
   );
 
-  const setError = useCallback(
-    (error: string | null) => {
-      dispatch({ type: "SET_ERROR", payload: error });
-    },
-    [dispatch]
-  );
+  const removeSelectedService = useCallback((id: string) => {
+    dispatch({ type: "REMOVE_SELECTED_SERVICE", payload: id });
+  }, []);
+
+  const setLoading = useCallback((loading: boolean) => {
+    dispatch({ type: "SET_LOADING", payload: loading });
+  }, []);
+
+  const setError = useCallback((error: string | null) => {
+    dispatch({ type: "SET_ERROR", payload: error });
+  }, []);
 
   const reset = useCallback(() => {
     dispatch({ type: "RESET" });
-  }, [dispatch]);
+    localStorage.removeItem("serviceRequestState");
+  }, []);
+
+  const validateForm = useCallback(async () => {
+    const {
+      name,
+      nameProject,
+      location,
+      identification,
+      phone,
+      email,
+      description,
+    } = state.formData;
+    const isValid =
+      !!name &&
+      !!nameProject &&
+      !!location &&
+      !!identification &&
+      !!phone &&
+      !!email &&
+      !!description;
+    setFormValidity(isValid);
+    return isValid;
+  }, [state.formData, setFormValidity]);
+
+  const submitForm = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      if (!(await validateForm())) {
+        throw new Error("Por favor, complete todos los campos del formulario.");
+      }
+      // Simula el envío exitoso y limpia el estado
+      reset();
+    } catch (error: any) {
+      setError(error.message || "Error al procesar la solicitud");
+    } finally {
+      setLoading(false);
+    }
+  }, [validateForm, setLoading, setError, reset]);
 
   const value: ServiceRequestContextType = {
     state,
     setFormData,
-    setSelectedServices,
-    setAdditionalInfo,
+    addSelectedService,
+    updateAdditionalInfo,
+    removeSelectedService,
     setLoading,
     setError,
     reset,
+    setFormValidity,
+    validateForm,
+    submitForm,
   };
 
   return (
@@ -182,7 +347,7 @@ export const useServiceRequest = () => {
   const context = useContext(ServiceRequestContext);
   if (!context) {
     throw new Error(
-      "useServiceRequest debe usarse dentro de un ServiceRequestProvider"
+      "useServiceRequest must be used within a ServiceRequestProvider"
     );
   }
   return context;

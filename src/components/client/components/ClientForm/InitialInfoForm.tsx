@@ -1,6 +1,6 @@
-import React, { useCallback } from "react";
-import { TextField, Grid2, Typography, Button, Box } from "@mui/material";
-import { useForm, SubmitHandler } from "react-hook-form";
+import React, { useEffect } from "react";
+import { TextField, Grid2, Typography, Box } from "@mui/material";
+import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as Yup from "yup";
 import { useServiceRequest } from "../ServiceRequestContext";
@@ -15,40 +15,45 @@ interface FormData {
   description: string;
 }
 
-const InitialInfoForm: React.FC = () => {
-  const { state, setFormData } = useServiceRequest();
-  const { formData } = state;
+const validationSchema = Yup.object().shape({
+  name: Yup.string().required("El nombre es requerido"),
+  nameProject: Yup.string().required("El nombre del proyecto es requerido"),
+  location: Yup.string().required("La localización es requerida"),
+  identification: Yup.string().required("La identificación es requerida"),
+  phone: Yup.string().required("El teléfono es requerido"),
+  email: Yup.string()
+    .email("Correo electrónico no válido")
+    .required("El correo electrónico es requerido"),
+  description: Yup.string().required("La descripción es requerida"),
+});
 
-  // --- Esquema de Validación Yup ---
-  const validationSchema = Yup.object().shape({
-    name: Yup.string().required("El nombre es requerido"),
-    nameProject: Yup.string().required("El nombre del proyecto es requerido"),
-    location: Yup.string().required("La localización es requerida"),
-    identification: Yup.string().required("La identificación es requerida"),
-    phone: Yup.string().required("El teléfono es requerido"),
-    email: Yup.string()
-      .email("Correo electrónico no válido")
-      .required("El correo electrónico es requerido"),
-    description: Yup.string().required("La descripción es requerida"),
-  });
+const InitialInfoForm: React.FC = () => {
+  const { state, setFormData, setFormValidity } = useServiceRequest();
+  const { formData } = state;
 
   const {
     register,
-    handleSubmit,
-    formState: { errors },
+    formState: { errors, isValid },
+    watch,
+    setValue,
+    reset,
   } = useForm<FormData>({
     resolver: yupResolver(validationSchema),
     defaultValues: formData,
     mode: "onChange",
   });
 
-  const onSubmit: SubmitHandler<FormData> = useCallback(
-    (data) => {
-      console.log("Form submitted, updating context with data:", data);
-      setFormData(data);
-    },
-    [setFormData]
-  );
+  useEffect(() => {
+    reset(formData);
+  }, [formData, reset]);
+
+  useEffect(() => {
+    const subscription = watch((value) => {
+      setFormData(value as FormData);
+      setFormValidity(isValid);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, setFormData, setFormValidity, isValid]);
 
   return (
     <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
@@ -63,7 +68,8 @@ const InitialInfoForm: React.FC = () => {
             {...register("name")}
             error={!!errors.name}
             helperText={errors.name?.message}
-            aria-invalid={!!errors.name ? "true" : "false"}
+            aria-invalid={!!errors.name}
+            InputLabelProps={{ shrink: true }}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
@@ -73,7 +79,8 @@ const InitialInfoForm: React.FC = () => {
             {...register("nameProject")}
             error={!!errors.nameProject}
             helperText={errors.nameProject?.message}
-            aria-invalid={!!errors.nameProject ? "true" : "false"}
+            aria-invalid={!!errors.nameProject}
+            InputLabelProps={{ shrink: true }}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
@@ -83,7 +90,8 @@ const InitialInfoForm: React.FC = () => {
             {...register("location")}
             error={!!errors.location}
             helperText={errors.location?.message}
-            aria-invalid={!!errors.location ? "true" : "false"}
+            aria-invalid={!!errors.location}
+            InputLabelProps={{ shrink: true }}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
@@ -93,7 +101,8 @@ const InitialInfoForm: React.FC = () => {
             {...register("identification")}
             error={!!errors.identification}
             helperText={errors.identification?.message}
-            aria-invalid={!!errors.identification ? "true" : "false"}
+            aria-invalid={!!errors.identification}
+            InputLabelProps={{ shrink: true }}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
@@ -103,7 +112,8 @@ const InitialInfoForm: React.FC = () => {
             {...register("phone")}
             error={!!errors.phone}
             helperText={errors.phone?.message}
-            aria-invalid={!!errors.phone ? "true" : "false"}
+            aria-invalid={!!errors.phone}
+            InputLabelProps={{ shrink: true }}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
@@ -114,7 +124,8 @@ const InitialInfoForm: React.FC = () => {
             {...register("email")}
             error={!!errors.email}
             helperText={errors.email?.message}
-            aria-invalid={!!errors.email ? "true" : "false"}
+            aria-invalid={!!errors.email}
+            InputLabelProps={{ shrink: true }}
           />
         </Grid2>
         <Grid2 size={{ xs: 12 }}>
@@ -126,21 +137,11 @@ const InitialInfoForm: React.FC = () => {
             {...register("description")}
             error={!!errors.description}
             helperText={errors.description?.message}
-            aria-invalid={!!errors.description ? "true" : "false"}
+            aria-invalid={!!errors.description}
+            InputLabelProps={{ shrink: true }}
           />
         </Grid2>
       </Grid2>
-      {/* Botón oculto para permitir el envío externo */}
-      <Button
-        color="primary"
-        type="submit"
-        aria-hidden="true"
-        variant="contained"
-        sx={{ width: "25%", m: "auto 2rem" }}
-        onClick={handleSubmit(onSubmit)}
-      >
-        Enviar
-      </Button>
     </Box>
   );
 };

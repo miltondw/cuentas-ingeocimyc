@@ -229,7 +229,7 @@ const ApiquesDeSuelos = () => {
   }
 
   return (
-    <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
+    <Box sx={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
       <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
         <IconButton
           onClick={() => navigate(`/lab/proyectos/${projectId}/apiques`)}
@@ -295,7 +295,7 @@ const ApiquesDeSuelos = () => {
 
       <Snackbar
         open={notification.open}
-        autoHideDuration={6000}
+        autoHideDuration={1000}
         onClose={handleCloseNotification}
       >
         <Alert
@@ -306,7 +306,7 @@ const ApiquesDeSuelos = () => {
           {notification.message}
         </Alert>
       </Snackbar>
-    </div>
+    </Box>
   );
 };
 

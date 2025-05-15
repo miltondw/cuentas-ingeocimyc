@@ -4,7 +4,6 @@ import {
   Select,
   MenuItem,
   FormControl,
-  SelectChangeEvent,
   FormControlLabel,
   Checkbox,
   RadioGroup,
@@ -16,38 +15,58 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { Dayjs } from "dayjs";
-import { AdditionalInfo, AdditionalInfoFormProps } from "../types"; // Adjust path to your types file
+import { AdditionalInfo, AdditionalInfoFormProps } from "../types";
+import { useCallback } from "react";
 
 const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
   service,
   itemAdditionalInfo,
   setItemAdditionalInfo,
 }) => {
-  const handleChange = (field: string, value: any) => {
-    setItemAdditionalInfo((prev) => ({ ...prev, [field]: value }));
-  };
+  const handleChange = useCallback(
+    (field: string, value: string | number | boolean | string[]) => {
+      setItemAdditionalInfo((prev) => ({ ...prev, [field]: value }));
+    },
+    [setItemAdditionalInfo]
+  );
 
-  const handleCheckboxChange = (field: string, checked: boolean) => {
-    setItemAdditionalInfo((prev) => ({ ...prev, [field]: checked }));
-  };
+  const handleCheckboxChange = useCallback(
+    (field: string, checked: boolean) => {
+      handleChange(field, checked);
+    },
+    [handleChange]
+  );
 
-  const handleMultiSelectChange = (field: string, value: string[]) => {
-    setItemAdditionalInfo((prev) => ({ ...prev, [field]: value }));
-  };
+  const handleMultiSelectChange = useCallback(
+    (field: string, value: string[]) => {
+      handleChange(field, value);
+    },
+    [handleChange]
+  );
 
-  const handleDateChange = (field: string, date: Dayjs | null) => {
-    setItemAdditionalInfo((prev) => ({
-      ...prev,
-      [field]: date ? dayjs(date).format("YYYY-MM-DD") : null,
-    }));
+  const handleDateChange = useCallback(
+    (field: string, date: Dayjs | null) => {
+      handleChange(field, date ? dayjs(date).format("DD-MM-YYYY") : "");
+    },
+    [handleChange]
+  );
+
+  const getDateValue = (
+    value: string | number | boolean | string[] | undefined
+  ): Dayjs | null => {
+    if (typeof value === "string" && value) {
+      const parsedDate = dayjs(value, "DD-MM-YYYY", true);
+      return parsedDate.isValid() ? parsedDate : null;
+    }
+    return null;
   };
 
   return (
     <Box>
       {service.additionalInfo?.map((info: AdditionalInfo, i: number) => {
         if (
-          info.dependsOn &&
-          itemAdditionalInfo[info.dependsOn.field] !== info.dependsOn.value
+          info.dependsOnField &&
+          itemAdditionalInfo[info.dependsOnField] !== info.dependsOnValue
         ) {
           return null;
         }
@@ -59,13 +78,19 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
                 key={i}
                 fullWidth
                 label={info.label}
-                value={itemAdditionalInfo[info.field] || ""}
+                value={itemAdditionalInfo[info.field] ?? ""}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  handleChange(info.field, e.target.value)
+                  handleChange(
+                    info.field,
+                    info.type === "number"
+                      ? parseFloat(e.target.value) || 0
+                      : e.target.value
+                  )
                 }
                 margin="normal"
                 type={info.type}
                 required={info.required}
+                aria-label={info.label}
               />
             );
           case "select":
@@ -79,12 +104,12 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
                 <InputLabel id={`${info.field}-label`}>{info.label}</InputLabel>
                 <Select
                   labelId={`${info.field}-label`}
-                  id={info.field}
-                  value={itemAdditionalInfo[info.field] || ""}
+                  value={itemAdditionalInfo[info.field] ?? ""}
                   label={info.label}
-                  onChange={(e: SelectChangeEvent) =>
+                  onChange={(e) =>
                     handleChange(info.field, e.target.value as string)
                   }
+                  aria-label={info.label}
                 >
                   {info.options?.map((option) => (
                     <MenuItem key={option} value={option}>
@@ -105,17 +130,24 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
                 <InputLabel id={`${info.field}-label`}>{info.label}</InputLabel>
                 <Select
                   labelId={`${info.field}-label`}
-                  id={info.field}
                   multiple
-                  value={itemAdditionalInfo[info.field] || []}
+                  value={
+                    Array.isArray(itemAdditionalInfo[info.field])
+                      ? (itemAdditionalInfo[info.field] as string[])
+                      : typeof itemAdditionalInfo[info.field] === "string" &&
+                        itemAdditionalInfo[info.field]
+                      ? [String(itemAdditionalInfo[info.field])]
+                      : []
+                  }
                   label={info.label}
-                  onChange={(e: SelectChangeEvent<string[]>) =>
+                  onChange={(e) =>
                     handleMultiSelectChange(
                       info.field,
                       e.target.value as string[]
                     )
                   }
                   renderValue={(selected: string[]) => selected.join(", ")}
+                  aria-label={info.label}
                 >
                   {info.options?.map((option) => (
                     <MenuItem key={option} value={option}>
@@ -132,9 +164,10 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
                 control={
                   <Checkbox
                     checked={!!itemAdditionalInfo[info.field]}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    onChange={(e) =>
                       handleCheckboxChange(info.field, e.target.checked)
                     }
+                    aria-label={info.label}
                   />
                 }
                 label={info.label}
@@ -153,10 +186,8 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
                 <RadioGroup
                   aria-label={info.label}
                   name={info.field}
-                  value={itemAdditionalInfo[info.field] || ""}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    handleChange(info.field, e.target.value)
-                  }
+                  value={itemAdditionalInfo[info.field] ?? ""}
+                  onChange={(e) => handleChange(info.field, e.target.value)}
                 >
                   {info.options?.map((option) => (
                     <FormControlLabel
@@ -171,18 +202,13 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
             );
           case "date":
             return (
-              <FormControl fullWidth margin="normal" key={info.field}>
+              <FormControl fullWidth margin="normal" key={i}>
                 <LocalizationProvider dateAdapter={AdapterDayjs}>
                   <DatePicker
                     label={info.label}
-                    value={
-                      itemAdditionalInfo[info.field]
-                        ? dayjs(itemAdditionalInfo[info.field])
-                        : null
-                    }
-                    onChange={(date: Dayjs | null) =>
-                      handleDateChange(info.field, date)
-                    }
+                    value={getDateValue(itemAdditionalInfo[info.field])}
+                    onChange={(date) => handleDateChange(info.field, date)}
+                    slotProps={{ textField: { "aria-label": info.label } }}
                   />
                 </LocalizationProvider>
               </FormControl>

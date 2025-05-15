@@ -361,7 +361,7 @@ const MobileProfileView = ({
 
       <Snackbar
         open={notification.open}
-        autoHideDuration={5000}
+        autoHideDuration={1000}
         onClose={handleCloseNotification}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >

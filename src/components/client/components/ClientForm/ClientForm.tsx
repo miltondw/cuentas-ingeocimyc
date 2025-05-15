@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Stepper,
@@ -9,6 +9,9 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
+  Typography,
+  Grid2,
+  Tooltip,
 } from "@mui/material";
 import InitialInfoForm from "./InitialInfoForm";
 import ServiceSelection from "../ServiceSelection/ServiceSelection";
@@ -16,6 +19,16 @@ import ServiceReview from "./ServiceReview";
 import ConfirmationModal from "./ConfirmationModal";
 import { useServiceRequest } from "../ServiceRequestContext";
 import api from "@api";
+import { Service } from "../types";
+
+interface LocationState {
+  step?: number;
+  editServiceId?: string;
+  editInstanceId?: string;
+  editCategory?: string;
+  editAdditionalInfo?: Record<string, string | number | boolean | string[]>;
+  serviceItemId?: string;
+}
 
 const steps = [
   "Información inicial",
@@ -35,156 +48,232 @@ const ClientForm: React.FC = () => {
     message: "",
     severity: "success",
   });
-  const [services, setServices] = useState([]);
-  const { state, reset, setLoading, setError } = useServiceRequest();
+  const [loading, setLoading] = useState(false);
+  const [services, setServices] = useState<Service[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
+  const { state, submitForm, validateForm } = useServiceRequest();
+  const { error, formIsValid } = state;
 
+  const locationState = location.state as LocationState | null;
+
+  // Forzar inicio en paso 0 si no hay estado previo
   useEffect(() => {
-    const fetchServices = async () => {
-      setLoading(true);
-      try {
-        const response = await api.get("/service-requests/services/all");
-        setServices(response.data.services);
-      } catch (error: any) {
-        setError(error.message || "Error al cargar los servicios");
-        setNotification({
-          open: true,
-          message: error.message || "Error al cargar los servicios",
-          severity: "error",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchServices();
-
-    if (location.state && location.state.step) {
-      setActiveStep(location.state.step as number);
-    }
-  }, [location.state, setLoading, setError]);
-
-  const handleNext = () => {
-    if (activeStep === steps.length - 1) {
-      setOpenConfirmation(true);
+    if (locationState?.step !== undefined) {
+      setActiveStep(locationState.step);
     } else {
-      setActiveStep((prevActiveStep) => prevActiveStep + 1);
+      setActiveStep(0); // Asegura que siempre inicie en "Información inicial"
+      navigate("/cliente", { state: { step: 0 }, replace: true });
     }
-  };
+  }, [locationState?.step, navigate]);
 
-  const handleBack = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep - 1);
-  };
-
-  const handleCloseConfirmation = () => {
-    setOpenConfirmation(false);
-  };
-
-  const handleSubmit = async () => {
+  // Carga los servicios solo en el paso 1
+  const fetchServices = useCallback(async () => {
     setLoading(true);
     try {
-      //  Aquí iría la llamada a la API para crear la solicitud
-      //  const response = await api.post("/service-requests", state);
-      //  console.log("Solicitud creada:", response.data);
-
-      //  Simulación de la llamada a la API (reemplazar con la real)
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
+      const response = await api.get("/service-requests/services/all");
+      setServices(response.data.services);
+    } catch (error) {
       setNotification({
         open: true,
-        message: "Solicitud creada con éxito",
-        severity: "success",
-      });
-      reset();
-      setActiveStep(0);
-      navigate("/"); //  O a donde quieras redirigir
-    } catch (error: any) {
-      setError(error.message || "Error al crear la solicitud");
-      setNotification({
-        open: true,
-        message: error.message || "Error al crear la solicitud",
+        message: "Error al cargar los servicios",
         severity: "error",
       });
     } finally {
       setLoading(false);
-      setOpenConfirmation(false);
     }
-  };
+  }, []);
 
-  const handleCloseNotification = () => {
-    setNotification({ ...notification, open: false });
-  };
+  useEffect(() => {
+    if (activeStep === 1) {
+      fetchServices();
+    }
+  }, [activeStep, fetchServices]);
 
-  const renderStepContent = (step: number) => {
-    switch (step) {
+  // Maneja el avance al siguiente paso
+  const handleNext = useCallback(async () => {
+    if (activeStep === 0 && !(await validateForm())) {
+      setNotification({
+        open: true,
+        message: "Por favor completa todos los campos requeridos",
+        severity: "warning",
+      });
+      return;
+    }
+    if (activeStep === steps.length - 1) {
+      setOpenConfirmation(true);
+    } else {
+      setActiveStep((prev) => prev + 1);
+      navigate("/cliente", { state: { step: activeStep + 1 } });
+    }
+  }, [activeStep, validateForm, navigate]);
+
+  // Maneja el retroceso al paso anterior
+  const handleBack = useCallback(() => {
+    setActiveStep((prev) => prev - 1);
+    navigate("/cliente", { state: { step: activeStep - 1 } });
+  }, [activeStep, navigate]);
+
+  // Cierra el modal de confirmación
+  const handleCloseConfirmation = useCallback(() => {
+    setOpenConfirmation(false);
+  }, []);
+
+  // Envía el formulario (simulado, guarda en localStorage)
+  const handleSubmit = useCallback(async () => {
+    setOpenConfirmation(false);
+    setLoading(true);
+    try {
+      await submitForm();
+      setNotification({
+        open: true,
+        message: "Solicitud procesada con éxito (guardada localmente)",
+        severity: "success",
+      });
+      setActiveStep(0);
+      navigate("/cliente", { replace: true, state: { step: 0 } });
+    } catch (error) {
+      setNotification({
+        open: true,
+        message: "Error al procesar la solicitud",
+        severity: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [submitForm, navigate]);
+
+  // Cierra la notificación
+  const handleCloseNotification = useCallback(() => {
+    setNotification((prev) => ({ ...prev, open: false }));
+  }, []);
+
+  // Selecciona el componente del paso actual
+  const currentStepComponent = useMemo(() => {
+    switch (activeStep) {
       case 0:
         return <InitialInfoForm />;
       case 1:
-        return <ServiceSelection services={services} />;
+        return (
+          <ServiceSelection
+            services={services}
+            loading={loading}
+            editCategory={locationState?.editCategory}
+          />
+        );
       case 2:
         return <ServiceReview />;
       default:
-        return <div>Paso desconocido</div>;
+        return null;
     }
-  };
+  }, [activeStep, services, loading, locationState?.editCategory]);
+
+  // Determina si el botón "Siguiente" está deshabilitado
+  const isNextDisabled = useMemo(() => {
+    if (activeStep === 0) return !formIsValid;
+    if (activeStep === 1) return state.selectedServices.length === 0;
+    return false;
+  }, [activeStep, formIsValid, state.selectedServices]);
 
   return (
-    <Box sx={{ width: "80%", margin: "auto", mt: 2 }}>
-      <Stepper activeStep={activeStep} alternativeLabel>
-        {steps.map((label) => (
+    <Box sx={{ maxWidth: "1200px", mx: "auto", p: { xs: 2, md: 3 } }}>
+      <Typography
+        variant="h4"
+        gutterBottom
+        sx={{ textAlign: "center", mb: 4 }}
+        aria-label="Formulario de solicitud de servicio"
+      >
+        Solicitud de Servicio
+      </Typography>
+      <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+        {steps.map((label, index) => (
           <Step key={label}>
-            <StepLabel>{label}</StepLabel>
+            <StepLabel
+              aria-label={`Paso ${index + 1}: ${label}`}
+              sx={{
+                "& .MuiStepLabel-label": {
+                  fontSize: { xs: "0.9rem", sm: "1rem" },
+                },
+              }}
+            >
+              {label}
+            </StepLabel>
           </Step>
         ))}
       </Stepper>
-      {state.loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-          <CircularProgress />
+      {loading && activeStep !== 1 ? (
+        <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+          <CircularProgress aria-label="Cargando formulario" />
         </Box>
       ) : (
-        <>
-          {renderStepContent(activeStep)}
-
-          <Box sx={{ display: "flex", justifyContent: "space-between", mt: 2 }}>
-            <Button
-              disabled={activeStep === 0}
-              onClick={handleBack}
-              variant="outlined"
-            >
-              Atrás
-            </Button>
+        <Box sx={{ minHeight: "400px" }}>{currentStepComponent}</Box>
+      )}
+      {error && (
+        <Alert severity="error" sx={{ my: 2 }}>
+          {error}
+        </Alert>
+      )}
+      <Grid2
+        container
+        spacing={2}
+        justifyContent="space-between"
+        sx={{ mt: 3 }}
+      >
+        <Grid2>
+          {activeStep > 0 && (
+            <Tooltip title="Volver al paso anterior">
+              <Button
+                onClick={handleBack}
+                disabled={loading}
+                variant="outlined"
+                aria-label="Volver al paso anterior"
+              >
+                Atrás
+              </Button>
+            </Tooltip>
+          )}
+        </Grid2>
+        <Grid2>
+          <Tooltip
+            title={
+              activeStep === steps.length - 1
+                ? "Enviar solicitud"
+                : "Continuar al siguiente paso"
+            }
+          >
             <Button
               onClick={handleNext}
               variant="contained"
-              disabled={state.loading}
+              aria-label={
+                activeStep === steps.length - 1
+                  ? "Enviar solicitud"
+                  : "Continuar"
+              }
             >
-              {activeStep === steps.length - 1 ? "Confirmar" : "Siguiente"}
+              {activeStep === steps.length - 1 ? "Enviar" : "Siguiente"}
             </Button>
-          </Box>
-
-          <ConfirmationModal
-            open={openConfirmation}
-            onClose={handleCloseConfirmation}
-            onConfirm={handleSubmit}
-            loading={state.loading}
-          />
-
-          <Snackbar
-            open={notification.open}
-            autoHideDuration={6000}
-            onClose={handleCloseNotification}
-          >
-            <Alert
-              onClose={handleCloseNotification}
-              severity={notification.severity}
-              sx={{ width: "100%" }}
-            >
-              {notification.message}
-            </Alert>
-          </Snackbar>
-        </>
-      )}
+          </Tooltip>
+        </Grid2>
+      </Grid2>
+      <ConfirmationModal
+        open={openConfirmation}
+        onCancel={handleCloseConfirmation}
+        onConfirm={handleSubmit}
+      />
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={4000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleCloseNotification}
+          severity={notification.severity}
+          sx={{ width: "100%" }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
