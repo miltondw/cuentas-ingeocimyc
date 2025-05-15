@@ -35,7 +35,6 @@ const InitialInfoForm: React.FC = () => {
     register,
     formState: { errors, isValid },
     watch,
-    setValue,
     reset,
   } = useForm<FormData>({
     resolver: yupResolver(validationSchema),
@@ -69,7 +68,7 @@ const InitialInfoForm: React.FC = () => {
             error={!!errors.name}
             helperText={errors.name?.message}
             aria-invalid={!!errors.name}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{ inputLabel: { shrink: true } }}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
@@ -80,7 +79,7 @@ const InitialInfoForm: React.FC = () => {
             error={!!errors.nameProject}
             helperText={errors.nameProject?.message}
             aria-invalid={!!errors.nameProject}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{ inputLabel: { shrink: true } }}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
@@ -91,7 +90,7 @@ const InitialInfoForm: React.FC = () => {
             error={!!errors.location}
             helperText={errors.location?.message}
             aria-invalid={!!errors.location}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{ inputLabel: { shrink: true } }}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
@@ -102,7 +101,7 @@ const InitialInfoForm: React.FC = () => {
             error={!!errors.identification}
             helperText={errors.identification?.message}
             aria-invalid={!!errors.identification}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{ inputLabel: { shrink: true } }}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
@@ -113,7 +112,7 @@ const InitialInfoForm: React.FC = () => {
             error={!!errors.phone}
             helperText={errors.phone?.message}
             aria-invalid={!!errors.phone}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{ inputLabel: { shrink: true } }}
           />
         </Grid2>
         <Grid2 size={{ xs: 12, sm: 6 }}>
@@ -125,7 +124,7 @@ const InitialInfoForm: React.FC = () => {
             error={!!errors.email}
             helperText={errors.email?.message}
             aria-invalid={!!errors.email}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{ inputLabel: { shrink: true } }}
           />
         </Grid2>
         <Grid2 size={{ xs: 12 }}>
@@ -138,7 +137,7 @@ const InitialInfoForm: React.FC = () => {
             error={!!errors.description}
             helperText={errors.description?.message}
             aria-invalid={!!errors.description}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{ inputLabel: { shrink: true } }}
           />
         </Grid2>
       </Grid2>

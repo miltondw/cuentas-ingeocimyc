@@ -177,7 +177,7 @@ const MobileProfileView = ({
           fullWidth
           margin="normal"
           size="small"
-          InputLabelProps={{ shrink: true }}
+          slotProps={{ inputLabel: { shrink: true } }}
           required
         />
 

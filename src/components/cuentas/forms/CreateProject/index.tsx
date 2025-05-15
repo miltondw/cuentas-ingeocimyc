@@ -102,7 +102,7 @@ const FormCreateProject: React.FC = () => {
                   label="Fecha"
                   type="date"
                   fullWidth
-                  InputLabelProps={{ shrink: true }}
+                  slotProps={{ inputLabel: { shrink: true } }}
                   error={!!errors.fecha}
                   helperText={errors.fecha?.message}
                 />

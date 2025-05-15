@@ -92,7 +92,7 @@ const FormCreateMonth: React.FC = () => {
               label="MES"
               type="date"
               fullWidth
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
               error={!!errors.mes}
               helperText={errors.mes?.message}
             />

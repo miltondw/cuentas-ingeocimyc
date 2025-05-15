@@ -143,7 +143,7 @@ const DesktopProfileView = ({
             type="date"
             value={formData.profile_date}
             onChange={handleChange}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{ inputLabel: { shrink: true } }}
             required
             size="small"
           />

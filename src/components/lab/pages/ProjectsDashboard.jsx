@@ -245,7 +245,7 @@ const ProjectsDashboard = () => {
                                 onChange={(e) => handleFilterChange("fechaInicio", e.target.value)}
                                 variant="outlined"
                                 size="small"
-                                InputLabelProps={{ shrink: true }}
+                                slotProps={{ inputLabel: { shrink: true } }}
                             />
                         </Grid2>
                         <Grid2 size={{ xs: 12, sm: 6 }} md={3}>
@@ -257,7 +257,7 @@ const ProjectsDashboard = () => {
                                 onChange={(e) => handleFilterChange("fechaFin", e.target.value)}
                                 variant="outlined"
                                 size="small"
-                                InputLabelProps={{ shrink: true }}
+                                slotProps={{ inputLabel: { shrink: true } }}
                             />
                         </Grid2>
                         <Grid2 size={{ xs: 12, sm: 6 }} md={3}>

@@ -39,7 +39,7 @@ const BasicInfoForm = ({ formData, handleChange }: BasicInfoFormProps) => {
           value={formData.date}
           onChange={handleChange}
           fullWidth
-          InputLabelProps={{ shrink: true }}
+          slotProps={{ inputLabel: { shrink: true } }}
         />
       </Grid2>
       <Grid2 size={{ xs: 12, sm: 6 }}>
