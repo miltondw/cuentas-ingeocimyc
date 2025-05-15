@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import type { SelectChangeEvent } from "@mui/material/Select";
 import {
   Box,
@@ -14,23 +14,59 @@ import {
   CircularProgress,
 } from "@mui/material";
 import ServiceCategory from "./ServiceCategory";
-import { Service, ServiceSelectionProps } from "../types";
-import { useNavigate } from "react-router-dom";
+import { ServiceSelectionProps } from "../types";
 
 const ServiceSelection: React.FC<ServiceSelectionProps> = ({
   services = [],
   loading = false,
   editCategory,
 }) => {
-  const navigate = useNavigate();
-  const [selectedCategory, setSelectedCategory] = useState<string>(
-    editCategory || ""
-  );
-  const [searchTerm, setSearchTerm] = useState<string>("");
-
   const categories = useMemo(
     () => Array.from(new Set(services.map((service) => service.category))),
     [services]
+  );
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => {
+    // Solo usar editCategory si está en categories
+    return editCategory && categories.includes(editCategory)
+      ? editCategory
+      : "";
+  });
+  const [searchTerm, setSearchTerm] = useState<string>("");
+
+  // Actualizar selectedCategory si categories cambia y editCategory no es válido
+  useEffect(() => {
+    if (
+      editCategory &&
+      categories.length > 0 &&
+      !categories.includes(editCategory)
+    ) {
+      setSelectedCategory("");
+    } else if (
+      editCategory &&
+      categories.includes(editCategory) &&
+      selectedCategory !== editCategory
+    ) {
+      setSelectedCategory(editCategory);
+    }
+  }, [editCategory, categories, selectedCategory]);
+
+  const handleCategoryChange = useCallback(
+    (event: SelectChangeEvent<string>) => {
+      setSelectedCategory(event.target.value as string);
+    },
+    []
+  );
+
+  const handleClearFilters = useCallback(() => {
+    setSelectedCategory("");
+    setSearchTerm("");
+  }, []);
+
+  const handleSearchChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setSearchTerm(event.target.value);
+    },
+    []
   );
 
   const filteredServices = useMemo(() => {
@@ -54,25 +90,6 @@ const ServiceSelection: React.FC<ServiceSelectionProps> = ({
     }
     return filtered;
   }, [services, selectedCategory, searchTerm, editCategory]);
-
-  const handleCategoryChange = useCallback(
-    (event: SelectChangeEvent<string>) => {
-      setSelectedCategory(event.target.value as string);
-    },
-    []
-  );
-
-  const handleClearFilters = useCallback(() => {
-    setSelectedCategory("");
-    setSearchTerm("");
-  }, []);
-
-  const handleSearchChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setSearchTerm(event.target.value);
-    },
-    []
-  );
 
   if (loading) {
     return (

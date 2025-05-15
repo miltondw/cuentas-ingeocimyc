@@ -47,12 +47,16 @@ type ServiceRequestAction =
       type: "UPDATE_ADDITIONAL_INFO";
       payload: {
         serviceId: string;
-        instanceId: string;
-        additionalInfo: Record<string, string | number | boolean | string[]>;
+        instanceId: string | null;
+        additionalInfo: Record<
+          string,
+          string | number | boolean | string[]
+        > | null;
         instances?: Array<{
           id: string;
           additionalInfo: Record<string, string | number | boolean | string[]>;
         }>;
+        newQuantity?: number;
       };
     }
   | { type: "REMOVE_SELECTED_SERVICE"; payload: string }
@@ -103,19 +107,33 @@ const serviceRequestReducer = (
           service.id === action.payload.serviceId
             ? {
                 ...service,
-                instances:
-                  action.payload.instances ||
-                  service.instances.map((instance) =>
-                    instance.id === action.payload.instanceId
-                      ? {
-                          ...instance,
-                          additionalInfo: action.payload.additionalInfo,
-                        }
-                      : instance
-                  ),
-                quantity: action.payload.instances
-                  ? action.payload.instances.length
-                  : service.quantity,
+                instances: action.payload.instances
+                  ? action.payload.instances.map((instance) => ({
+                      ...instance,
+                      additionalInfo:
+                        instance.additionalInfo === null
+                          ? {}
+                          : instance.additionalInfo,
+                    }))
+                  : action.payload.instanceId && action.payload.additionalInfo
+                  ? service.instances.map((instance) =>
+                      instance.id === action.payload.instanceId
+                        ? {
+                            ...instance,
+                            additionalInfo:
+                              action.payload.additionalInfo === null
+                                ? {}
+                                : action.payload.additionalInfo,
+                          }
+                        : instance
+                    )
+                  : service.instances,
+                quantity:
+                  action.payload.newQuantity !== undefined
+                    ? action.payload.newQuantity
+                    : action.payload.instances
+                    ? action.payload.instances.length
+                    : service.quantity,
               }
             : service
         ),
@@ -156,12 +174,13 @@ interface ServiceRequestContextType {
   ) => void;
   updateAdditionalInfo: (
     serviceId: string,
-    instanceId: string,
-    additionalInfo: Record<string, string | number | boolean | string[]>,
+    instanceId: string | null,
+    additionalInfo: Record<string, string | number | boolean | string[]> | null,
     instances?: Array<{
       id: string;
       additionalInfo: Record<string, string | number | boolean | string[]>;
-    }>
+    }>,
+    newQuantity?: number
   ) => void;
   removeSelectedService: (id: string) => void;
   setLoading: (loading: boolean) => void;
@@ -252,16 +271,26 @@ export const ServiceRequestProvider: React.FC<{
   const updateAdditionalInfo = useCallback(
     (
       serviceId: string,
-      instanceId: string,
-      additionalInfo: Record<string, string | number | boolean | string[]>,
+      instanceId: string | null,
+      additionalInfo: Record<
+        string,
+        string | number | boolean | string[]
+      > | null,
       instances?: Array<{
         id: string;
         additionalInfo: Record<string, string | number | boolean | string[]>;
-      }>
+      }>,
+      newQuantity?: number
     ) => {
       dispatch({
         type: "UPDATE_ADDITIONAL_INFO",
-        payload: { serviceId, instanceId, additionalInfo, instances },
+        payload: {
+          serviceId,
+          instanceId,
+          additionalInfo,
+          instances,
+          newQuantity,
+        },
       });
     },
     []
@@ -283,7 +312,6 @@ export const ServiceRequestProvider: React.FC<{
     dispatch({ type: "RESET" });
     localStorage.removeItem("serviceRequestState");
   }, []);
-
   const validateForm = useCallback(async () => {
     const {
       name,
@@ -299,12 +327,21 @@ export const ServiceRequestProvider: React.FC<{
       !!nameProject &&
       !!location &&
       !!identification &&
-      !!phone &&
-      !!email &&
+      /^\d{10}$/.test(phone) &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
       !!description;
     setFormValidity(isValid);
     return isValid;
-  }, [state.formData, setFormValidity]);
+  }, [
+    state.formData.name,
+    state.formData.nameProject,
+    state.formData.location,
+    state.formData.identification,
+    state.formData.phone,
+    state.formData.email,
+    state.formData.description,
+    setFormValidity,
+  ]);
 
   const submitForm = useCallback(async () => {
     try {

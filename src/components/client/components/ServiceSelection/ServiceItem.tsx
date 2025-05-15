@@ -99,6 +99,8 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
             ...instanceToEdit.additionalInfo,
             ...(editAdditionalInfo || {}),
           });
+          // Inicializar quantity con la cantidad total del servicio
+          setQuantity(serviceToEdit.quantity || 1);
           setShowAdditionalInfo(true);
         }
       }
@@ -125,38 +127,38 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
 
         const editServiceId = location.state?.editServiceId;
         if (editServiceId) {
+          // Actualizar servicio existente
           updateAdditionalInfo(
             editServiceId,
             instances[0].id,
             instances[0].additionalInfo,
-            instances
+            instances,
+            quantity // Pasar la nueva cantidad
           );
           setNotification({
             open: true,
             message: "Servicio actualizado",
             severity: "success",
           });
+          setShowAdditionalInfo(false);
+          setInitialAdditionalInfo({});
+          setQuantity(1);
+          navigate("/cliente", { replace: true, state: { step: 2 } });
         } else {
+          // Agregar nuevo servicio
           const newServiceId = uuidv4();
-          addSelectedService(
-            item,
-            instances.length,
-            category,
-            newServiceId,
-            instances
-          );
+          addSelectedService(item, quantity, category, newServiceId, instances);
           setNotification({
             open: true,
-            message: `Servicio agregado (${instances.length} instancia${
-              instances.length > 1 ? "s" : ""
+            message: `Servicio agregado (${quantity} instancia${
+              quantity > 1 ? "s" : ""
             })`,
             severity: "success",
           });
+          setShowAdditionalInfo(false);
+          setInitialAdditionalInfo({});
+          setQuantity(1);
         }
-
-        setShowAdditionalInfo(false);
-        setQuantity(1);
-        navigate(location.pathname, { replace: true, state: { step: 1 } });
       } catch (error) {
         setNotification({
           open: true,
@@ -170,9 +172,10 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
       updateAdditionalInfo,
       item,
       category,
-      location,
+      location.state,
       navigate,
       validateForm,
+      quantity,
     ]
   );
 
@@ -183,6 +186,7 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
   const handleCancelAdditionalInfo = useCallback(() => {
     setShowAdditionalInfo(false);
     setQuantity(1);
+    setInitialAdditionalInfo({});
   }, []);
 
   const handleAddService = useCallback(async () => {
@@ -196,16 +200,51 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
       return;
     }
 
-    addSelectedService(item, quantity, category);
-    setNotification({
-      open: true,
-      message: `Servicio agregado (${quantity} instancia${
-        quantity > 1 ? "s" : ""
-      })`,
-      severity: "success",
-    });
-    setQuantity(1);
-  }, [addSelectedService, item, category, quantity, validateForm]);
+    const editServiceId = location.state?.editServiceId;
+    if (editServiceId) {
+      // Actualizar cantidad del servicio existente
+      const serviceToEdit = state.selectedServices.find(
+        (service) => service.id === editServiceId && service.item.id === item.id
+      );
+      if (serviceToEdit) {
+        updateAdditionalInfo(
+          editServiceId,
+          null,
+          null,
+          serviceToEdit.instances,
+          quantity
+        );
+        setNotification({
+          open: true,
+          message: "Cantidad actualizada",
+          severity: "success",
+        });
+        setQuantity(1);
+        navigate("/cliente", { replace: true, state: { step: 2 } });
+      }
+    } else {
+      // Agregar nuevo servicio
+      addSelectedService(item, quantity, category);
+      setNotification({
+        open: true,
+        message: `Servicio agregado (${quantity} instancia${
+          quantity > 1 ? "s" : ""
+        })`,
+        severity: "success",
+      });
+      setQuantity(1);
+    }
+  }, [
+    addSelectedService,
+    updateAdditionalInfo,
+    item,
+    category,
+    quantity,
+    validateForm,
+    location.state,
+    state.selectedServices,
+    navigate,
+  ]);
 
   const handleConfirmDelete = useCallback(() => {
     if (selectedInstances.length === 1) {
@@ -278,14 +317,16 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
               >
                 <Typography variant="body1">Cantidad:</Typography>
                 <Tooltip title="Reducir cantidad">
-                  <IconButton
-                    onClick={handleDecrementQuantity}
-                    size="small"
-                    disabled={loading}
-                    aria-label={`Reducir cantidad de ${item.name}`}
-                  >
-                    <RemoveIcon fontSize="small" />
-                  </IconButton>
+                  <span>
+                    <IconButton
+                      onClick={handleDecrementQuantity}
+                      size="small"
+                      disabled={loading}
+                      aria-label={`Reducir cantidad de ${item.name}`}
+                    >
+                      <RemoveIcon fontSize="small" />
+                    </IconButton>
+                  </span>
                 </Tooltip>
                 <TextField
                   type="number"
@@ -297,34 +338,38 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
                   aria-label={`Cantidad de ${item.name}`}
                 />
                 <Tooltip title="Aumentar cantidad">
-                  <IconButton
-                    onClick={handleIncrementQuantity}
-                    size="small"
-                    disabled={loading}
-                    aria-label={`Aumentar cantidad de ${item.name}`}
-                  >
-                    <AddIcon fontSize="small" />
-                  </IconButton>
+                  <span>
+                    <IconButton
+                      onClick={handleIncrementQuantity}
+                      size="small"
+                      disabled={loading}
+                      aria-label={`Aumentar cantidad de ${item.name}`}
+                    >
+                      <AddIcon fontSize="small" />
+                    </IconButton>
+                  </span>
                 </Tooltip>
               </Box>
               <Tooltip
                 title={isServiceAdded ? "Editar detalles" : "Añadir detalles"}
               >
-                <Button
-                  onClick={handleOpenAdditionalInfo}
-                  variant="contained"
-                  color="primary"
-                  startIcon={<InfoIcon />}
-                  fullWidth
-                  disabled={loading}
-                  aria-label={
-                    isServiceAdded
-                      ? `Editar detalles de ${item.name}`
-                      : `Añadir detalles a ${item.name}`
-                  }
-                >
-                  {isServiceAdded ? "Editar Detalles" : "Añadir Detalles"}
-                </Button>
+                <span>
+                  <Button
+                    onClick={handleOpenAdditionalInfo}
+                    variant="contained"
+                    color="primary"
+                    startIcon={<InfoIcon />}
+                    fullWidth
+                    disabled={loading}
+                    aria-label={
+                      isServiceAdded
+                        ? `Editar detalles de ${item.name}`
+                        : `Añadir detalles a ${item.name}`
+                    }
+                  >
+                    {isServiceAdded ? "Editar Detalles" : "Añadir Detalles"}
+                  </Button>
+                </span>
               </Tooltip>
               {showAdditionalInfo && (
                 <AdditionalInfoFormWrapper
@@ -340,18 +385,20 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
               )}
               {isServiceAdded && !showAdditionalInfo && (
                 <Tooltip title="Eliminar servicio">
-                  <Button
-                    onClick={() => setDeleteDialogOpen(true)}
-                    variant="outlined"
-                    color="error"
-                    fullWidth
-                    disabled={loading}
-                    sx={{ mt: 1 }}
-                    startIcon={<DeleteIcon />}
-                    aria-label={`Eliminar servicio ${item.name}`}
-                  >
-                    Eliminar Servicio
-                  </Button>
+                  <span>
+                    <Button
+                      onClick={() => setDeleteDialogOpen(true)}
+                      variant="outlined"
+                      color="error"
+                      fullWidth
+                      disabled={loading}
+                      sx={{ mt: 1 }}
+                      startIcon={<DeleteIcon />}
+                      aria-label={`Eliminar servicio ${item.name}`}
+                    >
+                      Eliminar Servicio
+                    </Button>
+                  </span>
                 </Tooltip>
               )}
             </>
@@ -366,14 +413,16 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
             >
               <Typography variant="body1">Cantidad:</Typography>
               <Tooltip title="Reducir cantidad">
-                <IconButton
-                  onClick={handleDecrementQuantity}
-                  size="small"
-                  disabled={loading}
-                  aria-label={`Reducir cantidad de ${item.name}`}
-                >
-                  <RemoveIcon fontSize="small" />
-                </IconButton>
+                <span>
+                  <IconButton
+                    onClick={handleDecrementQuantity}
+                    size="small"
+                    disabled={loading}
+                    aria-label={`Reducir cantidad de ${item.name}`}
+                  >
+                    <RemoveIcon fontSize="small" />
+                  </IconButton>
+                </span>
               </Tooltip>
               <TextField
                 type="number"
@@ -385,38 +434,44 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
                 aria-label={`Cantidad de ${item.name}`}
               />
               <Tooltip title="Aumentar cantidad">
-                <IconButton
-                  onClick={handleIncrementQuantity}
-                  size="small"
-                  disabled={loading}
-                  aria-label={`Aumentar cantidad de ${item.name}`}
-                >
-                  <AddIcon fontSize="small" />
-                </IconButton>
+                <span>
+                  <IconButton
+                    onClick={handleIncrementQuantity}
+                    size="small"
+                    disabled={loading}
+                    aria-label={`Aumentar cantidad de ${item.name}`}
+                  >
+                    <AddIcon fontSize="small" />
+                  </IconButton>
+                </span>
               </Tooltip>
               {isServiceAdded ? (
                 <Tooltip title="Eliminar servicio">
-                  <Button
-                    onClick={() => setDeleteDialogOpen(true)}
-                    variant="contained"
-                    color="error"
-                    disabled={loading}
-                    startIcon={<DeleteIcon />}
-                    aria-label={`Eliminar servicio ${item.name}`}
-                  >
-                    Eliminar Servicio
-                  </Button>
+                  <span>
+                    <Button
+                      onClick={() => setDeleteDialogOpen(true)}
+                      variant="contained"
+                      color="error"
+                      disabled={loading}
+                      startIcon={<DeleteIcon />}
+                      aria-label={`Eliminar servicio ${item.name}`}
+                    >
+                      Eliminar Servicio
+                    </Button>
+                  </span>
                 </Tooltip>
               ) : (
                 <Tooltip title="Agregar servicio">
-                  <Button
-                    onClick={handleAddService}
-                    variant="contained"
-                    disabled={loading}
-                    aria-label={`Agregar servicio ${item.name}`}
-                  >
-                    Agregar Servicio
-                  </Button>
+                  <span>
+                    <Button
+                      onClick={handleAddService}
+                      variant="contained"
+                      disabled={loading}
+                      aria-label={`Agregar servicio ${item.name}`}
+                    >
+                      Agregar Servicio
+                    </Button>
+                  </span>
                 </Tooltip>
               )}
             </Box>

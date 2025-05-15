@@ -188,13 +188,13 @@ const AdditionalInfoFormWrapper: React.FC<AdditionalInfoFormWrapperProps> = ({
         });
         return;
       }
-      onSave(instances);
+      await onSave(instances); // Llama a onSave para guardar las instancias
       setNotification({
         open: true,
         message: "Instancias guardadas con éxito",
         severity: "success",
       });
-      handleCancel();
+      handleCancel(); // Cierra el diálogo y restablece el estado
     } catch (error) {
       setNotification({
         open: true,
