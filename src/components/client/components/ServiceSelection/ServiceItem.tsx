@@ -233,6 +233,7 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
         severity: "success",
       });
       setQuantity(1);
+      navigate("/cliente", { replace: true, state: { step: 2 } });
     }
   }, [
     addSelectedService,
@@ -279,6 +280,37 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
     setNotification((prev) => ({ ...prev, open: false }));
   }, []);
 
+  const handleGoNext = useCallback(async () => {
+    if (isServiceAdded && !hasAdditionalInfoFields) {
+      const editServiceId =
+        location.state?.editServiceId || selectedInstances[0].id;
+      updateAdditionalInfo(
+        editServiceId,
+        null,
+        null,
+        selectedInstances.map((instance) => ({
+          id: instance.id,
+          additionalInfo: instance.instances?.[0]?.additionalInfo ?? {},
+        })),
+        quantity
+      );
+      navigate("/cliente", { replace: true, state: { step: 2 } });
+    } else if (!isServiceAdded) {
+      await handleAddService();
+    } else if (isServiceAdded && hasAdditionalInfoFields) {
+      handleOpenAdditionalInfo();
+    }
+  }, [
+    isServiceAdded,
+    hasAdditionalInfoFields,
+    selectedInstances,
+    updateAdditionalInfo,
+    quantity,
+    navigate,
+    handleAddService,
+    handleOpenAdditionalInfo,
+    location.state?.editServiceId,
+  ]);
   return (
     <Card
       sx={{
@@ -446,30 +478,44 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
                 </span>
               </Tooltip>
               {isServiceAdded ? (
-                <Tooltip title="Eliminar servicio">
-                  <span>
-                    <Button
-                      onClick={() => setDeleteDialogOpen(true)}
-                      variant="contained"
-                      color="error"
-                      disabled={loading}
-                      startIcon={<DeleteIcon />}
-                      aria-label={`Eliminar servicio ${item.name}`}
-                    >
-                      Eliminar Servicio
-                    </Button>
-                  </span>
-                </Tooltip>
+                <>
+                  <Tooltip title="Eliminar servicio">
+                    <span>
+                      <Button
+                        onClick={() => setDeleteDialogOpen(true)}
+                        variant="contained"
+                        color="error"
+                        disabled={loading}
+                        startIcon={<DeleteIcon />}
+                        aria-label={`Eliminar servicio ${item.name}`}
+                      >
+                        Eliminar Servicio
+                      </Button>
+                    </span>
+                  </Tooltip>
+                  <Tooltip title="Agregar servicio">
+                    <span>
+                      <Button
+                        onClick={handleGoNext}
+                        variant="contained"
+                        disabled={loading}
+                        aria-label={`Agregar servicio ${item.name}`}
+                      >
+                        {isServiceAdded ? "Actualizar" : "Agregar Servicio"}
+                      </Button>
+                    </span>
+                  </Tooltip>
+                </>
               ) : (
                 <Tooltip title="Agregar servicio">
                   <span>
                     <Button
-                      onClick={handleAddService}
+                      onClick={handleGoNext}
                       variant="contained"
                       disabled={loading}
                       aria-label={`Agregar servicio ${item.name}`}
                     >
-                      Agregar Servicio
+                      {isServiceAdded ? "Siguiente" : "Agregar Servicio"}
                     </Button>
                   </span>
                 </Tooltip>
