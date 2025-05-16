@@ -1,4 +1,3 @@
-// components/PerfilDeSuelos/MobileProfileView.tsx
 import {
   Container,
   Box,
@@ -26,13 +25,14 @@ import {
   Notification,
   BlowData,
 } from "./profileTypes";
+import React from "react";
 
 interface MobileProfileViewProps {
   formData: ProfileFormData;
   profileId: string | undefined;
   projectId: string | undefined;
   profileStats: ProfileStats;
-  soundingNumberError: boolean;
+  errors: Partial<Record<keyof ProfileFormData, string>>;
   expandedDepth: string | null;
   handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleBlowChange: (
@@ -49,15 +49,12 @@ interface MobileProfileViewProps {
   navigate: (path: string) => void;
 }
 
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-
 const MobileProfileView = ({
   formData,
   profileId,
   projectId,
   profileStats,
-  soundingNumberError,
+  errors,
   expandedDepth,
   handleChange,
   handleBlowChange,
@@ -65,19 +62,21 @@ const MobileProfileView = ({
   handleSubmit,
   handleCloseNotification,
   notification,
+  navigate,
 }: MobileProfileViewProps) => {
-  const setSoundingNumberError = useState(soundingNumberError)[1];
-  const navigate = useNavigate();
   return (
     <Container sx={{ py: 2, px: 1, mb: 8 }}>
       <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
         <IconButton
           onClick={() => navigate(`/lab/proyectos/${projectId}/perfiles`)}
+          aria-label="Volver a la lista de perfiles"
         >
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h6" sx={{ ml: 1 }}>
-          {profileId && profileId !== "nuevo" ? "Editar" : "Nuevo"} Perfil
+          {profileId && profileId !== "nuevo"
+            ? "Editar Perfil"
+            : "Nuevo Perfil"}
         </Typography>
       </Box>
 
@@ -86,12 +85,18 @@ const MobileProfileView = ({
           Información Básica
         </Typography>
 
-        <Alert severity={soundingNumberError ? "error" : "info"} sx={{ mb: 2 }}>
-          El número de sondeo es obligatorio y debe tener un valor.
+        <Alert
+          severity={Object.keys(errors).length > 0 ? "error" : "info"}
+          sx={{ mb: 2 }}
+          aria-live="polite"
+        >
+          {Object.keys(errors).length > 0
+            ? "Por favor, corrige los errores en el formulario"
+            : "Completa los campos obligatorios para continuar"}
         </Alert>
 
         <TextField
-          label="N° Sondeo"
+          label="Número de Sondeo"
           name="sounding_number"
           value={formData.sounding_number}
           onChange={handleChange}
@@ -99,24 +104,18 @@ const MobileProfileView = ({
           margin="normal"
           size="small"
           required
-          error={soundingNumberError}
-          helperText={
-            soundingNumberError
-              ? "Campo obligatorio - Debe ingresar un valor"
-              : ""
-          }
-          placeholder="Ingrese el número de sondeo"
+          error={!!errors.sounding_number}
+          helperText={errors.sounding_number || "Por ejemplo, 1, S-01, etc."}
+          placeholder="Ingresa el número de sondeo"
           inputProps={{
+            "aria-label": "Entrada de número de sondeo",
             sx: {
-              borderWidth: soundingNumberError ? 2 : 1,
-              backgroundColor: soundingNumberError
+              borderWidth: errors.sounding_number ? 2 : 1,
+              backgroundColor: errors.sounding_number
                 ? "rgba(211, 47, 47, 0.05)"
                 : undefined,
             },
           }}
-          onBlur={() =>
-            setSoundingNumberError(!formData.sounding_number.trim())
-          }
         />
 
         <TextField
@@ -127,12 +126,13 @@ const MobileProfileView = ({
           fullWidth
           margin="normal"
           size="small"
-          placeholder="Ingrese la ubicación del sondeo"
+          placeholder="Ingresa la ubicación del sondeo"
+          inputProps={{ "aria-label": "Entrada de ubicación" }}
         />
 
         <Box sx={{ display: "flex", gap: 1 }}>
           <TextField
-            label="Nivel Freático"
+            label="Nivel de Agua"
             name="water_level"
             value={formData.water_level}
             onChange={handleChange}
@@ -148,9 +148,10 @@ const MobileProfileView = ({
                   </InputAdornment>
                 ) : null,
             }}
+            inputProps={{ "aria-label": "Entrada de nivel de agua" }}
           />
           <TextField
-            label="Muestras"
+            label="Número de Muestras"
             name="samples_number"
             type="number"
             value={formData.samples_number}
@@ -165,6 +166,7 @@ const MobileProfileView = ({
                 </InputAdornment>
               ),
             }}
+            inputProps={{ "aria-label": "Entrada de número de muestras" }}
           />
         </Box>
 
@@ -179,6 +181,7 @@ const MobileProfileView = ({
           size="small"
           slotProps={{ inputLabel: { shrink: true } }}
           required
+          inputProps={{ "aria-label": "Entrada de fecha" }}
         />
 
         {profileStats.totalRows > 0 && (
@@ -192,8 +195,8 @@ const MobileProfileView = ({
               }}
             >
               <Typography variant="body2" color="text.secondary">
-                Avance: {profileStats.completedRows}/{profileStats.totalRows}{" "}
-                profundidades
+                Progreso: {profileStats.completedRows}/{profileStats.totalRows}{" "}
+                Profundidades
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {profileStats.percentComplete}%
@@ -203,38 +206,34 @@ const MobileProfileView = ({
               variant="determinate"
               value={profileStats.percentComplete}
               sx={{ height: 8, borderRadius: 2 }}
+              aria-label="Barra de progreso del perfil"
             />
             <Box
               sx={{ display: "flex", justifyContent: "space-between", mt: 1 }}
             >
               <Chip
                 size="small"
-                label={`N máx: ${profileStats.maxN}`}
+                label={`N Máximo: ${profileStats.maxN}`}
                 color="primary"
                 variant="outlined"
+                aria-label={`Valor N máximo: ${profileStats.maxN}`}
               />
               <Chip
                 size="small"
-                label={`Prof. máx: ${profileStats.maxDepth}m`}
+                label={`Profundidad Máxima: ${profileStats.maxDepth}m`}
                 color="primary"
                 variant="outlined"
+                aria-label={`Profundidad máxima: ${profileStats.maxDepth} metros`}
               />
             </Box>
           </Box>
         )}
       </Paper>
 
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 1,
-        }}
-      >
+      <Box sx={{ mb: 1 }}>
         <Typography variant="subtitle1">Datos de Golpes</Typography>
         <Typography variant="caption" color="text.secondary">
-          Toca para expandir
+          Toca para expandir detalles
         </Typography>
       </Box>
 
@@ -248,6 +247,7 @@ const MobileProfileView = ({
             backgroundColor: Number(row.n) > 0 ? "#f5f9ff" : undefined,
             border: Number(row.n) > 0 ? "1px solid #e3f2fd" : undefined,
           }}
+          aria-label={`Datos de golpes para profundidad ${row.depth} metros`}
         >
           <AccordionSummary
             expandIcon={<ExpandMoreIcon />}
@@ -269,7 +269,7 @@ const MobileProfileView = ({
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               <Box sx={{ display: "flex", gap: 1 }}>
                 <TextField
-                  label='6"'
+                  label="6 Pulgadas"
                   type="number"
                   value={row.blows6}
                   onChange={(e) =>
@@ -278,9 +278,10 @@ const MobileProfileView = ({
                   fullWidth
                   size="small"
                   inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                  aria-label={`Golpes a 6 pulgadas para profundidad ${row.depth}`}
                 />
                 <TextField
-                  label='12"'
+                  label="12 Pulgadas"
                   type="number"
                   value={row.blows12}
                   onChange={(e) =>
@@ -289,9 +290,10 @@ const MobileProfileView = ({
                   fullWidth
                   size="small"
                   inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                  aria-label={`Golpes a 12 pulgadas para profundidad ${row.depth}`}
                 />
                 <TextField
-                  label='18"'
+                  label="18 Pulgadas"
                   type="number"
                   value={row.blows18}
                   onChange={(e) =>
@@ -300,6 +302,7 @@ const MobileProfileView = ({
                   fullWidth
                   size="small"
                   inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                  aria-label={`Golpes a 18 pulgadas para profundidad ${row.depth}`}
                 />
               </Box>
               <Box
@@ -316,6 +319,7 @@ const MobileProfileView = ({
                   label={row.n}
                   size="small"
                   color={Number(row.n) > 0 ? "primary" : "default"}
+                  aria-label={`Valor N para profundidad ${row.depth}`}
                 />
               </Box>
               <TextField
@@ -328,7 +332,10 @@ const MobileProfileView = ({
                 size="small"
                 multiline
                 rows={2}
-                placeholder="Ej: Color, textura, tipo de suelo..."
+                placeholder="Por ejemplo, color, textura, tipo de suelo..."
+                inputProps={{
+                  "aria-label": `Observación para profundidad ${row.depth}`,
+                }}
               />
             </Box>
           </AccordionDetails>
@@ -354,14 +361,21 @@ const MobileProfileView = ({
           fullWidth
           onClick={handleSubmit}
           size="large"
+          aria-label={
+            profileId && profileId !== "nuevo"
+              ? "Actualizar perfil"
+              : "Guardar perfil"
+          }
         >
-          {profileId && profileId !== "nuevo" ? "Actualizar" : "Guardar"} Perfil
+          {profileId && profileId !== "nuevo"
+            ? "Actualizar Perfil"
+            : "Guardar Perfil"}
         </Button>
       </Box>
 
       <Snackbar
         open={notification.open}
-        autoHideDuration={1000}
+        autoHideDuration={3000}
         onClose={handleCloseNotification}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
@@ -369,6 +383,7 @@ const MobileProfileView = ({
           onClose={handleCloseNotification}
           severity={notification.severity}
           sx={{ width: "100%" }}
+          aria-live="polite"
         >
           {notification.message}
         </Alert>

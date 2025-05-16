@@ -4,8 +4,29 @@
       "source": "/api/(.*)",
       "destination": "https://api-cuentas-zlut.onrender.com/api/$1"
     },
-    { "source": "/dev-dist/sw.js", "destination": "/dev-dist/sw.js" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/dev-dist/sw.js",
+      "destination": "/dev-dist/sw.js"
+    },
+    {
+      "source": "/dev-dist/(.*)",
+      "destination": "/dev-dist/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/dev-dist/sw.js",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        }
+      ]
+    }
   ],
   "build": {
     "env": {
