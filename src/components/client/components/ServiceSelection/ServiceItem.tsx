@@ -99,7 +99,6 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
             ...instanceToEdit.additionalInfo,
             ...(editAdditionalInfo || {}),
           });
-          // Inicializar quantity con la cantidad total del servicio
           setQuantity(serviceToEdit.quantity || 1);
           setShowAdditionalInfo(true);
         }
@@ -127,13 +126,12 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
 
         const editServiceId = location.state?.editServiceId;
         if (editServiceId) {
-          // Actualizar servicio existente
           updateAdditionalInfo(
             editServiceId,
             instances[0].id,
             instances[0].additionalInfo,
             instances,
-            quantity // Pasar la nueva cantidad
+            quantity
           );
           setNotification({
             open: true,
@@ -145,7 +143,6 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
           setQuantity(1);
           navigate("/cliente", { replace: true, state: { step: 2 } });
         } else {
-          // Agregar nuevo servicio
           const newServiceId = uuidv4();
           addSelectedService(item, quantity, category, newServiceId, instances);
           setNotification({
@@ -202,7 +199,6 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
 
     const editServiceId = location.state?.editServiceId;
     if (editServiceId) {
-      // Actualizar cantidad del servicio existente
       const serviceToEdit = state.selectedServices.find(
         (service) => service.id === editServiceId && service.item.id === item.id
       );
@@ -223,7 +219,6 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
         navigate("/cliente", { replace: true, state: { step: 2 } });
       }
     } else {
-      // Agregar nuevo servicio
       addSelectedService(item, quantity, category);
       setNotification({
         open: true,
@@ -233,7 +228,6 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
         severity: "success",
       });
       setQuantity(1);
-      navigate("/cliente", { replace: true, state: { step: 2 } });
     }
   }, [
     addSelectedService,
@@ -294,6 +288,12 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
         })),
         quantity
       );
+      setNotification({
+        open: true,
+        message: "Cantidad actualizada",
+        severity: "success",
+      });
+      setQuantity(1);
       navigate("/cliente", { replace: true, state: { step: 2 } });
     } else if (!isServiceAdded) {
       await handleAddService();
@@ -311,6 +311,7 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
     handleOpenAdditionalInfo,
     location.state?.editServiceId,
   ]);
+
   return (
     <Card
       sx={{
