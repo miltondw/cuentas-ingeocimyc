@@ -76,6 +76,12 @@ const AdditionalInfoFormWrapper: React.FC<AdditionalInfoFormWrapperProps> = ({
     }));
   }, [serviceId, instanceId, initialAdditionalInfo, state.selectedServices]);
 
+  const handleCancel = useCallback(() => {
+    setCurrentStep(0);
+    setInstances([]);
+    onClose();
+  }, [onClose]);
+
   useEffect(() => {
     if (!open || instances.length > 0) return;
     if (serviceId && existingInstances.length > 0) {
@@ -91,7 +97,7 @@ const AdditionalInfoFormWrapper: React.FC<AdditionalInfoFormWrapperProps> = ({
       }));
       setInstances(newInstances);
     }
-  }, [open, quantity, serviceId, instanceId, existingInstances]);
+  }, [open, quantity, serviceId, instanceId, existingInstances, instances.length]);
 
   const validateInstance = useCallback(
     async (
@@ -171,7 +177,6 @@ const AdditionalInfoFormWrapper: React.FC<AdditionalInfoFormWrapperProps> = ({
     setInstances((prev) => [...prev, { id: uuidv4(), additionalInfo: {} }]);
     setCurrentStep((prev) => prev + 1);
   }, [instances, currentStep, validateInstance]);
-
   const handleSaveAll = useCallback(async () => {
     try {
       const invalidInstances = await Promise.all(
@@ -195,20 +200,14 @@ const AdditionalInfoFormWrapper: React.FC<AdditionalInfoFormWrapperProps> = ({
         severity: "success",
       });
       handleCancel(); // Cierra el diálogo y restablece el estado
-    } catch (error) {
+    } catch {
       setNotification({
         open: true,
         message: "Error al guardar las instancias",
         severity: "error",
       });
     }
-  }, [instances, onSave, validateInstance]);
-
-  const handleCancel = useCallback(() => {
-    setCurrentStep(0);
-    setInstances([]);
-    onClose();
-  }, [onClose]);
+  }, [instances, onSave, validateInstance, handleCancel]);
 
   const handleCloseNotification = useCallback(() => {
     setNotification((prev) => ({ ...prev, open: false }));
@@ -244,7 +243,7 @@ const AdditionalInfoFormWrapper: React.FC<AdditionalInfoFormWrapperProps> = ({
           <LinearProgress variant="determinate" value={progress} />
         </Box>
         <AdditionalInfoForm
-          service={service}
+          service={{...service, additionalInfo: service.additionalInfo}}
           itemAdditionalInfo={instances[currentStep]?.additionalInfo || {}}
           setItemAdditionalInfo={handleSaveInstance}
         />

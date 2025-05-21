@@ -46,7 +46,7 @@ interface ServiceItem {
   additionalInfo?: FieldInfo[];
 }
 
-export interface SelectedService {
+interface SelectedService {
   id: string;
   item: ServiceItem;
   category?: string;
@@ -54,23 +54,31 @@ export interface SelectedService {
   instances: ServiceInstance[];
 }
 
+interface ServiceRequestState {
+  formData: AdditionalInfo;
+  selectedServices: SelectedService[];
+  error?: string;
+  loading: boolean;
+}
+
 const ServiceReview: React.FC = () => {
   const { state, removeSelectedService, updateAdditionalInfo } =
     useServiceRequest();
   const navigate = useNavigate();
-  const { formData, selectedServices, error, loading } = state;
+  const { formData, selectedServices, error, loading } =
+    state as ServiceRequestState;
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{
     serviceId: string;
     instanceId?: string;
     serviceName?: string;
   } | null>(null);
+
+  // Estilos memoizados para rendimiento
   const headerCellStyle = useMemo(
     () => ({
       fontWeight: "bold",
       textAlign: "center" as const,
-      whiteSpace: "nowrap" as const,
-      padding: "8px 16px",
     }),
     []
   );
@@ -78,11 +86,11 @@ const ServiceReview: React.FC = () => {
   const bodyCellStyle = useMemo(
     () => ({
       textAlign: "center" as const,
-      whiteSpace: "nowrap" as const,
-      padding: "8px 16px",
     }),
     []
   );
+
+  // Etiquetas para campos de formulario
   const fieldLabels: { [key: string]: string } = useMemo(
     () => ({
       name: "Solicitante",
@@ -93,19 +101,27 @@ const ServiceReview: React.FC = () => {
       email: "Correo electrónico",
       description: "Descripción del servicio",
       status: "Estado",
-      // Etiquetas para campos adicionales
-      tipoMuestra: "Tipo de Muestra",
-      tamanoCilindro: "Tamaño del Cilindro",
-      resistenciaCompresion: "Resistencia a Compresión",
-      resistenciaDiseno: "Resistencia de Diseño",
-      identificacionMuestra: "Identificación de Muestra",
-      estructuraRealizada: "Estructura Realizada",
-      fechaFundida: "Fecha Fundida",
-      edadEnsayo: "Edad de Ensayo",
     }),
     []
   );
 
+  // Función para formatear valores que pueden ser undefined, null, "", etc.
+  const formatAdditionalInfoValue = useCallback(
+    (
+      value: string | number | boolean | string[] | undefined | null | object
+    ): string => {
+      if (value === undefined || value === null || value === "") return "N/A";
+      if (Array.isArray(value))
+        return value.length > 0 ? value.join(", ") : "N/A";
+      if (typeof value === "string" && value.trim() === "") return "N/A";
+      if (typeof value === "number" && isNaN(value)) return "N/A";
+      if (typeof value === "object" && Object.keys(value || {}).length === 0) return "N/A";
+      return String(value);
+    },
+    []
+  );
+
+  // Filtros de servicios con y sin información adicional
   const servicesWithoutAdditionalInfo = useMemo(
     () =>
       selectedServices.filter(
@@ -131,6 +147,7 @@ const ServiceReview: React.FC = () => {
     [selectedServices]
   );
 
+  // Manejadores de eventos
   const handleEditService = useCallback(
     (
       serviceId: string,
@@ -166,6 +183,7 @@ const ServiceReview: React.FC = () => {
     setDeleteTarget(null);
     setDeleteDialogOpen(false);
   }, []);
+
   const handleConfirmDelete = useCallback(() => {
     if (!deleteTarget) return;
     const { serviceId, instanceId } = deleteTarget;
@@ -176,36 +194,23 @@ const ServiceReview: React.FC = () => {
           (instance) => instance.id !== instanceId
         );
         if (updatedInstances.length > 0) {
-          // Ensure all instances have valid additionalInfo objects without null/undefined values
-          const validUpdatedInstances = updatedInstances.map((instance) => {
+          // Validar instancias para quitar valores nulos/undefined
+          const validUpdatedInstances = updatedInstances.map(instance => {
             const rawAdditionalInfo = instance.additionalInfo || {};
-            // Filter out null and undefined values to match Record<string, string | number | boolean | string[]>
-            const cleanedAdditionalInfo: Record<
-              string,
-              string | number | boolean | string[]
-            > = {};
-
+            const cleanedAdditionalInfo: Record<string, string | number | boolean | string[]> = {};
+            
             Object.entries(rawAdditionalInfo).forEach(([key, value]) => {
               if (value !== null && value !== undefined) {
-                cleanedAdditionalInfo[key] = value as
-                  | string
-                  | number
-                  | boolean
-                  | string[];
+                cleanedAdditionalInfo[key] = value as string | number | boolean | string[];
               }
             });
-
+            
             return {
               id: instance.id,
-              additionalInfo: cleanedAdditionalInfo,
+              additionalInfo: cleanedAdditionalInfo
             };
           });
-          updateAdditionalInfo(
-            serviceId,
-            instanceId,
-            {},
-            validUpdatedInstances
-          );
+          updateAdditionalInfo(serviceId, instanceId, {}, validUpdatedInstances);
         } else {
           removeSelectedService(serviceId);
         }
@@ -221,28 +226,107 @@ const ServiceReview: React.FC = () => {
     selectedServices,
     handleCloseDeleteDialog,
   ]);
-  const formatAdditionalInfoValue = useCallback(
-    (
-      value: string | number | boolean | string[] | undefined | null | object
-    ): string => {
-      if (value === undefined || value === null || value === "") return "N/A";
-      if (Array.isArray(value))
-        return value.length > 0 ? value.join(", ") : "N/A";
-      if (typeof value === "string" && value.trim() === "") return "N/A";
-      if (typeof value === "number" && isNaN(value)) return "N/A";
-      if (typeof value === "object" && Object.keys(value || {}).length === 0)
-        return "N/A";
-      return String(value);
+
+  // Función para verificar si un campo debe mostrarse según su dependencia
+  const shouldShowField = useCallback(
+    (field: string, additionalInfo: AdditionalInfo, fieldInfo: FieldInfo) => {
+      // Caso especial para campos específicos de Cilindro
+      if (
+        (field === "tamanoCilindro" || field === "resistenciaCompresion") &&
+        additionalInfo["tipoMuestra"] !== "Cilindro"
+      ) {
+        return false;
+      }
+      // Verificar dependencias generales
+      if (!fieldInfo.dependsOnField) return true;
+      return (
+        fieldInfo.dependsOnValue !== undefined &&
+        additionalInfo[fieldInfo.dependsOnField] === fieldInfo.dependsOnValue
+      );
     },
     []
   );
 
+  // Función para obtener los campos ordenados
+  const getOrderedFields = useCallback(
+    (instanceAdditionalInfo: AdditionalInfo, serviceItem: ServiceItem) => {
+      const baseOrderedFields = [
+        "tipoMuestra",
+        "tamanoCilindro",
+        "resistenciaCompresion",
+        "resistenciaDiseno",
+        "identificacionMuestra",
+        "estructuraRealizada",
+        "fechaFundida",
+        "edadEnsayo",
+      ];
+
+      const result: Array<{ field: string; label: string }> = [];
+      const additionalInfoArray = serviceItem.additionalInfo || [];
+
+      // Añadir campos en orden predefinido
+      for (const fieldName of baseOrderedFields) {
+        const fieldInfo = additionalInfoArray.find(
+          (info: FieldInfo) => info.field === fieldName
+        );
+        if (
+          fieldInfo &&
+          shouldShowField(fieldName, instanceAdditionalInfo, fieldInfo)
+        ) {
+          result.push({
+            field: fieldInfo.field,
+            label: fieldInfo.label,
+          });
+        }
+      }
+
+      // Añadir campos adicionales no incluidos en el orden base
+      additionalInfoArray.forEach((info: FieldInfo) => {
+        if (
+          !baseOrderedFields.includes(info.field) &&
+          shouldShowField(info.field, instanceAdditionalInfo, info)
+        ) {
+          result.push({
+            field: info.field,
+            label: info.label,
+          });
+        }
+      });
+
+      return result;
+    },
+    [shouldShowField]
+  );
+
+  // Obtener todos los campos para un servicio
+  const getAllFieldsForService = useCallback((service: SelectedService) => {
+    const allFields = new Set<string>();
+    const fieldMap: { [key: string]: string } = {};
+
+    service.instances.forEach((instance) => {
+      if (instance.additionalInfo) {
+        const orderedFields = getOrderedFields(
+          instance.additionalInfo,
+          service.item
+        );
+        orderedFields.forEach(({ field, label }) => {
+          allFields.add(field);
+          fieldMap[field] = label;
+        });
+      }
+    });
+
+    return { allFields: Array.from(allFields), fieldMap };
+  }, [getOrderedFields]);
+
+  // Components memoizados
   const clientInfoTable = useMemo(
     () => (
       <TableContainer component={Paper}>
         <Table aria-label="Información del cliente">
           <TableBody>
-            {Object.entries(formData).map(([field, value]) => (              <TableRow key={field}>{/* Eliminamos espacios innecesarios */}
+            {Object.entries(formData).map(([field, value]) => (
+              <TableRow key={field}>
                 <TableCell
                   sx={{ textTransform: "uppercase", ...bodyCellStyle }}
                 >
@@ -265,7 +349,8 @@ const ServiceReview: React.FC = () => {
       servicesWithoutAdditionalInfo.length > 0 ? (
         <TableContainer component={Paper}>
           <Table aria-label="Servicios sin información adicional">
-            <TableHead>              <TableRow>{/* Eliminamos espacios innecesarios */}
+            <TableHead>
+              <TableRow>
                 <TableCell sx={headerCellStyle}>CÓDIGO</TableCell>
                 <TableCell sx={headerCellStyle}>NOMBRE</TableCell>
                 <TableCell sx={headerCellStyle}>CATEGORÍA</TableCell>
@@ -274,7 +359,8 @@ const ServiceReview: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {servicesWithoutAdditionalInfo.map((serviceInstance) => (                <TableRow key={serviceInstance.id}>{/* Eliminamos espacios innecesarios */}
+              {servicesWithoutAdditionalInfo.map((serviceInstance) => (
+                <TableRow key={serviceInstance.id}>
                   <TableCell sx={bodyCellStyle}>
                     {formatAdditionalInfoValue(serviceInstance.item.code)}
                   </TableCell>
@@ -341,8 +427,7 @@ const ServiceReview: React.FC = () => {
       bodyCellStyle,
       formatAdditionalInfoValue,
     ]
-  ); // Esta sección anteriormente contenía la definición de shouldShowField y getOrderedFields,
-  // pero ahora usamos un enfoque más directo con finalFieldList
+  );
 
   return (
     <Box sx={{ p: 3 }}>
@@ -400,34 +485,10 @@ const ServiceReview: React.FC = () => {
                 Object.keys(instance.additionalInfo).length > 0
             );
 
-            if (validInstances.length === 0) return null; // Usamos un enfoque directo para definir los campos que queremos mostrar
-            const fixedFields = [
-              "tipoMuestra",
-              "tamanoCilindro",
-              "resistenciaCompresion",
-              "resistenciaDiseno",
-              "identificacionMuestra",
-            ];
+            if (validInstances.length === 0) return null;
 
-            // Recopilamos todos los campos disponibles en todas las instancias
-            const allAdditionalInfoFields = new Set<string>();
-            validInstances.forEach((instance) => {
-              if (instance.additionalInfo) {
-                Object.keys(instance.additionalInfo).forEach((key) => {
-                  allAdditionalInfoFields.add(key);
-                });
-              }
-            });
-
-            // Aseguramos que los campos importantes siempre estén presentes en el orden correcto
-            const finalFieldList = [
-              ...fixedFields.filter((field) =>
-                allAdditionalInfoFields.has(field)
-              ),
-              ...Array.from(allAdditionalInfoFields).filter(
-                (field) => !fixedFields.includes(field)
-              ),
-            ];
+            const { allFields, fieldMap } =
+              getAllFieldsForService(serviceInstance);
 
             return (
               <Box key={serviceInstance.id} sx={{ mb: 4 }}>
@@ -437,35 +498,28 @@ const ServiceReview: React.FC = () => {
                 >
                   {serviceInstance.item.name} (
                   {serviceInstance.category || "N/A"})
-                </Typography>{" "}
-                <TableContainer
-                  component={Paper}
-                  sx={{
-                    overflow: "auto",
-                    maxWidth: "100%",
-                    border: "1px solid rgba(224, 224, 224, 1)",
-                  }}
-                >
+                </Typography>
+                <TableContainer component={Paper}>
                   <Table
                     aria-label={`Servicios con información adicional para ${serviceInstance.item.name}`}
-                    size="small"
-                    sx={{ minWidth: 650 }}
                   >
-                    <TableHead>                      <TableRow>{/* Eliminamos espacios innecesarios */}
-                        <TableCell sx={headerCellStyle}>N° MUESTRA</TableCell>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={headerCellStyle}>N° Muestra</TableCell>
                         <TableCell sx={headerCellStyle}>CÓDIGO</TableCell>
                         <TableCell sx={headerCellStyle}>NOMBRE</TableCell>
                         <TableCell sx={headerCellStyle}>CATEGORÍA</TableCell>
-                        {finalFieldList.map((field) => (
+                        {allFields.map((field) => (
                           <TableCell key={field} sx={headerCellStyle}>
-                            {fieldLabels[field] || field.toUpperCase()}
+                            {fieldMap[field] || field}
                           </TableCell>
                         ))}
                         <TableCell sx={headerCellStyle}>ACCIONES</TableCell>
                       </TableRow>
                     </TableHead>
-                    <TableBody>                      {validInstances.map((instance, index) => (
-                        <TableRow key={`${serviceInstance.id}-${instance.id}`}>{/* Eliminamos espacios innecesarios */}
+                    <TableBody>
+                      {validInstances.map((instance, index) => (
+                        <TableRow key={`${serviceInstance.id}-${instance.id}`}>
                           <TableCell sx={bodyCellStyle}>{index + 1}</TableCell>
                           <TableCell sx={bodyCellStyle}>
                             {formatAdditionalInfoValue(
@@ -481,29 +535,14 @@ const ServiceReview: React.FC = () => {
                             {formatAdditionalInfoValue(
                               serviceInstance.category
                             )}
-                          </TableCell>{" "}
-                          {finalFieldList.map((field) => {
-                            // Manejo especial para campos específicos de Cilindro
-                            let displayValue;
-                            if (
-                              (field === "tamanoCilindro" ||
-                                field === "resistenciaCompresion") &&
-                              instance.additionalInfo?.["tipoMuestra"] !==
-                                "Cilindro"
-                            ) {
-                              displayValue = "N/A";
-                            } else {
-                              displayValue = formatAdditionalInfoValue(
+                          </TableCell>
+                          {allFields.map((field) => (
+                            <TableCell key={field} sx={bodyCellStyle}>
+                              {formatAdditionalInfoValue(
                                 instance.additionalInfo?.[field]
-                              );
-                            }
-
-                            return (
-                              <TableCell key={field} sx={bodyCellStyle}>
-                                {displayValue}
-                              </TableCell>
-                            );
-                          })}
+                              )}
+                            </TableCell>
+                          ))}
                           <TableCell sx={bodyCellStyle}>
                             <Button
                               size="small"

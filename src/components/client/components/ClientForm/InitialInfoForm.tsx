@@ -45,14 +45,17 @@ const InitialInfoForm: React.FC = () => {
   useEffect(() => {
     reset(formData);
   }, [formData, reset]);
-
   useEffect(() => {
     const subscription = watch((value) => {
       setFormData(value as FormData);
-      setFormValidity(isValid);
     });
     return () => subscription.unsubscribe();
-  }, [watch, setFormData, setFormValidity, isValid]);
+  }, [watch, setFormData]);
+  
+  // Efecto separado para manejar la validez del formulario
+  useEffect(() => {
+    setFormValidity(isValid);
+  }, [isValid, setFormValidity]);
 
   return (
     <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>

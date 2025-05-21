@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -55,9 +55,8 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
     message: "",
     severity: "success",
   });
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-  const [initialAdditionalInfo, setInitialAdditionalInfo] = useState<
-    Record<string, any>
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);  const [initialAdditionalInfo, setInitialAdditionalInfo] = useState<
+    Record<string, string | number | boolean | string[]>
   >({});
 
   const hasAdditionalInfoFields =
@@ -155,8 +154,7 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
           setShowAdditionalInfo(false);
           setInitialAdditionalInfo({});
           setQuantity(1);
-        }
-      } catch (error) {
+        }      } catch {
         setNotification({
           open: true,
           message: "Error al guardar el servicio",
@@ -546,9 +544,8 @@ const ServiceItem: React.FC<ServiceItemProps> = ({ item, category }) => {
           <DialogTitle id="delete-service-dialog-title">
             Confirmar Eliminación
           </DialogTitle>
-          <DialogContent>
-            <Typography>
-              ¿Estás seguro de que deseas eliminar el servicio "{item.name}"?
+          <DialogContent>            <Typography>
+              ¿Estás seguro de que deseas eliminar el servicio &quot;{item.name}&quot;?
             </Typography>
           </DialogContent>
           <DialogActions>
