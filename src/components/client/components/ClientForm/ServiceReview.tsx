@@ -70,7 +70,9 @@ const ServiceReview: React.FC = () => {
       fontWeight: "bold",
       textAlign: "center" as const,
       whiteSpace: "nowrap" as const,
-      padding: "8px 16px",
+      padding: "10px 16px",
+      backgroundColor: "#f5f5f5",
+      borderBottom: "2px solid rgba(224, 224, 224, 1)",
     }),
     []
   );
@@ -79,7 +81,10 @@ const ServiceReview: React.FC = () => {
     () => ({
       textAlign: "center" as const,
       whiteSpace: "nowrap" as const,
-      padding: "8px 16px",
+      padding: "10px 16px",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      maxWidth: "250px",
     }),
     []
   );
@@ -97,6 +102,7 @@ const ServiceReview: React.FC = () => {
       tipoMuestra: "Tipo de Muestra",
       tamanoCilindro: "Tamaño del Cilindro",
       resistenciaCompresion: "Resistencia a Compresión",
+      elementoFundido: "Elemento Fundido",
       resistenciaDiseno: "Resistencia de Diseño",
       identificacionMuestra: "Identificación de Muestra",
       estructuraRealizada: "Estructura Realizada",
@@ -225,24 +231,50 @@ const ServiceReview: React.FC = () => {
     (
       value: string | number | boolean | string[] | undefined | null | object
     ): string => {
+      // Handle undefined, null, or empty values
       if (value === undefined || value === null || value === "") return "N/A";
-      if (Array.isArray(value))
+
+      // Handle arrays - check if array and handle empty arrays
+      if (Array.isArray(value)) {
         return value.length > 0 ? value.join(", ") : "N/A";
-      if (typeof value === "string" && value.trim() === "") return "N/A";
-      if (typeof value === "number" && isNaN(value)) return "N/A";
-      if (typeof value === "object" && Object.keys(value || {}).length === 0)
-        return "N/A";
+      }
+
+      // Handle empty strings with whitespace
+      if (typeof value === "string") {
+        return value.trim() === "" ? "N/A" : value.trim();
+      }
+
+      // Handle invalid numbers
+      if (typeof value === "number") {
+        return isNaN(value) ? "N/A" : String(value);
+      }
+
+      // Handle empty objects
+      if (typeof value === "object") {
+        return Object.keys(value || {}).length === 0
+          ? "N/A"
+          : JSON.stringify(value);
+      }
+
+      // Convert any other value to string
       return String(value);
     },
     []
   );
-
   const clientInfoTable = useMemo(
     () => (
-      <TableContainer component={Paper}>
+      <TableContainer
+        component={Paper}
+        sx={{
+          overflow: "auto",
+          maxWidth: "100%",
+          border: "1px solid rgba(224, 224, 224, 1)",
+        }}
+      >
         <Table aria-label="Información del cliente">
           <TableBody>
-            {Object.entries(formData).map(([field, value]) => (              <TableRow key={field}>{/* Eliminamos espacios innecesarios */}
+            {Object.entries(formData).map(([field, value]) => (
+              <TableRow key={field}>
                 <TableCell
                   sx={{ textTransform: "uppercase", ...bodyCellStyle }}
                 >
@@ -259,13 +291,20 @@ const ServiceReview: React.FC = () => {
     ),
     [formData, fieldLabels, bodyCellStyle, formatAdditionalInfoValue]
   );
-
   const noAdditionalInfoTable = useMemo(
     () =>
       servicesWithoutAdditionalInfo.length > 0 ? (
-        <TableContainer component={Paper}>
+        <TableContainer
+          component={Paper}
+          sx={{
+            overflow: "auto",
+            maxWidth: "100%",
+            border: "1px solid rgba(224, 224, 224, 1)",
+          }}
+        >
           <Table aria-label="Servicios sin información adicional">
-            <TableHead>              <TableRow>{/* Eliminamos espacios innecesarios */}
+            <TableHead>
+              <TableRow>
                 <TableCell sx={headerCellStyle}>CÓDIGO</TableCell>
                 <TableCell sx={headerCellStyle}>NOMBRE</TableCell>
                 <TableCell sx={headerCellStyle}>CATEGORÍA</TableCell>
@@ -274,7 +313,8 @@ const ServiceReview: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {servicesWithoutAdditionalInfo.map((serviceInstance) => (                <TableRow key={serviceInstance.id}>{/* Eliminamos espacios innecesarios */}
+              {servicesWithoutAdditionalInfo.map((serviceInstance) => (
+                <TableRow key={serviceInstance.id}>
                   <TableCell sx={bodyCellStyle}>
                     {formatAdditionalInfoValue(serviceInstance.item.code)}
                   </TableCell>
@@ -399,12 +439,12 @@ const ServiceReview: React.FC = () => {
                 instance.additionalInfo &&
                 Object.keys(instance.additionalInfo).length > 0
             );
-
             if (validInstances.length === 0) return null; // Usamos un enfoque directo para definir los campos que queremos mostrar
             const fixedFields = [
               "tipoMuestra",
               "tamanoCilindro",
               "resistenciaCompresion",
+              "elementoFundido",
               "resistenciaDiseno",
               "identificacionMuestra",
             ];
@@ -431,13 +471,14 @@ const ServiceReview: React.FC = () => {
 
             return (
               <Box key={serviceInstance.id} sx={{ mb: 4 }}>
+                {" "}
                 <Typography
                   variant="subtitle1"
                   sx={{ fontWeight: "bold", mb: 2, textAlign: "center" }}
                 >
                   {serviceInstance.item.name} (
                   {serviceInstance.category || "N/A"})
-                </Typography>{" "}
+                </Typography>
                 <TableContainer
                   component={Paper}
                   sx={{
@@ -451,7 +492,9 @@ const ServiceReview: React.FC = () => {
                     size="small"
                     sx={{ minWidth: 650 }}
                   >
-                    <TableHead>                      <TableRow>{/* Eliminamos espacios innecesarios */}
+                    {" "}
+                    <TableHead>
+                      <TableRow>
                         <TableCell sx={headerCellStyle}>N° MUESTRA</TableCell>
                         <TableCell sx={headerCellStyle}>CÓDIGO</TableCell>
                         <TableCell sx={headerCellStyle}>NOMBRE</TableCell>
@@ -464,8 +507,9 @@ const ServiceReview: React.FC = () => {
                         <TableCell sx={headerCellStyle}>ACCIONES</TableCell>
                       </TableRow>
                     </TableHead>
-                    <TableBody>                      {validInstances.map((instance, index) => (
-                        <TableRow key={`${serviceInstance.id}-${instance.id}`}>{/* Eliminamos espacios innecesarios */}
+                    <TableBody>
+                      {validInstances.map((instance, index) => (
+                        <TableRow key={`${serviceInstance.id}-${instance.id}`}>
                           <TableCell sx={bodyCellStyle}>{index + 1}</TableCell>
                           <TableCell sx={bodyCellStyle}>
                             {formatAdditionalInfoValue(
@@ -476,7 +520,7 @@ const ServiceReview: React.FC = () => {
                             {formatAdditionalInfoValue(
                               serviceInstance.item.name
                             )}
-                          </TableCell>
+                          </TableCell>{" "}
                           <TableCell sx={bodyCellStyle}>
                             {formatAdditionalInfoValue(
                               serviceInstance.category

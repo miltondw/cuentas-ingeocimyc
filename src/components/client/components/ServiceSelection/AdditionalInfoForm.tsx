@@ -24,7 +24,9 @@ interface AdditionalInfoFormProps {
     [key: string]: unknown;
   };
   itemAdditionalInfo: Record<string, string | number | boolean | string[]>;
-  setItemAdditionalInfo: React.Dispatch<React.SetStateAction<Record<string, string | number | boolean | string[]>>>;
+  setItemAdditionalInfo: React.Dispatch<
+    React.SetStateAction<Record<string, string | number | boolean | string[]>>
+  >;
 }
 
 const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
@@ -68,15 +70,20 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
       return parsedDate.isValid() ? parsedDate : null;
     }
     return null;
-  };  // Función para renderizar un campo específico por su nombre
+  }; // Función para renderizar un campo específico por su nombre
   const renderFieldByName = (fieldName: string) => {
-    const info = service.additionalInfo?.find((item) => item.field === fieldName);
+    const info = service.additionalInfo?.find(
+      (item) => item.field === fieldName
+    );
     if (!info) return null;
 
     // Verificar campos específicos para Cilindro
     // Estos campos solo deben mostrarse cuando el tipo es "Cilindro"
-    if ((fieldName === "resistenciaCompresion" || fieldName === "tamanoCilindro") && 
-        itemAdditionalInfo["tipoMuestra"] !== "Cilindro") {
+    if (
+      (fieldName === "resistenciaCompresion" ||
+        fieldName === "tamanoCilindro") &&
+      itemAdditionalInfo["tipoMuestra"] !== "Cilindro"
+    ) {
       return null;
     }
 
@@ -85,7 +92,7 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
       (info.dependsOnField &&
         info.dependsOnValue !== undefined &&
         itemAdditionalInfo[info.dependsOnField] === info.dependsOnValue);
-    
+
     if (!showField) return null;
 
     switch (info.type) {
@@ -145,9 +152,7 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
             required={info.required}
             key={info.field}
           >
-            <InputLabel id={`${info.field}-label`}>
-              {info.label}
-            </InputLabel>
+            <InputLabel id={`${info.field}-label`}>{info.label}</InputLabel>
             <Select
               labelId={`${info.field}-label`}
               multiple
@@ -161,10 +166,7 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
               }
               label={info.label}
               onChange={(e) =>
-                handleMultiSelectChange(
-                  info.field,
-                  e.target.value as string[]
-                )
+                handleMultiSelectChange(info.field, e.target.value as string[])
               }
               renderValue={(selected: string[]) => selected.join(", ")}
               aria-label={info.label}
@@ -237,34 +239,36 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
       default:
         return null;
     }
-  };  // Lista de campos ordenados según especificación
+  }; // Lista de campos ordenados según especificación
   // Definimos el orden basado en el tipo de muestra seleccionado
   const orderedFields = [
     "tipoMuestra",
     // Campos específicos para Cilindro
-    ...(itemAdditionalInfo["tipoMuestra"] === "Cilindro" 
-      ? ["tamanoCilindro", "resistenciaCompresion"] 
+    ...(itemAdditionalInfo["tipoMuestra"] === "Cilindro"
+      ? ["tamanoCilindro", "resistenciaCompresion"]
       : []),
     // Campos comunes para ambos tipos
+    "elementoFundido",
     "resistenciaDiseno",
     "identificacionMuestra",
     "estructuraRealizada",
     "fechaFundida",
-    "edadEnsayo"
+    "edadEnsayo",
   ];
 
   // Encontrar campos adicionales que no estén en la lista ordenada
-  const additionalFields = service.additionalInfo
-    ?.filter(info => !orderedFields.includes(info.field))
-    .map(info => info.field) || [];
+  const additionalFields =
+    service.additionalInfo
+      ?.filter((info) => !orderedFields.includes(info.field))
+      .map((info) => info.field) || [];
 
   return (
     <Box>
       {/* Renderizar campos en el orden especificado */}
-      {orderedFields.map(fieldName => renderFieldByName(fieldName))}
-      
+      {orderedFields.map((fieldName) => renderFieldByName(fieldName))}
+
       {/* Renderizar cualquier campo adicional no incluido en el orden específico */}
-      {additionalFields.map(fieldName => renderFieldByName(fieldName))}
+      {additionalFields.map((fieldName) => renderFieldByName(fieldName))}
     </Box>
   );
 };

@@ -73,7 +73,8 @@ const ClientForm: React.FC = () => {
     try {
       const response = await api.get("/service-requests/services/all");
       setServices(response.data.services);
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       setNotification({
         open: true,
         message: "Error al cargar los servicios",
@@ -132,7 +133,8 @@ const ClientForm: React.FC = () => {
       });
       setActiveStep(0);
       navigate("/cliente", { replace: true, state: { step: 0 } });
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       setNotification({
         open: true,
         message: "Error al procesar la solicitud",
