@@ -15,11 +15,11 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "baseUrl": "./src",
+    "baseUrl": "src",
     "paths": {
-      "@/*": ["*"],
-      "@components/*": ["components/*"],
+      "@/*": ["./*"],
       "@api/*": ["api/*"],
+      "@components/*": ["components/*"],
       "@utils/*": ["utils/*"],
       "@assets/*": ["assets/*"]
     },
@@ -27,6 +27,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

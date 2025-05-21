@@ -13,7 +13,7 @@ import {
   IconButton,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "@api/AuthContext";
 import { Lock, Email, Visibility, VisibilityOff } from "@mui/icons-material";
 
 interface LoginResponse {
@@ -46,17 +46,20 @@ const Login = () => {
     setRemainingAttempts(null);
 
     try {
-      const result: LoginResponse = await login(email, password);
+      const result = await login(email, password);
 
       if (result.success) {
         navigate("/lab/proyectos");
       } else {
         handleLoginError(result);
       }
-    } catch (err) {
-      console.error("Error inesperado:", err);
+    } catch (err: unknown) {
+      const error = err as { customMessage?: string };
       setError(
-        "No se pudo conectar con el servidor. Verifique su conexión e intente nuevamente."
+        error.customMessage ||
+          (!navigator.onLine
+            ? "Sin conexión a Internet. Por favor, intente de nuevo cuando esté conectado."
+            : "No se puede conectar al servidor. Por favor, verifique su conexión e intente de nuevo.")
       );
     } finally {
       setLoading(false);
@@ -67,7 +70,7 @@ const Login = () => {
     if (result.status === 429) {
       const waitMinutes = result.error?.waitMinutes ?? 15;
       setError(
-        `Cuenta temporalmente bloqueada. Intente nuevamente en ${waitMinutes} minutos.`
+        `Cuenta temporalmente bloqueada. Intente de nuevo en ${waitMinutes} minutos.`
       );
     } else if (result.status === 401 && result.error?.remainingAttempts) {
       setRemainingAttempts(result.error.remainingAttempts);
@@ -75,7 +78,7 @@ const Login = () => {
     } else {
       setError(
         result.error?.message ||
-          "Error al iniciar sesión. Por favor intente nuevamente."
+          "Error al iniciar sesión. Por favor, intente de nuevo."
       );
     }
   };

@@ -3,7 +3,7 @@ import * as yup from "yup";
 export interface ExtraGasto {
   id: string;
   field: string;
-  value: string;
+  value: number; // Cambiado de string a number
 }
 
 export interface GastoFields {
@@ -25,9 +25,9 @@ export interface ProjectFormData {
   obrero: string;
   costo_servicio: number;
   abono: number;
-  factura: string;
+  factura: string | undefined;
   metodo_de_pago: string;
-  valor_retencion: number;
+  valor_retencion: number | undefined;
   retencionIva: boolean;
   gastos: GastoFields;
 }
@@ -94,16 +94,19 @@ export const validationSchema: yup.ObjectSchema<ProjectFormData> = yup.object({
       .number()
       .required("El gasto de hospedaje es requerido")
       .typeError("Hospedaje debe ser un número"),
-    extras: yup.array().of(
-      yup.object({
-        id: yup.string().required(),
-        field: yup.string().required("El nombre del gasto es requerido"),
-        value: yup
-          .string()
-          .required("El valor del gasto es requerido")
-          .typeError("El valor debe ser un número"),
-      })
-    ),
+    extras: yup
+      .array()
+      .required()
+      .of(
+        yup.object({
+          id: yup.string().required(),
+          field: yup.string().required("El nombre del gasto es requerido"),
+          value: yup
+            .number()
+            .required("El valor del gasto es requerido")
+            .typeError("El valor debe ser un número"),
+        })
+      ),
   }),
 });
 
@@ -127,6 +130,6 @@ export const defaultValues: ProjectFormData = {
     peajes: 0,
     combustible: 0,
     hospedaje: 0,
-    extras: [{ id: "0", field: "", value: "" }],
+    extras: [{ id: "0", field: "", value: 0 }], // Cambiado value a number
   },
 };

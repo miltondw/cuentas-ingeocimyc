@@ -21,12 +21,12 @@ import {
   GastoFields,
   validationSchema,
   defaultValues,
-} from "./form-create-project.types"; // Importa tipos y schema
-import { formatNumber, parseNumber } from "@utils/formatNumber"; // Importa utilidades de formato
+} from "./form-create-project.types";
+import { formatNumber, parseNumber } from "@utils/formatNumber";
 import {
   fetchProjectData,
   transformProjectData,
-} from "./form-create-project.api"; // Importa funciones de la API
+} from "./form-create-project.api";
 
 const FormCreateProject: React.FC = () => {
   const { id } = useParams();
@@ -51,13 +51,18 @@ const FormCreateProject: React.FC = () => {
     name: "gastos.extras",
   });
 
+  const [error, setError] = useState("");
+
   useEffect(() => {
     if (id) {
       fetchProjectData(id)
         .then((data: ProjectFormData) => {
           reset(data);
         })
-        .catch((error: unknown) => console.error(error));
+        .catch((error: unknown) => {
+          console.error("Error fetching project:", error);
+          setError("Error al cargar el proyecto");
+        });
     } else {
       reset(defaultValues);
     }
@@ -68,7 +73,7 @@ const FormCreateProject: React.FC = () => {
       const payload = transformProjectData(data);
       const endpoint = id ? `/projects/${id}` : "/projects";
       await api[id ? "put" : "post"](endpoint, payload);
-      navigate(-1); // Regresar a la página anterior
+      navigate(-1);
     } catch (error: any) {
       console.error("Error submitting form:", error);
       setError(
@@ -76,8 +81,6 @@ const FormCreateProject: React.FC = () => {
       );
     }
   };
-
-  const [error, setError] = useState("");
 
   return (
     <Paper sx={{ p: 4, maxWidth: 800, margin: "2rem auto" }}>
@@ -102,7 +105,7 @@ const FormCreateProject: React.FC = () => {
                   label="Fecha"
                   type="date"
                   fullWidth
-                  slotProps={{ inputLabel: { shrink: true } }}
+                  InputLabelProps={{ shrink: true }}
                   error={!!errors.fecha}
                   helperText={errors.fecha?.message}
                 />
@@ -167,7 +170,7 @@ const FormCreateProject: React.FC = () => {
                   error={!!errors.metodo_de_pago}
                   helperText={errors.metodo_de_pago?.message}
                 >
-                  <MenuItem value="">otro</MenuItem>
+                  <MenuItem value="">Otro</MenuItem>
                   <MenuItem value="transferencia">Transferencia</MenuItem>
                   <MenuItem value="efectivo">Efectivo</MenuItem>
                 </TextField>
@@ -183,10 +186,9 @@ const FormCreateProject: React.FC = () => {
                   {...field}
                   label="Costo del Servicio"
                   fullWidth
-                  value={formatNumber(field.value)}
-                  onChange={(e) =>
-                    field.onChange(parseNumber(e.target.value) as any)
-                  }
+                  type="text"
+                  value={formatNumber(field.value) || ""}
+                  onChange={(e) => field.onChange(parseNumber(e.target.value))}
                   error={!!errors.costo_servicio}
                   helperText={errors.costo_servicio?.message}
                 />
@@ -202,10 +204,9 @@ const FormCreateProject: React.FC = () => {
                   {...field}
                   label="Abono"
                   fullWidth
-                  value={formatNumber(field.value)}
-                  onChange={(e) =>
-                    field.onChange(parseNumber(e.target.value) as any)
-                  }
+                  type="text"
+                  value={formatNumber(field.value) || ""}
+                  onChange={(e) => field.onChange(parseNumber(e.target.value))}
                   error={!!errors.abono}
                   helperText={errors.abono?.message}
                 />
@@ -255,9 +256,10 @@ const FormCreateProject: React.FC = () => {
                       {...field}
                       label="Valor Retención"
                       fullWidth
-                      value={formatNumber(field.value)}
+                      type="text"
+                      value={formatNumber(field.value) || ""}
                       onChange={(e) =>
-                        field.onChange(parseNumber(e.target.value) as any)
+                        field.onChange(parseNumber(e.target.value))
                       }
                       error={!!errors.valor_retencion}
                       helperText={errors.valor_retencion?.message}
@@ -270,7 +272,7 @@ const FormCreateProject: React.FC = () => {
         </Grid2>
 
         {/* Campos de gastos */}
-        <Typography variant="h4" sx={{ mt: 3, mb: 2 }}>
+        <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
           Gastos
         </Typography>
         <Grid2
@@ -297,15 +299,12 @@ const FormCreateProject: React.FC = () => {
                 render={({ field: gastoField }) => (
                   <TextField
                     {...gastoField}
-                    label={field.toUpperCase()}
+                    label={field.charAt(0).toUpperCase() + field.slice(1)}
                     fullWidth
-                    value={
-                      typeof gastoField.value === "number"
-                        ? formatNumber(gastoField.value)
-                        : ""
-                    }
+                    type="text"
+                    value={formatNumber(gastoField.value) || ""}
                     onChange={(e) =>
-                      gastoField.onChange(parseNumber(e.target.value) as any)
+                      gastoField.onChange(parseNumber(e.target.value))
                     }
                     error={!!errors.gastos?.[field]}
                     helperText={errors.gastos?.[field]?.message}
@@ -343,9 +342,10 @@ const FormCreateProject: React.FC = () => {
                       {...field}
                       label="Valor"
                       fullWidth
-                      value={formatNumber(field.value)}
+                      type="text"
+                      value={formatNumber(field.value) || ""}
                       onChange={(e) =>
-                        field.onChange(parseNumber(e.target.value) as any)
+                        field.onChange(parseNumber(e.target.value))
                       }
                       error={!!errors.gastos?.extras?.[index]?.value}
                       helperText={
@@ -384,6 +384,7 @@ const FormCreateProject: React.FC = () => {
           variant="contained"
           color="primary"
           disabled={isSubmitting}
+          sx={{ mt: 2 }}
         >
           {id ? "Actualizar Proyecto" : "Crear Proyecto"}
         </Button>

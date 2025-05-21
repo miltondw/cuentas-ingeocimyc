@@ -45,7 +45,7 @@ export const menuConfig: MenuConfig = {
     {
       key: "client",
       label: "Cliente",
-      items: [{ title: "Cliente", link: "/cliente" }],
+      items: [{ title: "Cliente", link: "cliente" }],
       roles: ["admin", "usuario"], // Visible para admin y usuario
     },
   ],

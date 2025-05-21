@@ -21,7 +21,7 @@ export const fetchProjectData = async (id: string) => {
       Object.entries(gastoFromApi.otros_campos).map(([key, value]) => ({
         id: key,
         field: key,
-        value: value.toString(),
+        value: Number(value), // Aseguramos que value sea un número
       }));
 
     const formattedData: ProjectFormData = {
@@ -41,7 +41,7 @@ export const fetchProjectData = async (id: string) => {
 
 export const transformProjectData = (data: ProjectFormData) => {
   const otrosCampos = data.gastos.extras.reduce((acc: any, item) => {
-    if (item.field && item.value) {
+    if (item.field && item.value !== undefined) {
       acc[item.field.split(" ").join("_")] = Number(item.value);
     }
     return acc;
