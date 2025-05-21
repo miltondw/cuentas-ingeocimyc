@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, ChangeEvent, FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "@api";
 import {
@@ -12,7 +12,7 @@ import { debounce } from "lodash";
 export const DEPTH_INCREMENT = 0.45;
 export const DEPTH_LEVELS = 14;
 
-export const useProfileForm = () => {
+export const UseProfileForm = () => {
   const [formData, setFormData] = useState<ProfileFormData>({
     sounding_number: "",
     location: "",
@@ -105,7 +105,7 @@ export const useProfileForm = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleChange = debounce((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = debounce((e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -163,7 +163,7 @@ export const useProfileForm = () => {
     return { completedRows, totalRows, percentComplete, maxN, maxDepth };
   }, [formData.blows_data]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
       setNotification({
@@ -212,8 +212,8 @@ export const useProfileForm = () => {
       setNotification({
         open: true,
         message:
-          (error as any).response?.data?.message ||
-          "Error al guardar el perfil",
+          (error as { response?: { data?: { message?: string } } }).response
+            ?.data?.message || "Error al guardar el perfil",
         severity: "error",
       });
     } finally {
