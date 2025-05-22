@@ -7,12 +7,11 @@ import {
   ProfileStats,
   BlowData,
 } from "./profileTypes";
-import { debounce } from "lodash";
 
 export const DEPTH_INCREMENT = 0.45;
 export const DEPTH_LEVELS = 14;
 
-export const UseProfileForm = () => {
+export const useProfileForm = () => {
   const [formData, setFormData] = useState<ProfileFormData>({
     sounding_number: "",
     location: "",
@@ -92,28 +91,41 @@ export const UseProfileForm = () => {
 
     fetchProfile();
   }, [projectId, profileId]);
-
   const validateForm = () => {
     const newErrors: Partial<Record<keyof ProfileFormData, string>> = {};
-    if (!formData.sounding_number.trim()) {
+
+    // Validar número de sondeo
+    if (!formData.sounding_number || !formData.sounding_number.trim()) {
       newErrors.sounding_number = "El número de sondeo es obligatorio";
     }
+
+    // Validar fecha
     if (!formData.profile_date) {
       newErrors.profile_date = "La fecha es obligatoria";
     }
+
+    // Mostrar los errores en el formulario
     setErrors(newErrors);
+
+    // Notificar al usuario sobre los campos con error
+    if (Object.keys(newErrors).length > 0) {
+      setNotification({
+        open: true,
+        message: "Por favor, completa los campos obligatorios",
+        severity: "warning",
+      });
+    }
+
     return Object.keys(newErrors).length === 0;
   };
-
-  const handleChange = debounce((e: ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value || "",
     }));
     setErrors((prev) => ({ ...prev, [name]: undefined }));
-  }, 300);
-
+  };
   const handleBlowChange = (
     index: number,
     field: keyof BlowData,
@@ -127,17 +139,40 @@ export const UseProfileForm = () => {
           [field]: String(value) || "",
         };
       } else {
-        const numValue = value === "" ? "" : parseInt(value as string) || 0;
+        // Tratar correctamente las entradas vacías y numéricas
+        const stringValue = String(value).trim();
+        const numValue = stringValue === "" ? "" : parseInt(stringValue) || 0;
+
         newBlowsData[index] = { ...newBlowsData[index], [field]: numValue };
+
+        // Calcular el valor de N si tenemos valores para blows12 y blows18
         if (field === "blows12" || field === "blows18") {
           const blows12 =
             field === "blows12" ? numValue : newBlowsData[index].blows12;
+
           const blows18 =
             field === "blows18" ? numValue : newBlowsData[index].blows18;
+
+          // Solo calcular N si ambos valores son números válidos
           if (blows12 !== "" && blows18 !== "") {
-            newBlowsData[index].n =
-              (parseInt(blows12 as string) || 0) +
-              (parseInt(blows18 as string) || 0);
+            const b12 =
+              typeof blows12 === "string"
+                ? blows12 === ""
+                  ? 0
+                  : parseInt(blows12) || 0
+                : blows12 || 0;
+
+            const b18 =
+              typeof blows18 === "string"
+                ? blows18 === ""
+                  ? 0
+                  : parseInt(blows18) || 0
+                : blows18 || 0;
+
+            newBlowsData[index].n = b12 + b18;
+          } else {
+            // Si alguno está vacío, N debería ser 0
+            newBlowsData[index].n = 0;
           }
         }
       }
@@ -162,7 +197,6 @@ export const UseProfileForm = () => {
       : 0;
     return { completedRows, totalRows, percentComplete, maxN, maxDepth };
   }, [formData.blows_data]);
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
@@ -176,26 +210,40 @@ export const UseProfileForm = () => {
 
     try {
       setLoading(true);
+
+      // Convertir de manera segura los datos para enviar al backend
       const payload = {
-        sounding_number: formData.sounding_number,
-        location: formData.location,
-        water_level: formData.water_level || "",
+        sounding_number: formData.sounding_number.trim(),
+        location: formData.location.trim(),
+        water_level: formData.water_level.trim() || "",
         profile_date: formData.profile_date,
-        samples_number: parseInt(formData.samples_number as string) || 0,
-        blows_data: formData.blows_data.map((blow) => ({
-          depth: parseFloat(blow.depth),
-          blows6: parseInt(blow.blows6 as string) || 0,
-          blows12: parseInt(blow.blows12 as string) || 0,
-          blows18: parseInt(blow.blows18 as string) || 0,
-          n: parseInt(blow.n as string) || 0,
-          observation: blow.observation || "",
-        })),
+        samples_number:
+          typeof formData.samples_number === "string"
+            ? parseInt(formData.samples_number) || 0
+            : formData.samples_number,
+        blows_data: formData.blows_data.map((blow) => {
+          const safeParseInt = (value: string | number) => {
+            if (value === "" || value === null || value === undefined) return 0;
+            const parsed = typeof value === "string" ? parseInt(value) : value;
+            return isNaN(parsed) ? 0 : parsed;
+          };
+
+          return {
+            depth: parseFloat(blow.depth),
+            blows6: safeParseInt(blow.blows6),
+            blows12: safeParseInt(blow.blows12),
+            blows18: safeParseInt(blow.blows18),
+            n: safeParseInt(blow.n),
+            observation: (blow.observation || "").trim(),
+          };
+        }),
       };
 
       const endpoint =
         profileId && profileId !== "nuevo"
           ? `/projects/${projectId}/profiles/${profileId}`
           : `/projects/${projectId}/profiles`;
+
       const method = profileId && profileId !== "nuevo" ? "put" : "post";
 
       await api[method](endpoint, payload);
@@ -206,14 +254,36 @@ export const UseProfileForm = () => {
         } exitosamente`,
         severity: "success",
       });
-      setTimeout(() => navigate(`/lab/proyectos/${projectId}/perfiles`), 1000);
+
+      // Esperar a que el usuario vea la notificación antes de redirigir
+      setTimeout(() => navigate(`/lab/proyectos/${projectId}/perfiles`), 1500);
     } catch (error) {
       console.error("Error saving profile:", error);
+
+      // Mejorar el manejo de errores
+      let errorMessage = "Error al guardar el perfil";
+
+      try {
+        const errorResponse = error as {
+          response?: {
+            data?: {
+              message?: string;
+              error?: string;
+            };
+          };
+        };
+
+        errorMessage =
+          errorResponse.response?.data?.message ||
+          errorResponse.response?.data?.error ||
+          errorMessage;
+      } catch (parseError) {
+        console.error("Error parsing error response:", parseError);
+      }
+
       setNotification({
         open: true,
-        message:
-          (error as { response?: { data?: { message?: string } } }).response
-            ?.data?.message || "Error al guardar el perfil",
+        message: errorMessage,
         severity: "error",
       });
     } finally {

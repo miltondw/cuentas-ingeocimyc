@@ -23,41 +23,53 @@ const StyledTable = styled("table")(({ theme }) => ({
     padding: theme.spacing(1),
     textAlign: "left",
   },
+  "& th.centered": {
+    textAlign: "center",
+  },
   "& tbody tr": {
     borderBottom: `1px solid ${theme.palette.divider}`,
   },
+  "& td.highlighted-n": {
+    textAlign: "center",
+    fontWeight: "bold",
+  },
+  "& td.active-n": {
+    color: theme.palette.primary.main,
+  },
+}));
+
+const StyledBox = styled(Box)(({ theme }) => ({
+  maxHeight: "500px",
+  overflowY: "auto",
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: theme.shape.borderRadius,
+}));
+
+const StyledRow = styled("tr", {
+  shouldForwardProp: (prop) => prop !== "isActive",
+})<{ isActive?: boolean }>(({ theme, isActive }) => ({
+  backgroundColor: isActive
+    ? theme.palette.primary.light || "#f5f9ff"
+    : "transparent",
 }));
 
 const BlowDataTable = ({ blowsData, handleBlowChange }: BlowDataTableProps) => {
   return (
-    <Box
-      sx={{
-        maxHeight: "500px",
-        overflowY: "auto",
-        border: "1px solid",
-        borderColor: "divider",
-        borderRadius: 1,
-      }}
-    >
+    <StyledBox>
       <StyledTable aria-label="Tabla de datos de golpes">
         <thead>
           <tr>
             <th>Profundidad (m)</th>
-            <th style={{ textAlign: "center" }}>6"</th>
-            <th style={{ textAlign: "center" }}>12"</th>
-            <th style={{ textAlign: "center" }}>18"</th>
-            <th style={{ textAlign: "center" }}>N</th>
+            <th className="centered">6"</th>
+            <th className="centered">12"</th>
+            <th className="centered">18"</th>
+            <th className="centered">N</th>
             <th>Observaciones</th>
           </tr>
         </thead>
         <tbody>
           {blowsData.map((row, index) => (
-            <tr
-              key={index}
-              style={{
-                backgroundColor: Number(row.n) > 0 ? "#f5f9ff" : undefined,
-              }}
-            >
+            <StyledRow key={index} isActive={Number(row.n) > 0}>
               <td>{row.depth}</td>
               <td>
                 <TextField
@@ -68,7 +80,12 @@ const BlowDataTable = ({ blowsData, handleBlowChange }: BlowDataTableProps) => {
                   }
                   size="small"
                   fullWidth
-                  inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                  sx={{ input: { textAlign: "center" } }}
+                  inputProps={{
+                    inputMode: "numeric",
+                    pattern: "[0-9]*",
+                    min: 0,
+                  }}
                   aria-label={`Golpes a 6 pulgadas para profundidad ${row.depth}`}
                 />
               </td>
@@ -81,7 +98,12 @@ const BlowDataTable = ({ blowsData, handleBlowChange }: BlowDataTableProps) => {
                   }
                   size="small"
                   fullWidth
-                  inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                  sx={{ input: { textAlign: "center" } }}
+                  inputProps={{
+                    inputMode: "numeric",
+                    pattern: "[0-9]*",
+                    min: 0,
+                  }}
                   aria-label={`Golpes a 12 pulgadas para profundidad ${row.depth}`}
                 />
               </td>
@@ -94,16 +116,19 @@ const BlowDataTable = ({ blowsData, handleBlowChange }: BlowDataTableProps) => {
                   }
                   size="small"
                   fullWidth
-                  inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                  sx={{ input: { textAlign: "center" } }}
+                  inputProps={{
+                    inputMode: "numeric",
+                    pattern: "[0-9]*",
+                    min: 0,
+                  }}
                   aria-label={`Golpes a 18 pulgadas para profundidad ${row.depth}`}
                 />
               </td>
               <td
-                style={{
-                  textAlign: "center",
-                  fontWeight: "bold",
-                  color: Number(row.n) > 0 ? "#1976d2" : "inherit",
-                }}
+                className={`highlighted-n ${
+                  Number(row.n) > 0 ? "active-n" : ""
+                }`}
               >
                 {row.n}
               </td>
@@ -121,11 +146,11 @@ const BlowDataTable = ({ blowsData, handleBlowChange }: BlowDataTableProps) => {
                   }}
                 />
               </td>
-            </tr>
+            </StyledRow>
           ))}
         </tbody>
       </StyledTable>
-    </Box>
+    </StyledBox>
   );
 };
 

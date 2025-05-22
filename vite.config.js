@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
-          globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+          globPatterns: ["**/*.{js,css,html}"], // Elimina los tipos de archivos que no están presentes
           runtimeCaching: [
             {
               urlPattern:

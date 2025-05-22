@@ -34,18 +34,35 @@ const ProfileFormField = ({
       helperText={helperText}
       placeholder={placeholder}
       type={type}
+      variant="outlined"
       InputProps={{
         ...InputProps,
         sx: {
+          borderRadius: 1,
           borderWidth: error ? 2 : 1,
           backgroundColor: error ? "rgba(211, 47, 47, 0.05)" : undefined,
+          '&:hover': {
+            borderColor: error ? 'error.main' : 'primary.main',
+          },
+          '&:focus-within': {
+            borderColor: error ? 'error.main' : 'primary.main',
+            boxShadow: (theme) => 
+              `0 0 0 2px ${error 
+                ? theme.palette.error.main + '20' 
+                : theme.palette.primary.main + '20'
+              }`,
+          },
+          transition: 'all 0.2s',
         },
       }}
       slotProps={{
         inputLabel: { shrink: true },
         ...slotProps,
       }}
-      inputProps={{ "aria-label": ariaLabel }}
+      inputProps={{ 
+        "aria-label": ariaLabel,
+        autoComplete: name,
+      }}
       {...rest}
     />
   );

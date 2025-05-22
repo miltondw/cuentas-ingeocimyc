@@ -1,7 +1,8 @@
 import { LinearProgress, useMediaQuery } from "@mui/material";
 import MobileProfileView from "./MobileProfileView";
 import DesktopProfileView from "./DesktopProfileView";
-import { UseProfileForm } from "./UseProfileForm";
+import { useProfileForm } from "./useProfileForm";
+import React, { useState } from "react";
 
 const PerfilDeSuelos = () => {
   const {
@@ -17,9 +18,16 @@ const PerfilDeSuelos = () => {
     navigate,
     profileId,
     projectId,
-  } = UseProfileForm();
+  } = useProfileForm();
 
+  const [expandedDepth, setExpandedDepth] = useState<string | null>(null);
   const isMobile = useMediaQuery("(max-width:768px)");
+
+  // Implementando la función handleAccordionChange correctamente
+  const handleAccordionChange =
+    (depth: string) => (_event: React.SyntheticEvent, isExpanded: boolean) => {
+      setExpandedDepth(isExpanded ? depth : null);
+    };
 
   if (loading) {
     return (
@@ -38,10 +46,10 @@ const PerfilDeSuelos = () => {
           projectId={projectId}
           profileStats={profileStats}
           errors={errors}
-          expandedDepth={null}
+          expandedDepth={expandedDepth}
           handleChange={handleChange}
           handleBlowChange={handleBlowChange}
-          handleAccordionChange={() => () => {}}
+          handleAccordionChange={handleAccordionChange}
           handleSubmit={handleSubmit}
           handleCloseNotification={handleCloseNotification}
           notification={notification}
