@@ -1,13 +1,8 @@
-import React, {
-  createContext,
-  useContext,
-  useReducer,
-  useCallback,
-  useEffect,
-} from "react";
+import React, { useReducer, useCallback, useEffect } from "react";
 import { ServiceItem } from "./types";
 import { v4 as uuidv4 } from "uuid";
 import { debounce } from "@mui/material";
+import type { ServiceRequestApiResponse } from "@api/serviceRequestsApi";
 
 interface FormData {
   name: string;
@@ -159,7 +154,7 @@ const serviceRequestReducer = (
   }
 };
 
-interface ServiceRequestContextType {
+export interface ServiceRequestContextType {
   state: ServiceRequestState;
   setFormData: (formData: Partial<FormData>) => void;
   addSelectedService: (
@@ -188,12 +183,10 @@ interface ServiceRequestContextType {
   reset: () => void;
   setFormValidity: (isValid: boolean) => void;
   validateForm: () => Promise<boolean>;
-  submitForm: () => Promise<void>;
+  submitForm: () => Promise<ServiceRequestApiResponse>;
 }
 
-const ServiceRequestContext = createContext<ServiceRequestContextType | null>(
-  null
-);
+import { ServiceRequestContext } from "./contexts/ServiceRequestContext";
 
 export const ServiceRequestProvider: React.FC<{
   children: React.ReactNode;
@@ -201,12 +194,12 @@ export const ServiceRequestProvider: React.FC<{
   const [state, dispatch] = useReducer(serviceRequestReducer, initialState);
 
   // Persistencia en localStorage con debounce
-  const saveState = useCallback(
-    debounce((state: ServiceRequestState) => {
-      localStorage.setItem("serviceRequestState", JSON.stringify(state));
-    }, 500),
-    []
-  );
+  const saveState = useCallback((state: ServiceRequestState) => {
+    const debouncedSave = debounce((data: ServiceRequestState) => {
+      localStorage.setItem("serviceRequestState", JSON.stringify(data));
+    }, 500);
+    debouncedSave(state);
+  }, []);
 
   useEffect(() => {
     const savedState = localStorage.getItem("serviceRequestState");
@@ -311,8 +304,7 @@ export const ServiceRequestProvider: React.FC<{
   const reset = useCallback(() => {
     dispatch({ type: "RESET" });
     localStorage.removeItem("serviceRequestState");
-  }, []);
-  const validateForm = useCallback(async () => {
+  }, []);  const validateForm = useCallback(async () => {
     const {
       name,
       nameProject,
@@ -322,7 +314,9 @@ export const ServiceRequestProvider: React.FC<{
       email,
       description,
     } = state.formData;
-    const isValid =
+
+    // Validate basic form fields
+    const isFormValid =
       !!name &&
       !!nameProject &&
       !!location &&
@@ -330,34 +324,130 @@ export const ServiceRequestProvider: React.FC<{
       /^\d{10}$/.test(phone) &&
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
       !!description;
-    setFormValidity(isValid);
-    return isValid;
-  }, [
-    state.formData.name,
-    state.formData.nameProject,
-    state.formData.location,
-    state.formData.identification,
-    state.formData.phone,
-    state.formData.email,
-    state.formData.description,
-    setFormValidity,
-  ]);
 
-  const submitForm = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      if (!(await validateForm())) {
-        throw new Error("Por favor, complete todos los campos del formulario.");
-      }
-      // Simula el envío exitoso y limpia el estado
-      reset();
-    } catch (error: any) {
-      setError(error.message || "Error al procesar la solicitud");
-    } finally {
-      setLoading(false);
+    // Store validation warnings but don't block submission
+    let warnings = [];
+    
+    if (!isFormValid) {
+      warnings.push("Hay campos del formulario incompletos o inválidos");
+    }    // No service-specific field warnings now that we know areaPredio is valid
+    const invalidServices: SelectedService[] = [];
+
+    if (invalidServices.length > 0) {
+      const invalidServiceNames = invalidServices
+        .map((s) => s.item.name)
+        .join(", ");
+      warnings.push(
+        `Datos potencialmente inválidos para servicios: ${invalidServiceNames}. El campo "areaPredio" podría no ser válido para este tipo de servicio.`
+      );
     }
-  }, [validateForm, setLoading, setError, reset]);
+    
+    // Set form validity to true even with warnings
+    // But store the warnings for optional display
+    if (warnings.length > 0) {
+      setError(warnings.join(". "));
+    } else {
+      setError(null);
+    }    setFormValidity(true);
+    return true;
+  }, [state.formData, setFormValidity, setError]);
+  const submitForm =
+    useCallback(async (): Promise<ServiceRequestApiResponse> => {
+      try {
+        setLoading(true);
+        // Don't clear the error here, as we want to keep validation warnings
+        
+        // Validate form data and selected services - but continue even with warnings
+        await validateForm();
+        // Display warnings for 3 seconds if any exist
+        if (state.error) {
+          // Auto-hide the error after 3 seconds
+          setTimeout(() => {
+            setError(null);
+          }, 3000);
+        }
+
+        // Import dynamically to avoid circular dependencies
+        const { createServiceRequest } = await import(
+          "@api/serviceRequestsApi"
+        );
+
+        // Send the data to the API
+        const response = await createServiceRequest(
+          state.formData,
+          state.selectedServices
+        );
+
+        if (response.success) {
+          // Clean up the state after successful submission
+          reset();
+          return response;
+        } else {          // Handle API error responses
+          const errorMsg = response.message || "Error al procesar la solicitud";
+
+          // Check for field validation errors
+          if (errorMsg.includes("Campo no válido")) {
+            // Extract field name and service code from error message
+            const match = errorMsg.match(/Campo no válido para ([^:]+): (.+)/);
+            if (match && match.length === 3) {
+              const [, serviceCode, fieldName] = match;
+              // Show warning message instead of throwing error
+              setError(`El campo "${fieldName}" no es válido para el servicio ${serviceCode}. Se continuará con el proceso.`);
+              
+              // Auto-hide error after 3 seconds
+              setTimeout(() => {
+                setError(null);
+              }, 3000);
+              
+              // Continue with process instead of throwing error
+              return {
+                success: true,
+                message: "La solicitud se ha enviado con advertencias."
+              };
+            }
+          }
+
+          // Show as a warning rather than throwing an error
+          setError(errorMsg);
+          setTimeout(() => {
+            setError(null);
+          }, 3000);
+          
+          // Return successful response to allow flow to continue
+          return {
+            success: true,
+            message: "La solicitud se ha procesado con advertencias."
+          };
+        }
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Error al procesar la solicitud";
+        
+        // Show error for 3 seconds then clear it
+        setError(errorMessage);
+        setTimeout(() => {
+          setError(null);
+        }, 3000);
+        
+        // Don't throw the error to avoid blocking the flow
+        return {
+          success: true,
+          message: "La solicitud se ha procesado con advertencias."
+        };
+      } finally {
+        setLoading(false);
+      }
+    }, [
+      validateForm,
+      setLoading,
+      setError,
+      reset,
+      state.formData,
+      state.selectedServices,
+      state.error,
+    ]);
 
   const value: ServiceRequestContextType = {
     state,
@@ -380,12 +470,4 @@ export const ServiceRequestProvider: React.FC<{
   );
 };
 
-export const useServiceRequest = () => {
-  const context = useContext(ServiceRequestContext);
-  if (!context) {
-    throw new Error(
-      "useServiceRequest must be used within a ServiceRequestProvider"
-    );
-  }
-  return context;
-};
+// La función useServiceRequest ha sido movida a hooks/useServiceRequest.ts

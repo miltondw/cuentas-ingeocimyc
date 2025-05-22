@@ -1,3 +1,5 @@
+import { Dispatch, SetStateAction } from "react";
+
 export interface AdditionalInfo {
   dependsOnField?: string;
   field: string;
@@ -38,8 +40,8 @@ export interface ServiceResponse {
 export interface AdditionalInfoFormProps {
   service: ServiceItem;
   itemAdditionalInfo: Record<string, string | number | boolean | string[]>;
-  setItemAdditionalInfo: React.Dispatch<
-    React.SetStateAction<Record<string, string | number | boolean | string[]>>
+  setItemAdditionalInfo: Dispatch<
+    SetStateAction<Record<string, string | number | boolean | string[]>>
   >;
 }
 

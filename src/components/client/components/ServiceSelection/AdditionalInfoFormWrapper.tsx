@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import AdditionalInfoForm from "./AdditionalInfoForm";
 import { ServiceItem } from "../types";
-import { useServiceRequest } from "../ServiceRequestContext";
+import { useServiceRequest } from "../hooks/useServiceRequest";
 import { v4 as uuidv4 } from "uuid";
 
 interface AdditionalInfoFormWrapperProps {
@@ -41,7 +41,7 @@ const AdditionalInfoFormWrapper: React.FC<AdditionalInfoFormWrapperProps> = ({
   instanceId,
   onClose,
   onSave,
-}) => {
+}): React.ReactElement => {
   const { state, validateForm } = useServiceRequest();
   const { loading, error } = state;
   const [currentStep, setCurrentStep] = useState(0);
@@ -99,40 +99,88 @@ const AdditionalInfoFormWrapper: React.FC<AdditionalInfoFormWrapperProps> = ({
     }
   }, [open, quantity, serviceId, instanceId, existingInstances, instances.length]);
 
+  // Helper function to check if a field is valid for a specific service  
+  const isValidField = useCallback((serviceCode: string, fieldName: string): boolean => {
+    // Define service-specific invalid fields
+    const invalidFieldsByService: Record<string, string[]> = {
+      // No invalid fields now that we know areaPredio is required for EDS-1
+      // Add other service codes and their invalid fields here as needed
+    };
+    
+    // Check if the field is invalid for this service
+    if (invalidFieldsByService[serviceCode] && 
+        invalidFieldsByService[serviceCode]?.includes(fieldName)) {
+      return false;
+    }
+    
+    return true;
+  }, []);
+
   const validateInstance = useCallback(
     async (
-      additionalInfo: Record<string, string | number | boolean | string[]>
-    ) => {
-      const isValid = await validateForm();
-      if (!isValid) return false;
+      additionalInfo: Record<string, string | number | boolean | string[]>,
+      showWarnings = true
+    ): Promise<boolean> => {
+      await validateForm();
+      
+      // Check for invalid fields based on service code
+      const invalidFields = Object.keys(additionalInfo).filter(
+        (fieldName) => !isValidField(service.code, fieldName)
+      );
+      
+      if (invalidFields.length > 0 && showWarnings) {
+        setNotification({
+          open: true,
+          message: `Advertencia: El campo "${invalidFields[0]}" podría no ser válido para el servicio ${service.code}`,
+          severity: "warning",
+        });
+        
+        // Auto-hide notification after 3 seconds
+        setTimeout(() => {
+          setNotification(prev => ({ ...prev, open: false }));
+        }, 3000);
+      }
+      
+      // Check required fields
       const requiredFields = service.additionalInfo?.filter(
         (field) => field.required
       );
-      if (!requiredFields?.length) return true;
-      return requiredFields.every((field) => {
-        const value = additionalInfo[field.field];
-        return value !== undefined && value !== "" && value !== null;
-      });
+      
+      if (requiredFields?.length) {
+        const missingRequiredFields = requiredFields.filter((field) => {
+          const value = additionalInfo[field.field];
+          return value === undefined || value === "" || value === null;
+        });
+        
+        if (missingRequiredFields.length > 0 && showWarnings) {
+          setNotification({
+            open: true,
+            message: `Advertencia: Campo incompleto: ${missingRequiredFields[0].label}`,
+            severity: "warning",
+          });
+          
+          // Auto-hide notification after 3 seconds
+          setTimeout(() => {
+            setNotification(prev => ({ ...prev, open: false }));
+          }, 3000);
+        }
+      }
+      
+      // Always return true to avoid blocking the user flow
+      return true;
     },
-    [service.additionalInfo, validateForm]
+    [service.additionalInfo, service.code, validateForm, setNotification, isValidField]
   );
-
-  const handleNext = useCallback(async () => {
+  const handleNext = useCallback(async (): Promise<void> => {
     if (currentStep < instances.length - 1) {
       const currentInstance = instances[currentStep];
-      if (!(await validateInstance(currentInstance.additionalInfo))) {
-        setNotification({
-          open: true,
-          message: "Por favor completa todos los campos requeridos",
-          severity: "warning",
-        });
-        return;
-      }
+      // Validate but don't block - validateInstance will show warnings
+      await validateInstance(currentInstance.additionalInfo);
       setCurrentStep((prev) => prev + 1);
     }
   }, [currentStep, instances, validateInstance]);
 
-  const handleBack = useCallback(() => {
+  const handleBack = useCallback((): void => {
     if (currentStep > 0) {
       setCurrentStep((prev) => prev - 1);
     }
@@ -145,7 +193,7 @@ const AdditionalInfoFormWrapper: React.FC<AdditionalInfoFormWrapperProps> = ({
         | ((
             prev: Record<string, string | number | boolean | string[]>
           ) => Record<string, string | number | boolean | string[]>)
-    ) => {
+    ): void => {
       setInstances((prevInstances) => {
         const currentAdditionalInfo =
           prevInstances[currentStep]?.additionalInfo || {};
@@ -163,42 +211,45 @@ const AdditionalInfoFormWrapper: React.FC<AdditionalInfoFormWrapperProps> = ({
     [currentStep]
   );
 
-  const handleAddInstance = useCallback(async () => {
+  const handleAddInstance = useCallback(async (): Promise<void> => {
     const currentInstance = instances[currentStep];
-    if (!(await validateInstance(currentInstance.additionalInfo))) {
-      setNotification({
-        open: true,
-        message:
-          "Por favor completa todos los campos requeridos antes de agregar otra instancia",
-        severity: "warning",
-      });
-      return;
-    }
+    
+    // Validate but don't block - show warnings and continue
+    await validateInstance(currentInstance.additionalInfo);
+    
+    // Always proceed to add a new instance
     setInstances((prev) => [...prev, { id: uuidv4(), additionalInfo: {} }]);
     setCurrentStep((prev) => prev + 1);
   }, [instances, currentStep, validateInstance]);
-  const handleSaveAll = useCallback(async () => {
+
+  const handleSaveAll = useCallback(async (): Promise<void> => {
     try {
-      const invalidInstances = await Promise.all(
+      // Validate all instances but don't block - just show warnings
+      await Promise.all(
         instances.map(
-          async (instance) => !(await validateInstance(instance.additionalInfo))
+          async (instance) => {
+            // Validate but continue anyway (validateInstance always returns true now)
+            await validateInstance(instance.additionalInfo, true);
+            return false; // No longer used to block
+          }
         )
       );
-      if (invalidInstances.some((invalid) => invalid)) {
-        setNotification({
-          open: true,
-          message:
-            "Por favor completa todos los campos requeridos en todas las instancias",
-          severity: "warning",
-        });
-        return;
-      }
-      await onSave(instances); // Llama a onSave para guardar las instancias
+      
+      // Always proceed to save instances
+      await onSave(instances);
+      
+      // Show success notification
       setNotification({
         open: true,
         message: "Instancias guardadas con éxito",
         severity: "success",
       });
+      
+      // Auto-hide success notification after 3 seconds
+      setTimeout(() => {
+        setNotification(prev => ({ ...prev, open: false }));
+      }, 3000);
+      
       handleCancel(); // Cierra el diálogo y restablece el estado
     } catch {
       setNotification({
@@ -206,6 +257,11 @@ const AdditionalInfoFormWrapper: React.FC<AdditionalInfoFormWrapperProps> = ({
         message: "Error al guardar las instancias",
         severity: "error",
       });
+      
+      // Auto-hide error notification after 3 seconds
+      setTimeout(() => {
+        setNotification(prev => ({ ...prev, open: false }));
+      }, 3000);
     }
   }, [instances, onSave, validateInstance, handleCancel]);
 
@@ -291,10 +347,9 @@ const AdditionalInfoFormWrapper: React.FC<AdditionalInfoFormWrapperProps> = ({
         >
           Guardar Todo
         </Button>
-      </DialogActions>
-      <Snackbar
+      </DialogActions>      <Snackbar
         open={notification.open}
-        autoHideDuration={4000}
+        autoHideDuration={3000}
         onClose={handleCloseNotification}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >

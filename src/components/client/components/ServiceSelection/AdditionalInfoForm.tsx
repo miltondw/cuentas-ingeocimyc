@@ -21,6 +21,7 @@ import React, { useCallback } from "react";
 interface AdditionalInfoFormProps {
   service: {
     additionalInfo?: AdditionalInfo[];
+    code?: string;
     [key: string]: unknown;
   };
   itemAdditionalInfo: Record<string, string | number | boolean | string[]>;
@@ -33,7 +34,7 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
   service,
   itemAdditionalInfo,
   setItemAdditionalInfo,
-}) => {
+}): React.ReactElement => {
   const handleChange = useCallback(
     (field: string, value: string | number | boolean | string[]) => {
       setItemAdditionalInfo((prev) => ({ ...prev, [field]: value }));
@@ -68,14 +69,46 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
     if (typeof value === "string" && value) {
       const parsedDate = dayjs(value, "DD-MM-YYYY", true);
       return parsedDate.isValid() ? parsedDate : null;
-    }
-    return null;
-  }; // Función para renderizar un campo específico por su nombre
-  const renderFieldByName = (fieldName: string) => {
+    }    return null;
+  }; 
+  
+  // Helper function to check if a field is valid for a specific service  
+  const isValidField = useCallback(
+    (serviceCode: string, fieldName: string): boolean => {
+      // Define service-specific invalid fields
+      const invalidFieldsByService: Record<string, string[]> = {
+        // "EDS-1": ["areaPredio"], - Removed as this field is actually required
+        // Add other service codes and their invalid fields here as needed
+      };
+
+      // Check if the field is invalid for this service
+      if (
+        invalidFieldsByService[serviceCode] &&
+        invalidFieldsByService[serviceCode].includes(fieldName)
+      ) {
+        return false;
+      }
+
+      return true;
+    },
+    []
+  );
+
+  // Función para renderizar un campo específico por su nombre  
+  const renderFieldByName = (fieldName: string): React.ReactElement | null => {
     const info = service.additionalInfo?.find(
-      (item) => item.field === fieldName
+      (item: AdditionalInfo) => item.field === fieldName
     );
     if (!info) return null;
+
+    // Skip fields that are invalid for this service type
+    if (
+      service.code &&
+      typeof service.code === "string" &&
+      !isValidField(service.code, fieldName)
+    ) {
+      return null;
+    }
 
     // Verificar campos específicos para Cilindro
     // Estos campos solo deben mostrarse cuando el tipo es "Cilindro"

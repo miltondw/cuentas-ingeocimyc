@@ -17,8 +17,8 @@ import InitialInfoForm from "./InitialInfoForm";
 import ServiceSelection from "../ServiceSelection/ServiceSelection";
 import ServiceReview from "./ServiceReview";
 import ConfirmationModal from "./ConfirmationModal";
-import { useServiceRequest } from "../ServiceRequestContext";
-import api from "@api";
+import { useServiceRequest } from "../hooks/useServiceRequest";
+import * as serviceRequestsApi from "@api/serviceRequestsApi";
 import { Service } from "../types";
 
 interface LocationState {
@@ -71,8 +71,8 @@ const ClientForm: React.FC = () => {
   const fetchServices = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get("/service-requests/services/all");
-      setServices(response.data.services);
+      const services = await serviceRequestsApi.getServices();
+      setServices(services);
     } catch (err) {
       console.error(err);
       setNotification({
@@ -119,25 +119,28 @@ const ClientForm: React.FC = () => {
   const handleCloseConfirmation = useCallback(() => {
     setOpenConfirmation(false);
   }, []);
-
-  // Envía el formulario (simulado, guarda en localStorage)
+  // Envía el formulario al backend
   const handleSubmit = useCallback(async () => {
     setOpenConfirmation(false);
     setLoading(true);
     try {
-      await submitForm();
+      const response = await submitForm();
+
       setNotification({
         open: true,
-        message: "Solicitud procesada con éxito (guardada localmente)",
+        message: navigator.onLine
+          ? `Solicitud ${response.request_id} procesada con éxito`
+          : "Solicitud guardada localmente y se enviará cuando haya conexión",
         severity: "success",
       });
       setActiveStep(0);
       navigate("/cliente", { replace: true, state: { step: 0 } });
-    } catch (err) {
+    } catch (err: Error | unknown) {
       console.error(err);
       setNotification({
         open: true,
-        message: "Error al procesar la solicitud",
+        message:
+          err instanceof Error ? err.message : "Error al procesar la solicitud",
         severity: "error",
       });
     } finally {

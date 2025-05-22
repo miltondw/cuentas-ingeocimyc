@@ -20,7 +20,7 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import { useServiceRequest } from "../ServiceRequestContext";
+import { useServiceRequest } from "../hooks/useServiceRequest";
 
 interface AdditionalInfo {
   [key: string]: string | number | boolean | string[] | undefined | null;

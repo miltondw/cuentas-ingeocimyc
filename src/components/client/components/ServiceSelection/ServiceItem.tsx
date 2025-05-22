@@ -20,7 +20,7 @@ import RemoveIcon from "@mui/icons-material/Remove";
 import InfoIcon from "@mui/icons-material/Info";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AdditionalInfoFormWrapper from "./AdditionalInfoFormWrapper";
-import { useServiceRequest } from "../ServiceRequestContext";
+import { useServiceRequest } from "../hooks/useServiceRequest";
 import { ServiceItem as ServiceItemType } from "../types";
 import { useLocation, useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
