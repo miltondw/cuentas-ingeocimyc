@@ -4,16 +4,19 @@ import { VitePWA } from "vite-plugin-pwa";
 import { resolve } from "path";
 
 export default defineConfig(({ mode }) => {
-  const prod = false;
+  const prod = mode === 'production';
 
   return {
     plugins: [
-      react(),
-      VitePWA({
+      react(),      VitePWA({
         registerType: "autoUpdate",
         devOptions: {
           enabled: true,
+          /* Disable these options to prevent precaching warnings in development */
+          suppressWarnings: true,
+          type: 'module'
         },
+        injectRegister: 'auto',
         strategies: "generateSW",
         includeAssets: ["favicon.ico", "logo-ingeocimyc.svg", "icons/*.png"],
         manifest: {
@@ -29,16 +32,26 @@ export default defineConfig(({ mode }) => {
               src: "/icons/icon-192x192.png",
               sizes: "192x192",
               type: "image/png",
+              purpose: "any"
             },
             {
               src: "/icons/icon-512x512.png",
               sizes: "512x512",
               type: "image/png",
+              purpose: "any maskable"
             },
           ],
         },
         workbox: {
-          globPatterns: ["**/*.{js,css,html}"], // Elimina los tipos de archivos que no están presentes
+          // Only precache in production to avoid warnings during development
+          globPatterns: prod ? ["**/*.{js,css,html,svg,png,ico,json}"] : [],
+          // Skip during development
+          skipWaiting: true,
+          clientsClaim: true, 
+          navigateFallback: '/index.html',
+          navigateFallbackDenylist: [/^\/api\//, /^\/@.*/],
+          // Don't precache development-specific files
+          globIgnores: ['**/node_modules/**/*', '**/dev-dist/**/*', '**/.vite/**/*'],
           runtimeCaching: [
             {
               urlPattern:

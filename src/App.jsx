@@ -213,33 +213,10 @@ const App = () => {
         }
         setInstallPrompt(null); // Limpiar el prompt después de la instalación
       });
-    }
-  };
-  // App.jsx
-  useEffect(() => {
-    const mostrarActualizacion = () => {
-      if (window.confirm('Hay una nueva versión disponible. ¿Quieres actualizar?')) {
-        window.location.reload();
-      }
-    };
-
-    navigator.serviceWorker.addEventListener('updatefound', () => {
-      const swActual = navigator.serviceWorker.controller;
-      const swNuevo = navigator.serviceWorker.waiting;
-
-      if (!swNuevo) return;
-
-      swNuevo.addEventListener('statechange', () => {
-        if (swNuevo.state === 'installed' && swActual) {
-          mostrarActualizacion();
-        }
-      });
-    });
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/dev-dist/sw.js');
-    }
-  }, []);
+    }  };
+  
+  // Service worker update handling is now completely managed in main.jsx
+  // We don't need duplicate event listeners here
   return (
     <ThemeProvider theme={theme}>
       <AuthProvider>

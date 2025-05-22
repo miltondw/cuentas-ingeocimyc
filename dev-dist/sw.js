@@ -78,15 +78,16 @@ define(['./workbox-f89d6064'], (function (workbox) { 'use strict';
    * See https://goo.gl/S9QRab
    */
   workbox.precacheAndRoute([{
-    "url": "registerSW.js",
-    "revision": "3ca0b8505b4bec776b69afdba2768812"
+    "url": "suppress-warnings.js",
+    "revision": "d41d8cd98f00b204e9800998ecf8427e"
   }, {
-    "url": "index.html",
-    "revision": "0.jmn4gk16b5o"
+    "url": "/index.html",
+    "revision": "0.s9q9tu2v2f"
   }], {});
   workbox.cleanupOutdatedCaches();
-  workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
-    allowlist: [/^\/$/]
+  workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/index.html"), {
+    allowlist: [/^\/$/],
+    denylist: [/^\/api\//, /^\/@.*/]
   }));
   workbox.registerRoute(/^https:\/\/api-cuentas-zlut\.onrender\.com\/api\/.*/i, new workbox.NetworkOnly({
     plugins: [new workbox.BackgroundSyncPlugin("api-sync-queue", {
