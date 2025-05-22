@@ -1,7 +1,7 @@
 import { LinearProgress, useMediaQuery } from "@mui/material";
 import MobileProfileView from "./MobileProfileView";
 import DesktopProfileView from "./DesktopProfileView";
-import { useProfileForm } from "./UseProfileForm";
+import { UseProfileForm } from "./UseProfileForm";
 
 const PerfilDeSuelos = () => {
   const {
@@ -17,7 +17,7 @@ const PerfilDeSuelos = () => {
     navigate,
     profileId,
     projectId,
-  } = useProfileForm();
+  } = UseProfileForm();
 
   const isMobile = useMediaQuery("(max-width:768px)");
 
