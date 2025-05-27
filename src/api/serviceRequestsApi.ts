@@ -68,6 +68,9 @@ export interface ServiceRequestApiData {
     };
     quantity: number;
     additionalInfo?: Record<string, string | number | boolean | string[]>;
+    instances?: Array<{
+      additionalInfo: Record<string, string | number | boolean | string[]>;
+    }>;
   }>;
 }
 
@@ -76,6 +79,10 @@ export interface ServiceRequestApiResponse {
   success: boolean;
   request_id?: number;
   message?: string;
+  pdf?: {
+    generated: boolean;
+    path: string;
+  };
 }
 
 /**
@@ -101,45 +108,66 @@ const transformToApiFormat = (
       const requiredFields =
         serviceFieldConfig.requiredFields[service.item.code] || [];
 
-      // Combine all additionalInfo from instances into one object
-      const combinedAdditionalInfo = service.instances.reduce<
-        Record<string, string | number | boolean | string[]>
-      >((acc, instance) => ({ ...acc, ...instance.additionalInfo }), {});
+      // Si el servicio tiene múltiples instancias, cada una con sus propios datos adicionales
+      if (service.instances.length > 1) {
+        // Crear un array de instancias con sus propios datos adicionales
+        const instancesData = service.instances.map((instance) => {
+          return {
+            additionalInfo: instance.additionalInfo,
+          };
+        });
 
-      // Special case handling for EDS-1: ensure areaPredio is included
-      if (service.item.code === "EDS-1") {
-        const instanceWithAreaPredio = service.instances.find(
-          (instance) =>
-            typeof instance.additionalInfo.areaPredio !== "undefined"
-        );
+        return {
+          item: {
+            code: service.item.code,
+            name: service.item.name,
+          },
+          quantity: service.quantity,
+          instances: instancesData,
+        };
+      } else {
+        // Para servicios con una sola instancia, mantener compatibilidad
+        // Combine all additionalInfo from instances into one object
+        const combinedAdditionalInfo = service.instances.reduce<
+          Record<string, string | number | boolean | string[]>
+        >((acc, instance) => ({ ...acc, ...instance.additionalInfo }), {});
 
-        if (instanceWithAreaPredio?.additionalInfo.areaPredio) {
-          combinedAdditionalInfo.areaPredio =
-            instanceWithAreaPredio.additionalInfo.areaPredio;
+        // Special case handling for special fields if needed
+        if (service.item.code === "EDS-1") {
+          const instanceWithAreaPredio = service.instances.find(
+            (instance) =>
+              typeof instance.additionalInfo.areaPredio !== "undefined"
+          );
+
+          if (instanceWithAreaPredio?.additionalInfo.areaPredio) {
+            combinedAdditionalInfo.areaPredio =
+              instanceWithAreaPredio.additionalInfo.areaPredio;
+          }
         }
-      }
 
-      // Check for missing required fields
-      const missingFields = requiredFields.filter(
-        (field) =>
-          !combinedAdditionalInfo[field] && combinedAdditionalInfo[field] !== 0
-      );
-
-      if (missingFields.length > 0) {
-        console.warn(
-          `Missing required fields for service ${service.item.code}:`,
-          missingFields
+        // Check for missing required fields
+        const missingFields = requiredFields.filter(
+          (field) =>
+            !combinedAdditionalInfo[field] &&
+            combinedAdditionalInfo[field] !== 0
         );
-      }
 
-      return {
-        item: {
-          code: service.item.code,
-          name: service.item.name,
-        },
-        quantity: service.quantity,
-        additionalInfo: combinedAdditionalInfo,
-      };
+        if (missingFields.length > 0) {
+          console.warn(
+            `Missing required fields for service ${service.item.code}:`,
+            missingFields
+          );
+        }
+
+        return {
+          item: {
+            code: service.item.code,
+            name: service.item.name,
+          },
+          quantity: service.quantity,
+          additionalInfo: combinedAdditionalInfo,
+        };
+      }
     }),
   };
 };
@@ -184,29 +212,60 @@ export const createServiceRequest = async (
 
   // Log the request data for debugging
   logApiRequest(requestData, "Service Request Data");
-
   // Ensure areaPredio is included for EDS-1 services
   requestData.selectedServices.forEach((service) => {
-    if (
-      service.item.code === "EDS-1" &&
-      (!service.additionalInfo || !service.additionalInfo.areaPredio)
-    ) {
-      console.warn("⚠️ Missing required field areaPredio for EDS-1 service");
+    if (service.item.code === "EDS-1") {
+      if (service.instances) {
+        // Verificar cada instancia tiene areaPredio
+        service.instances.forEach((instance, index) => {
+          if (!instance.additionalInfo.areaPredio) {
+            console.warn(
+              `⚠️ Missing required field areaPredio for EDS-1 service instance ${
+                index + 1
+              }`
+            );
+          }
+        });
+      } else if (
+        !service.additionalInfo ||
+        !service.additionalInfo.areaPredio
+      ) {
+        console.warn("⚠️ Missing required field areaPredio for EDS-1 service");
+      }
     }
   });
   try {
     // Validate services before sending
     for (const service of requestData.selectedServices) {
-      const validation = validateServiceFields(
-        service.item.code,
-        service.additionalInfo || {}
-      );
+      if (service.instances) {
+        // Validar cada instancia individualmente
+        service.instances.forEach((instance, index) => {
+          const validation = validateServiceFields(
+            service.item.code,
+            instance.additionalInfo || {}
+          );
 
-      if (!validation.isValid) {
-        console.warn(
-          `Service ${service.item.code} validation failed:`,
-          `Missing fields: ${validation.missingFields.join(", ")}`
+          if (!validation.isValid) {
+            console.warn(
+              `Service ${service.item.code} instance ${
+                index + 1
+              } validation failed:`,
+              `Missing fields: ${validation.missingFields.join(", ")}`
+            );
+          }
+        });
+      } else {
+        const validation = validateServiceFields(
+          service.item.code,
+          service.additionalInfo || {}
         );
+
+        if (!validation.isValid) {
+          console.warn(
+            `Service ${service.item.code} validation failed:`,
+            `Missing fields: ${validation.missingFields.join(", ")}`
+          );
+        }
       }
     }
 
@@ -214,7 +273,53 @@ export const createServiceRequest = async (
       "/service-requests",
       requestData
     );
-    return response.data;
+
+    // Si la solicitud de servicio fue exitosa y tenemos un request_id
+    if (response.data.success && response.data.request_id) {
+      const requestId = response.data.request_id;
+      console.log(`Solicitud de servicio creada con ID: ${requestId}`);
+
+      try {
+        // Realizar la llamada para obtener el PDF
+        const pdfResponse = await api.get(
+          `/service-requests/${requestId}/pdf`,
+          {
+            responseType: "blob", // Importante: para manejar el archivo binario (PDF)
+          }
+        );
+
+        // Crear una URL para el blob y descargar el archivo
+        const url = window.URL.createObjectURL(new Blob([pdfResponse.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `solicitud-${requestId}.pdf`); // Nombre del archivo a descargar
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url); // Limpiar la URL del objeto
+
+        console.log("PDF descargado exitosamente.");
+        return {
+          ...response.data,
+          pdf: {
+            generated: true,
+            path: `Descargado localmente como solicitud-${requestId}.pdf`,
+          },
+        };
+      } catch (pdfError) {
+        console.error("Error al descargar el PDF:", pdfError);
+        // Puedes optar por retornar un error específico o simplemente la respuesta original
+        return {
+          ...response.data,
+          pdf: {
+            generated: false,
+            path: "Error al descargar el PDF",
+          },
+        };
+      }
+    }
+
+    return response.data; // Retorna la respuesta original si no hay request_id o no fue exitosa
   } catch (error) {
     if (!navigator.onLine) {
       await saveRequest({

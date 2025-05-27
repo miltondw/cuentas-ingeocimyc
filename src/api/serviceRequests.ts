@@ -48,6 +48,9 @@ export interface ServiceRequestData {
     };
     quantity: number;
     additionalInfo?: Record<string, string | number | boolean | string[]>;
+    instances?: Array<{
+      additionalInfo: Record<string, string | number | boolean | string[]>;
+    }>;
   }>;
 }
 

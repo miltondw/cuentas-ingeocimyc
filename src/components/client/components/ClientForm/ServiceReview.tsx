@@ -469,9 +469,7 @@ const ServiceReview: React.FC = () => {
               ),
             ];
 
-            return (
-              <Box key={serviceInstance.id} sx={{ mb: 4 }}>
-                {" "}
+            return (              <Box key={serviceInstance.id} sx={{ mb: 4 }}>
                 <Typography
                   variant="subtitle1"
                   sx={{ fontWeight: "bold", mb: 2, textAlign: "center" }}
@@ -487,12 +485,10 @@ const ServiceReview: React.FC = () => {
                     border: "1px solid rgba(224, 224, 224, 1)",
                   }}
                 >
-                  <Table
-                    aria-label={`Servicios con información adicional para ${serviceInstance.item.name}`}
+                  <Table                    aria-label={`Servicios con información adicional para ${serviceInstance.item.name}`}
                     size="small"
                     sx={{ minWidth: 650 }}
                   >
-                    {" "}
                     <TableHead>
                       <TableRow>
                         <TableCell sx={headerCellStyle}>N° MUESTRA</TableCell>
@@ -515,17 +511,16 @@ const ServiceReview: React.FC = () => {
                             {formatAdditionalInfoValue(
                               serviceInstance.item.code
                             )}
-                          </TableCell>
-                          <TableCell sx={bodyCellStyle}>
+                          </TableCell>                          <TableCell sx={bodyCellStyle}>
                             {formatAdditionalInfoValue(
                               serviceInstance.item.name
                             )}
-                          </TableCell>{" "}
+                          </TableCell>
                           <TableCell sx={bodyCellStyle}>
                             {formatAdditionalInfoValue(
                               serviceInstance.category
                             )}
-                          </TableCell>{" "}
+                          </TableCell>
                           {finalFieldList.map((field) => {
                             // Manejo especial para campos específicos de Cilindro
                             let displayValue;

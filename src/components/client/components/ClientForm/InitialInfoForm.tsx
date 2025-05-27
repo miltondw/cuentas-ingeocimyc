@@ -40,21 +40,46 @@ const InitialInfoForm: React.FC = () => {
     resolver: yupResolver(validationSchema),
     defaultValues: formData,
     mode: "onChange",
-  });
-
+  });  // Referencias para evitar actualizaciones infinitas
+  const initialized = React.useRef(false);
+  const previousValidState = React.useRef(isValid);
+  const isUpdating = React.useRef(false);
+  
+  // Efecto para inicializar el formulario al principio
   useEffect(() => {
-    reset(formData);
+    if (!initialized.current) {
+      reset(formData);
+      initialized.current = true;
+    }
   }, [formData, reset]);
+  
+  // Escuchar cambios en el formulario y actualizar el contexto
   useEffect(() => {
-    const subscription = watch((value) => {
-      setFormData(value as FormData);
-    });
+    const handleFormChange = (value: Partial<FormData>) => {
+      if (isUpdating.current) return;
+      
+      isUpdating.current = true;
+      setTimeout(() => {
+        setFormData(value as FormData);
+        isUpdating.current = false;
+      }, 0);
+    };
+    
+    const subscription = watch(handleFormChange);
     return () => subscription.unsubscribe();
   }, [watch, setFormData]);
-  
-  // Efecto separado para manejar la validez del formulario
+    // Efecto para manejar la validez del formulario
   useEffect(() => {
-    setFormValidity(isValid);
+    // Solo actualizar si el estado de validez ha cambiado
+    if (previousValidState.current !== isValid) {
+      previousValidState.current = isValid;
+      
+      const timeoutId = setTimeout(() => {
+        setFormValidity(isValid);
+      }, 0);
+      
+      return () => clearTimeout(timeoutId);
+    }
   }, [isValid, setFormValidity]);
 
   return (
