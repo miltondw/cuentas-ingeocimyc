@@ -1,17 +1,8 @@
-import { useState, MouseEvent } from "react";
+import { useState } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import {
-  AppBar,
   Box,
-  Toolbar,
-  IconButton,
   Typography,
-  Menu,
-  Container,
-  Avatar,
-  Button,
-  Tooltip,
-  MenuItem,
   Drawer,
   List,
   ListItem,
@@ -19,8 +10,15 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
+  useTheme,
+  useMediaQuery,
+  Avatar,
+  Fab,
+  Toolbar,
+  IconButton,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import GroupIcon from "@mui/icons-material/Group";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import ScienceIcon from "@mui/icons-material/Science";
@@ -28,236 +26,182 @@ import BarChartIcon from "@mui/icons-material/BarChart";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import React from "react"; // Necesario para React.FC y React.ReactNode
 
-// Define navigations items by role
-const adminPages = [
+// --- TIPADO ---
+// 1. Define la estructura para los elementos de navegación
+interface NavItem {
+  name: string;
+  path: string;
+  icon: React.ReactNode; // El tipo correcto para íconos de React
+}
+
+// 2. Define una interfaz para el usuario (ajústala según tu hook useAuth)
+interface IUser {
+  name?: string;
+  email?: string;
+  role?: "admin" | "lab" | "client";
+}
+
+// --- DATOS TIPADOS ---
+const adminPages: NavItem[] = [
   { name: "Proyectos", path: "/proyectos", icon: <GroupIcon /> },
   { name: "Gastos", path: "/gastos", icon: <BarChartIcon /> },
   { name: "Utilidades", path: "/utilidades", icon: <BarChartIcon /> },
   { name: "Laboratorio", path: "/lab/proyectos", icon: <ScienceIcon /> },
 ];
-
-const labPages = [
+const labPages: NavItem[] = [
   { name: "Proyectos", path: "/lab/proyectos", icon: <ScienceIcon /> },
 ];
-
-const clientPages = [
+const clientPages: NavItem[] = [
   { name: "Mis Solicitudes", path: "/client/requests", icon: <GroupIcon /> },
 ];
 
-const settings = [
+const settings: NavItem[] = [
   { name: "Perfil", path: "/profile", icon: <AccountCircleIcon /> },
   { name: "Configuración", path: "/settings", icon: <SettingsIcon /> },
   { name: "Cerrar Sesión", path: "/logout", icon: <LogoutIcon /> },
 ];
 
-/**
- * Componente de navegación principal
- * Muestra diferentes opciones según el rol del usuario
- */
-const Navigation = () => {
-  const { user } = useAuth();
-  const location = useLocation();
-  const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+const drawerWidth = 260;
 
-  // Determinar qué menú mostrar según el rol
-  const pages =
+// 3. Tipamos el componente como un Functional Component de React
+const Navigation: React.FC = () => {
+  const { user }: { user: IUser | null } = useAuth(); // Tipamos la salida del hook
+  const location = useLocation();
+  const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
+
+  const pages: NavItem[] =
     user?.role === "admin"
       ? adminPages
       : user?.role === "lab"
       ? labPages
       : clientPages;
 
-  // Manejadores para el menú de usuario
-  const handleOpenUserMenu = (event: MouseEvent<HTMLElement>) => {
-    setAnchorElUser(event.currentTarget);
-  };
+  // 4. Tipamos los eventos del handler
+  const toggleDrawer =
+    (open: boolean) => (event: React.KeyboardEvent | React.MouseEvent) => {
+      if (
+        event &&
+        event.type === "keydown" &&
+        ((event as React.KeyboardEvent).key === "Tab" ||
+          (event as React.KeyboardEvent).key === "Shift")
+      ) {
+        return;
+      }
+      setDrawerOpen(open);
+    };
 
-  const handleCloseUserMenu = () => {
-    setAnchorElUser(null);
-  };
-
-  // Manejadores para el drawer responsive
-  const toggleDrawer = (open: boolean) => {
-    setDrawerOpen(open);
-  };
-
-  // Comprobar si la ruta actual coincide con alguna opción del menú
-  const isActive = (path: string) => {
+  const isActive = (path: string): boolean => {
     return (
       location.pathname === path || location.pathname.startsWith(`${path}/`)
     );
   };
 
+  const drawerContent = (
+    <Box
+      sx={{ display: "flex", flexDirection: "column", height: "100%" }}
+      onClick={(event: React.MouseEvent<HTMLDivElement>) => {
+        // 5. Usamos aserción de tipo para usar .closest() de forma segura
+        if ((event.target as HTMLElement).closest("a")) {
+          setDrawerOpen(false);
+        }
+      }}
+    >
+      <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
+        <Typography
+          variant="h6"
+          noWrap
+          component="div"
+          sx={{ fontWeight: 700 }}
+        >
+          INGEOCIMYC
+        </Typography>
+        <IconButton onClick={toggleDrawer(false)}>
+          <ChevronLeftIcon />
+        </IconButton>
+      </Toolbar>
+      <Divider />
+
+      <List sx={{ flexGrow: 1, overflowY: "auto" }}>
+        {pages.map((page) => (
+          <ListItem key={page.name} disablePadding>
+            <ListItemButton
+              component={RouterLink}
+              to={page.path}
+              selected={isActive(page.path)}
+            >
+              <ListItemIcon>{page.icon}</ListItemIcon>
+              <ListItemText primary={page.name} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+
+      <Divider />
+
+      <Box sx={{ p: 2 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+          <Avatar
+            alt={user?.name || user?.email}
+            src="/static/images/avatar/2.jpg"
+          />
+          <Typography fontWeight="bold" noWrap>
+            {user?.name || user?.email}
+          </Typography>
+        </Box>
+        <List sx={{ p: 0 }}>
+          {settings.map((setting) => (
+            <ListItem key={setting.name} disablePadding>
+              <ListItemButton component={RouterLink} to={setting.path}>
+                <ListItemIcon>{setting.icon}</ListItemIcon>
+                <ListItemText primary={setting.name} />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+    </Box>
+  );
+
   return (
-    <AppBar position="static">
-      <Container maxWidth="xl">
-        <Toolbar disableGutters>
-          {/* Logo y título - Desktop */}
-          <Typography
-            variant="h6"
-            noWrap
-            component={RouterLink}
-            to="/"
-            sx={{
-              mr: 2,
-              display: { xs: "none", md: "flex" },
-              fontFamily: "monospace",
-              fontWeight: 700,
-              letterSpacing: ".3rem",
-              color: "inherit",
-              textDecoration: "none",
-            }}
-          >
-            INGEOCIMYC
-          </Typography>
+    <>
+      <Fab
+        color="primary"
+        aria-label="open menu"
+        onClick={toggleDrawer(!drawerOpen)}
+        sx={{
+          position: "fixed",
+          top: 16,
+          left: 16,
+          zIndex: theme.zIndex.drawer + 2,
+        }}
+      >
+        {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
+      </Fab>
 
-          {/* Mobile navigation */}
-          <Box sx={{ flexGrow: 1, display: { xs: "flex", md: "none" } }}>
-            <IconButton
-              size="large"
-              aria-label="menu"
-              aria-controls="menu-appbar"
-              aria-haspopup="true"
-              onClick={() => toggleDrawer(true)}
-              color="inherit"
-            >
-              <MenuIcon />
-            </IconButton>
-            <Drawer
-              anchor="left"
-              open={drawerOpen}
-              onClose={() => toggleDrawer(false)}
-            >
-              <Box
-                sx={{ width: 250 }}
-                role="presentation"
-                onClick={() => toggleDrawer(false)}
-                onKeyDown={() => toggleDrawer(false)}
-              >
-                <List>
-                  <ListItem disablePadding>
-                    <ListItemButton component={RouterLink} to="/">
-                      <ListItemText primary="INGEOCIMYC" />
-                    </ListItemButton>
-                  </ListItem>
-                  <Divider />
-                  {pages.map((page) => (
-                    <ListItem key={page.name} disablePadding>
-                      <ListItemButton
-                        component={RouterLink}
-                        to={page.path}
-                        selected={isActive(page.path)}
-                      >
-                        <ListItemIcon>{page.icon}</ListItemIcon>
-                        <ListItemText primary={page.name} />
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            </Drawer>
-          </Box>
-
-          {/* Logo y título - Mobile */}
-          <Typography
-            variant="h6"
-            noWrap
-            component={RouterLink}
-            to="/"
-            sx={{
-              flexGrow: 1,
-              display: { xs: "flex", md: "none" },
-              fontFamily: "monospace",
-              fontWeight: 700,
-              letterSpacing: ".2rem",
-              color: "inherit",
-              textDecoration: "none",
-            }}
-          >
-            INGEOCIMYC
-          </Typography>
-
-          {/* Desktop navigation */}
-          <Box sx={{ flexGrow: 1, display: { xs: "none", md: "flex" } }}>
-            {pages.map((page) => (
-              <Button
-                key={page.name}
-                component={RouterLink}
-                to={page.path}
-                sx={{
-                  my: 2,
-                  color: "white",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  backgroundColor: isActive(page.path)
-                    ? "rgba(255, 255, 255, 0.2)"
-                    : "transparent",
-                  "&:hover": {
-                    backgroundColor: "rgba(255, 255, 255, 0.1)",
-                  },
-                }}
-              >
-                {page.icon}
-                {page.name}
-              </Button>
-            ))}
-          </Box>
-
-          {/* User menu */}
-          <Box sx={{ flexGrow: 0 }}>
-            <Tooltip title="Abrir configuración">
-              <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                <Avatar
-                  alt={user?.name || user?.email || "Usuario"}
-                  src="/static/images/avatar/2.jpg"
-                />
-              </IconButton>
-            </Tooltip>
-            <Menu
-              sx={{ mt: "45px" }}
-              id="menu-appbar"
-              anchorEl={anchorElUser}
-              anchorOrigin={{
-                vertical: "top",
-                horizontal: "right",
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: "top",
-                horizontal: "right",
-              }}
-              open={Boolean(anchorElUser)}
-              onClose={handleCloseUserMenu}
-            >
-              <MenuItem disabled sx={{ opacity: 0.7 }}>
-                <Typography textAlign="center">
-                  {user?.name || user?.email || "Usuario"}
-                </Typography>
-              </MenuItem>
-              <Divider />
-              {settings.map((setting) => (
-                <MenuItem
-                  key={setting.name}
-                  component={RouterLink}
-                  to={setting.path}
-                  onClick={handleCloseUserMenu}
-                  sx={{
-                    display: "flex",
-                    gap: 1,
-                  }}
-                >
-                  {setting.icon}
-                  <Typography textAlign="center">{setting.name}</Typography>
-                </MenuItem>
-              ))}
-            </Menu>
-          </Box>
-        </Toolbar>
-      </Container>
-    </AppBar>
+      <Drawer
+        anchor="left"
+        // Recomendación: Mantener "temporary" para que el componente sea 100% autocontenido
+        // sin necesidad de modificar el layout padre.
+        variant={isDesktop ? "persistent" : "temporary"} // Si prefieres el efecto "push", y ajustas el layout padre
+        // variant="temporary" // Opción más simple y segura
+        open={drawerOpen}
+        onClose={toggleDrawer(false)}
+        sx={{
+          width: drawerWidth,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: drawerWidth,
+            boxSizing: "border-box",
+          },
+        }}
+      >
+        {drawerContent}
+      </Drawer>
+    </>
   );
 };
 

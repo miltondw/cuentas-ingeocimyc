@@ -19,12 +19,20 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate, useParams } from "react-router-dom";
 import { projectsService } from "../services/projectsServiceNew";
+import { formatNumber, parseNumber } from "@/utils/formatNumber";
 import type {
   CreateProjectDto,
   UpdateProjectDto,
   PaymentMethod,
   CreateProjectExpensesDto,
 } from "../types/projectTypes";
+
+// Interface para campos extras
+interface ExtraField {
+  id: string;
+  description: string;
+  value: number;
+}
 
 // Opciones para métodos de pago según la documentación del backend
 const paymentMethods: { value: PaymentMethod; label: string }[] = [
@@ -45,7 +53,7 @@ export const ProjectFormCorrected: React.FC = () => {
 
   // Estados para el proyecto principal
   const [project, setProject] = useState<CreateProjectDto>({
-    fecha: new Date().toISOString().split("T")[0], // YYYY-MM-DD format
+    fecha: new Date().toISOString().split("T")[0],
     solicitante: "",
     nombreProyecto: "",
     obrero: "",
@@ -56,6 +64,7 @@ export const ProjectFormCorrected: React.FC = () => {
     metodoDePago: "efectivo",
     expenses: [],
   });
+
   type ExpenseFieldsType = keyof Omit<
     CreateProjectExpensesDto,
     "id" | "project_id" | "otrosCampos"
@@ -70,6 +79,7 @@ export const ProjectFormCorrected: React.FC = () => {
     "combustible",
     "hospedaje",
   ];
+
   // Estados para gastos del proyecto
   const [expenses, setExpenses] = useState<
     Omit<CreateProjectExpensesDto, "id" | "project_id">
@@ -83,7 +93,9 @@ export const ProjectFormCorrected: React.FC = () => {
     combustible: 0,
     hospedaje: 0,
     otrosCampos: {},
-  }); // Estado para campos extras dinámicos
+  });
+
+  // Estado para campos extras dinámicos
   const [extraFields, setExtraFields] = useState<ExtraField[]>([]);
 
   // Estados de la UI
@@ -115,27 +127,27 @@ export const ProjectFormCorrected: React.FC = () => {
           factura: response?.factura || "",
           valorRetencion: response?.valorRetencion || 0,
           metodoDePago: response?.metodoDePago || "efectivo",
-          expenses: [], // Initialize as empty array since expenses is handled separately
-        }); // Cargar valores formateados
+          expenses: [],
+        });
 
         // Cargar gastos si existen
-        if (response?.gastos) {
+        if (response?.expenses?.[0]) {
           setExpenses({
-            camioneta: response?.gastos.camioneta || 0,
-            campo: response?.gastos.campo || 0,
-            obreros: response?.gastos.obreros || 0,
-            comidas: response?.gastos.comidas || 0,
-            otros: response?.gastos.otros || 0,
-            peajes: response?.gastos.peajes || 0,
-            combustible: response?.gastos.combustible || 0,
-            hospedaje: response?.gastos.hospedaje || 0,
-            otrosCampos: response?.gastos.otrosCampos || {},
+            camioneta: response?.expenses[0].camioneta || 0,
+            campo: response?.expenses[0].campo || 0,
+            obreros: response?.expenses[0].obreros || 0,
+            comidas: response?.expenses[0].comidas || 0,
+            otros: response?.expenses[0].otros || 0,
+            peajes: response?.expenses[0].peajes || 0,
+            combustible: response?.expenses[0].combustible || 0,
+            hospedaje: response?.expenses[0].hospedaje || 0,
+            otrosCampos: response?.expenses[0].otrosCampos || {},
           });
 
           // Cargar campos extras desde otrosCampos
-          if (response?.gastos.otrosCampos) {
+          if (response?.expenses[0].otrosCampos) {
             const extraFieldsFromData = Object.entries(
-              response?.gastos.otrosCampos
+              response?.expenses[0].otrosCampos
             ).map(([key, value], index) => ({
               id: `existing_${index}`,
               description: key.replace(/_/g, " "),
@@ -174,7 +186,6 @@ export const ProjectFormCorrected: React.FC = () => {
       const otrosCampos: Record<string, number> = {};
       extraFields.forEach((field) => {
         if (field.description.trim() && field.value > 0) {
-          // Formatear la clave como name_description
           const key = field.description.replace(/\s+/g, "_");
           otrosCampos[key] = field.value;
         }
@@ -192,28 +203,17 @@ export const ProjectFormCorrected: React.FC = () => {
           id: parseInt(id),
         };
         await projectsService.updateProject(parseInt(id), updateData);
-
-        // Actualizar gastos
-        await projectsService.updateProjectExpenses(parseInt(id), expensesData);
       } else {
         // Crear nuevo proyecto
-        project.expenses = [expensesData]; // Asignar gastos al proyecto
-        const response = await projectsService.createProject(project);
-
-        if (response) {
-          // Crear gastos para el nuevo proyecto
-          const newExpensesData: CreateProjectExpensesDto = {
-            ...expensesData,
-          };
-          await projectsService.createProjectExpenses(newExpensesData);
-        }
+        project.expenses = [expensesData];
+        await projectsService.createProject(project);
       }
 
       setSuccess(true);
 
       // Redirigir después de 2 segundos
       setTimeout(() => {
-        navigate("/admin/projects");
+        navigate("/proyectos");
       }, 2000);
     } catch (err) {
       setError(
@@ -225,15 +225,6 @@ export const ProjectFormCorrected: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-  // Funciones de formateo de números
-  const formatNumber = (value: number | string): string => {
-    if (value === "" || value === 0 || isNaN(Number(value))) return "";
-    return Number(value).toLocaleString("en-US");
-  };
-
-  const unformatNumber = (value: string): string => {
-    return value.replace(/,/g, "");
   };
 
   // Funciones para manejar campos extras
@@ -252,40 +243,22 @@ export const ProjectFormCorrected: React.FC = () => {
 
   const updateExtraField = (id: string, updates: Partial<ExtraField>) => {
     setExtraFields((prev) =>
-      prev.map((field) => (field.id === id ? { ...field, ...updates } : field))
+      prev.map((field) => {
+        if (field.id === id) {
+          if ("value" in updates) {
+            const valueStr = String(updates.value);
+            const numericValue = parseNumber(valueStr);
+            return {
+              ...field,
+              ...updates,
+              value: Number(numericValue) || 0,
+            };
+          }
+          return { ...field, ...updates };
+        }
+        return field;
+      })
     );
-  };
-
-  // Interface para campos extras
-  interface ExtraField {
-    id: string;
-    description: string;
-    value: number;
-  }
-  // Funciones para manejar campos con formateo de números
-  const handleFormattedNumberChange = (
-    field: keyof CreateProjectDto,
-    value: string
-  ) => {
-    const unformattedValue = unformatNumber(value);
-
-    // Actualizar el estado del proyecto con el valor numérico
-    setProject((prev) => ({
-      ...prev,
-      [field]: Number(unformattedValue) || 0,
-    }));
-  };
-
-  // Función para manejar campos de gastos con formateo
-  const handleFormattedExpenseChange = (
-    field: keyof Omit<CreateProjectExpensesDto, "id">,
-    value: string
-  ) => {
-    const unformattedValue = unformatNumber(value);
-    setExpenses((prev) => ({
-      ...prev,
-      [field]: Number(unformattedValue) || 0,
-    }));
   };
 
   if (loading && isEditing) {
@@ -362,45 +335,57 @@ export const ProjectFormCorrected: React.FC = () => {
               label="Fecha del Proyecto"
               value={project.fecha}
               onChange={(e) => handleProjectChange("fecha", e.target.value)}
-              slotProps={{ inputLabel: { shrink: true } }}
+              InputLabelProps={{ shrink: true }}
               required
             />
           </Grid2>
+
           {/* Información financiera */}
           <Grid2 size={{ xs: 12 }}>
             <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
               Información Financiera
             </Typography>
-          </Grid2>{" "}
+          </Grid2>
+          
+          {/* Campos financieros con formateo en tiempo real */}
           <Grid2 size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               label="Costo del Servicio"
               value={formatNumber(project.costoServicio)}
-              onChange={(e) =>
-                handleFormattedNumberChange("costoServicio", e.target.value)
-              }
+              onChange={(e) => {
+                const numericValue = parseNumber(e.target.value);
+                handleProjectChange("costoServicio", Number(numericValue) || 0);
+              }}
               required
+              placeholder="0"
+              helperText="Formato colombiano (ej: 1,000,000)"
             />
           </Grid2>
           <Grid2 size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               label="Abono"
-              value={formatNumber(Number(project.abono) || 0)}
-              onChange={(e) =>
-                handleFormattedNumberChange("abono", e.target.value)
-              }
+              value={formatNumber(project.abono)}
+              onChange={(e) => {
+                const numericValue = parseNumber(e.target.value);
+                handleProjectChange("abono", Number(numericValue) || 0);
+              }}
+              placeholder="0"
+              helperText="Formato colombiano (ej: 500,000)"
             />
-          </Grid2>{" "}
+          </Grid2>
           <Grid2 size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               label="Valor Retención (%)"
-              value={formatNumber(Number(project.valorRetencion) || 0)}
-              onChange={(e) =>
-                handleFormattedNumberChange("valorRetencion", e.target.value)
-              }
+              value={formatNumber(project.valorRetencion)}
+              onChange={(e) => {
+                const numericValue = parseNumber(e.target.value);
+                handleProjectChange("valorRetencion", Number(numericValue) || 0);
+              }}
+              placeholder="0"
+              helperText="Porcentaje de retención (ej: 4)"
             />
           </Grid2>
           <Grid2 size={{ xs: 12, md: 6 }}>
@@ -432,25 +417,34 @@ export const ProjectFormCorrected: React.FC = () => {
               onChange={(e) => handleProjectChange("factura", e.target.value)}
             />
           </Grid2>
+
           {/* Gastos del proyecto */}
           <Grid2 size={{ xs: 12 }}>
             <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
               Gastos del Proyecto
             </Typography>
-          </Grid2>{" "}
+          </Grid2>
+          
+          {/* Campos de gastos con formateo en tiempo real */}
           {fieldsGastos.map((field) => (
             <Grid2 size={{ xs: 12, md: 6, lg: 4 }} key={field}>
               <TextField
                 fullWidth
-                label={field.toUpperCase()}
-                value={formatNumber(Number(expenses[field]) || 0)}
-                onChange={(e) =>
-                  handleFormattedExpenseChange(field, e.target.value)
-                }
-                slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+                label={field.charAt(0).toUpperCase() + field.slice(1)}
+                value={formatNumber(expenses[field])}
+                onChange={(e) => {
+                  const numericValue = parseNumber(e.target.value);
+                  setExpenses((prev) => ({
+                    ...prev,
+                    [field]: Number(numericValue) || 0,
+                  }));
+                }}
+                placeholder="0"
+                helperText="Formato colombiano (ej: 100,000)"
               />
             </Grid2>
           ))}
+
           {/* Campos extras dinámicos */}
           <Grid2 size={{ xs: 12 }}>
             <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
@@ -473,21 +467,19 @@ export const ProjectFormCorrected: React.FC = () => {
                         }
                       />
                     </Grid2>
-
                     <Grid2 size={{ xs: 4 }}>
                       <TextField
                         fullWidth
                         label="Valor"
-                        value={field.value}
-                        onChange={(e) =>
-                          updateExtraField(field.id, {
-                            value: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+                        value={formatNumber(field.value)}
+                        onChange={(e) => {
+                          const numericValue = parseNumber(e.target.value);
+                          updateExtraField(field.id, { value: Number(numericValue) || 0 });
+                        }}
+                        placeholder="0"
+                        helperText="Formato colombiano"
                       />
                     </Grid2>
-
                     <Grid2 size={{ xs: 12 }}>
                       <IconButton
                         color="error"
@@ -510,6 +502,7 @@ export const ProjectFormCorrected: React.FC = () => {
               Agregar Campo Extra
             </Button>
           </Grid2>
+
           {/* Botones */}
           <Grid2 size={{ xs: 12 }}>
             <Box

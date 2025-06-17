@@ -30,11 +30,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const checkAuth = async () => {
       try {
         const userData = tokenStorage.getUserData<User>();
-        console.info("📝 AuthContext - userData from storage:", userData);
+        // console.info("📝 AuthContext - userData from storage:", userData);
         if (!userData) {
-          console.info(
+          /*  console.info(
             "❌ AuthContext - No userData found, setting unauthenticated"
-          );
+          ); */
           setAuthState({ isAuthenticated: false, user: null, loading: false });
           return;
         }
@@ -44,10 +44,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           ...userData,
           name: userData.name || userData.email || "Usuario",
         };
-        console.info(
+        /* console.info(
           "✅ AuthContext - Normalized userData:",
           normalizedUserData
-        );
+        ); */
 
         // Si estamos offline, usar datos almacenados
         if (!navigator.onLine) {

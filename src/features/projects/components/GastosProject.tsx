@@ -35,7 +35,8 @@ import api from "@/api";
 import { useNotifications } from "@/api/hooks/useNotifications";
 import { LoadingOverlay } from "@/components/common/LoadingOverlay";
 import { ProjectFilters } from "@/types/api";
-
+import { formatNumber, parseNumber } from "@/utils/formatNumber";
+import { useQueryClient } from "@tanstack/react-query";
 // Types
 interface TableColumn {
   id: string;
@@ -198,12 +199,6 @@ const tableRowInputs: TableColumn[] = [
 ];
 
 // Utility functions
-const formatNumber = (value: number | string): string =>
-  value === "" || isNaN(Number(value))
-    ? ""
-    : Number(value).toLocaleString("es-CO");
-
-const unformatNumber = (value: string): string => value.replace(/,/g, "");
 
 const formatDate = (dateStr: string): string =>
   dateStr
@@ -219,7 +214,7 @@ const getGastos = (project: Project): ProjectGastos => {
         : null; // Tomar el primer gasto (debería ser único por proyecto)
 
     if (!expenses) {
-      console.info(`Proyecto ID ${project.id} no tiene datos de gastos.`);
+      //console.info(`Proyecto ID ${project.id} no tiene datos de gastos.`);
       return {};
     }
 
@@ -260,7 +255,7 @@ const getGastos = (project: Project): ProjectGastos => {
       });
     }
 
-    console.info(`✅ Gastos procesados para proyecto ${project.id}:`, gastos);
+    //  console.info(`✅ Gastos procesados para proyecto ${project.id}:`, gastos);
     return gastos;
   } catch (error) {
     console.warn(`Error procesando gastos para proyecto ${project.id}:`, error);
@@ -270,13 +265,14 @@ const getGastos = (project: Project): ProjectGastos => {
 
 const calculateValues = (project: Project): ProjectCalculations => {
   const gastos = getGastos(project);
-  const costo = parseFloat(String(project.costoServicio)) || 0;
-  const abono = Number(unformatNumber(String(project.abono))) || 0;
+  const costo = Number(project.costoServicio) || 0;
+  const abono = Number(project.abono) || 0;
   const totalGastos = Object.values(gastos).reduce(
     (sum, value) => sum + value,
     0
   );
   const saldo = Math.max(costo - abono, 0);
+
   const estadoCuenta: "Pendiente" | "Pagado" | "Abonado" =
     abono === 0 ? "Pendiente" : abono >= costo ? "Pagado" : "Abonado";
   const re = (Number(project.valorRetencion) / 100) * project.costoServicio;
@@ -300,6 +296,7 @@ const colorEstadoCuenta = (estado: string): string => {
 
 const GastosProject: React.FC = () => {
   const { showNotification, showError } = useNotifications();
+  const queryClient = useQueryClient();
   const [state, setState] = useState<AppState>({
     allProjects: [],
     filters: {
@@ -344,7 +341,7 @@ const GastosProject: React.FC = () => {
         const params = buildQueryParams();
         const response = await api.get("/projects", { params });
 
-        console.info("Respuesta del backend:", response.data); // Debug
+        //console.info("Respuesta del backend:", response.data); // Debug
 
         const proyectos =
           response.data.data?.map((p: Project) => ({
@@ -444,27 +441,39 @@ const GastosProject: React.FC = () => {
     try {
       setState((prev) => ({ ...prev, loading: true }));
 
+      // Convertir a número para enviar al backend
+      const montoNumerico = Number(paymentAmount);
+
       await api.patch(`/projects/${selectedProject.id}/payment`, {
-        abono: unformatNumber(paymentAmount),
+        monto: montoNumerico,
       });
 
       showNotification({
         type: "success",
         title: "Pago Procesado",
         message: `Se ha registrado el abono de $${formatNumber(
-          paymentAmount
+          montoNumerico
         )} al proyecto ${selectedProject.nombreProyecto}`,
         duration: 4000,
       });
 
-      // Refresh projects
-      const response = await api.get("/projects");
+      // Invalidar las queries de proyectos para refrescar automáticamente
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+
       setState((prev) => ({
         ...prev,
-        allProjects: response.data.data,
+        allProjects: prev.allProjects.map((project) => {
+          if (project.id === selectedProject.id) {
+            return {
+              ...project,
+              abono: Number(project.abono) + Number(montoNumerico),
+            };
+          }
+          return project;
+        }),
         modals: { ...prev.modals, payment: false },
-        paymentAmount: "",
         selectedProject: null,
+        paymentAmount: "",
         loading: false,
       }));
     } catch (error) {
@@ -556,6 +565,17 @@ const GastosProject: React.FC = () => {
         expandedRows: newExpandedRows,
       };
     });
+  };
+
+  const handlePaymentAmountChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = e.target.value;
+    // Permitir solo números y comas
+    const cleaned = value.replace(/[^\d,]/g, "");
+    // Guardar el valor sin comas para los cálculos
+    const numericValue = parseNumber(cleaned);
+    setState((prev) => ({ ...prev, paymentAmount: String(numericValue) }));
   };
 
   if (state.loading) {
@@ -990,19 +1010,27 @@ const GastosProject: React.FC = () => {
             <br />
             Abonado:{" "}
             <strong>${formatNumber(state.selectedProject?.abono || 0)}</strong>
+            <br />
+            Saldo:
+            <strong>
+              $
+              {formatNumber(
+                (state.selectedProject?.costoServicio ?? 0) -
+                  (state.selectedProject?.abono ?? 0)
+              )}
+            </strong>
           </DialogContentText>
+
           <TextField
             fullWidth
             label="Monto del Pago"
-            value={state.paymentAmount}
-            onChange={(e) =>
-              setState((prev) => ({ ...prev, paymentAmount: e.target.value }))
-            }
+            value={formatNumber(state.paymentAmount)}
+            onChange={handlePaymentAmountChange}
             variant="outlined"
-            type="number"
-            inputProps={{ min: 0 }}
+            placeholder="0"
             sx={{ mt: 2 }}
             autoFocus
+            helperText="Ingrese el monto del pago"
           />
         </DialogContent>
         <DialogActions>

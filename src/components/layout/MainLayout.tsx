@@ -81,7 +81,6 @@ const MainLayout = () => {
       <Container
         maxWidth="xl"
         sx={{
-          mt: 4,
           mb: 4,
           flexGrow: 1,
           position: "relative",

@@ -1,4 +1,3 @@
-import "./App.css";
 import { BrowserRouter as Router } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Alert, Container, Button } from "@mui/material";

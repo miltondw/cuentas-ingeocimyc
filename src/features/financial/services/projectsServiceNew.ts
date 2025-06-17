@@ -105,7 +105,7 @@ export const projectsService = {
    */
   async addPayment(
     id: number,
-    paymentData: { abono: number; factura?: string }
+    paymentData: { monto: number; factura?: string }
   ): Promise<ApiResponse<Project>> {
     const response = await apiClient.patch(
       `${BASE_URL}/${id}/payment`,

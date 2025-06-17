@@ -15,6 +15,7 @@ export interface Project {
   factura?: string;
   valorRetencion?: number; // decimal(10,2), default 0.00
   metodoDePago?: "efectivo" | "transferencia" | "cheque" | "credito";
+  expenses: CreateProjectExpensesDto[];
 }
 
 // Tipos para gastos de proyectos (tabla separada)
