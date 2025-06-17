@@ -1,11 +1,14 @@
-import { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { menuConfig, MenuItemConfig } from "./menuConfig";
-import { useAuth } from "@api/AuthContext";
+import { useAuth } from "@/api/useAuth";
 
 export const useResponsiveAppBar = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth(); // Asegura el tipo AuthContextType
+
+  // Debug logs
+  console.log("🧭 Navigation - Auth state:", { user, isAuthenticated });
 
   // Estados para manejar menús
   const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null);
@@ -31,16 +34,22 @@ export const useResponsiveAppBar = () => {
       return acc;
     }, {} as Record<string, null>)
   );
-
   const generatePages = useCallback((): Record<string, MenuItemConfig[]> => {
     const result: Record<string, MenuItemConfig[]> = {};
+
+    // Si no hay usuario autenticado, retornar objeto vacío
+    if (!user) {
+      return result;
+    }
+
     menuConfig.menuItems.forEach((item) => {
-      const normalizedUserRole = user?.rol?.toLowerCase();
+      const normalizedUserRole = user.role?.toLowerCase();
       const normalizedItemRoles = item.roles?.map((rol) => rol.toLowerCase());
 
       if (
         !item.roles ||
         (normalizedItemRoles &&
+          normalizedUserRole &&
           normalizedItemRoles.includes(normalizedUserRole))
       ) {
         result[item.key] = [...item.items];
@@ -109,12 +118,13 @@ export const useResponsiveAppBar = () => {
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
     }
-  }, [logout, navigate]);
-
-  // Generar iniciales para avatar
+  }, [logout, navigate]); // Generar iniciales para avatar
   const getInitials = useCallback(() => {
-    if (!user || !user.name) return "?";
-    return user.name
+    if (!user) return "?";
+
+    const name = user.name || user.email || "Usuario";
+
+    return name
       .split(" ")
       .map((word: string) => word[0])
       .join("")

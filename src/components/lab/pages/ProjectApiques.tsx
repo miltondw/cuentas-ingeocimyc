@@ -22,6 +22,13 @@ import {
   DialogActions,
   Button,
   styled,
+  Alert,
+  Pagination,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  TextField,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
@@ -30,27 +37,15 @@ import EditIcon from "@mui/icons-material/Edit";
 import TerrainIcon from "@mui/icons-material/Terrain";
 import LayersIcon from "@mui/icons-material/Layers";
 import ScienceIcon from "@mui/icons-material/Science";
-import api from "@api";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import { projectsService } from "@/api/services";
+import { useAuth } from "@/api/useAuth";
+import { useApiques } from "../hooks/useApiques";
+import type { Project, ApiquesFilters, Apique } from "@/types/api";
 
-interface Layer {
-  thickness?: number;
-  sample_id?: string;
-}
-
-interface Apique {
-  apique_id: string;
-  apique: string;
-  date?: string;
-  location?: string;
-  layers?: Layer[];
-  cbr_unaltered?: boolean;
-}
-
-interface Project {
-  nombre: string;
-  ubicacion?: string;
-  descripcion?: string;
-}
+// Import modern components
+import { LoadingOverlay } from "@/components/common/LoadingOverlay";
+import { useNotifications } from "@/api/hooks/useNotifications";
 
 const StyledCard = styled(Card)(({ theme }) => ({
   transition: "transform 0.2s, box-shadow 0.2s",
@@ -61,58 +56,112 @@ const StyledCard = styled(Card)(({ theme }) => ({
 }));
 
 const ProjectApiques = () => {
-  const [apiques, setApiques] = useState<Apique[]>([]);
   const [project, setProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [projectLoading, setProjectLoading] = useState(true);
+  const [projectError, setProjectError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
-    apiqueId: string | null;
+    apiqueId: number | null;
   }>({ open: false, apiqueId: null });
+
+  const [showFilters, setShowFilters] = useState(false);
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const isMobile = useMediaQuery("(max-width:768px)");
+  const { hasAnyRole } = useAuth();
+  const { showNotification } = useNotifications();
+
+  const projectIdNum = projectId ? parseInt(projectId) : 0;
+  const {
+    paginatedApiques,
+    loading: apiquesLoading,
+    error: apiquesError,
+    filters,
+    updateFilters,
+    deleteApique,
+  } = useApiques(projectIdNum);
 
   useEffect(() => {
-    const fetchProjectAndApiques = async () => {
-      try {
-        setLoading(true);
-        const projectResponse = await api.get(`/projects/${projectId}`);
-        setProject(projectResponse.data.project);
+    const fetchProject = async () => {
+      if (!projectIdNum) return;
 
-        const apiquesResponse = await api.get(`/projects/${projectId}/apiques`);
-        setApiques(apiquesResponse.data.apiques || []);
+      try {
+        setProjectLoading(true);
+        setProjectError(null);
+        const projectResponse = await projectsService.getProject(projectIdNum);
+        setProject(projectResponse);
       } catch (err) {
-        console.error("Error al cargar datos:", err);
-        setError("Error al cargar los apiques. Por favor, intenta de nuevo.");
+        console.error("Error al cargar proyecto:", err);
+        const errorMessage =
+          err instanceof Error ? err.message : "Error al cargar el proyecto";
+        setProjectError(errorMessage);
+        showNotification({
+          type: "error",
+          message: errorMessage,
+        });
       } finally {
-        setLoading(false);
+        setProjectLoading(false);
       }
     };
-
-    fetchProjectAndApiques();
-  }, [projectId]);
-
+    fetchProject();
+  }, [projectIdNum, showNotification]);
   const handleCreateApique = () => {
     navigate(`/lab/proyectos/${projectId}/apique/nuevo`);
   };
 
-  const handleEditApique = (apiqueId: string) => {
+  const handleEditApique = (apiqueId: number) => {
     navigate(`/lab/proyectos/${projectId}/apique/${apiqueId}`);
   };
+  const handleDeleteApique = async () => {
+    if (!deleteDialog.apiqueId) return;
 
-  const handleDeleteApique = async (apiqueId: string) => {
     try {
-      await api.delete(`/projects/${projectId}/apiques/${apiqueId}`);
-      setApiques(apiques.filter((apique) => apique.apique_id !== apiqueId));
-      setDeleteDialog({ open: false, apiqueId: null });
+      const result = await deleteApique(deleteDialog.apiqueId);
+      if (result.success) {
+        showNotification({
+          type: "success",
+          message: "Apique eliminado exitosamente",
+        });
+        setDeleteDialog({ open: false, apiqueId: null });
+      } else {
+        showNotification({
+          type: "error",
+          message: result.error || "Error al eliminar el apique",
+        });
+        console.error("Error al eliminar apique:", result.error);
+      }
     } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Error inesperado al eliminar el apique";
+      showNotification({
+        type: "error",
+        message: errorMessage,
+      });
       console.error("Error al eliminar apique:", err);
-      setError("No se pudo eliminar el apique. Intenta de nuevo.");
     }
   };
 
-  const openDeleteDialog = (apiqueId: string) => {
+  const handlePageChange = (_event: unknown, newPage: number) => {
+    updateFilters({ page: newPage });
+  };
+
+  const handleFilterChange = (newFilters: Partial<ApiquesFilters>) => {
+    updateFilters({ ...newFilters, page: 1 }); // Reset to page 1 when filtering
+  };
+
+  const handleStatusChange = (status: string) => {
+    if (status === "all") {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { status: _, ...filtersWithoutStatus } = filters;
+      updateFilters(filtersWithoutStatus);
+    } else {
+      handleFilterChange({ status: status as ApiquesFilters["status"] });
+    }
+  };
+
+  const openDeleteDialog = (apiqueId: number) => {
     setDeleteDialog({ open: true, apiqueId });
   };
 
@@ -129,27 +178,20 @@ const ProjectApiques = () => {
       day: "numeric",
     });
   };
-
-  const getLayersCount = (layers?: Layer[]): number => {
+  const getLayersCount = (layers?: unknown[]): number => {
     return layers?.length || 0;
   };
-
-  const getSamplesCount = (layers?: Layer[]): number => {
+  const getSamplesCount = (layers?: unknown[]): number => {
     if (!layers) return 0;
-    return layers.filter((layer) => layer.sample_id).length;
+    return layers.filter(
+      (layer: unknown) => (layer as { sampleId?: string }).sampleId
+    ).length;
   };
 
-  const getMaxDepth = (layers?: Layer[]): string => {
-    if (!layers || !layers.length) return "0.00";
-    return layers
-      .reduce(
-        (sum, layer) => sum + parseFloat(layer.thickness?.toString() || "0"),
-        0
-      )
-      .toFixed(2);
+  const getMaxDepth = (apique: Apique): string => {
+    return apique.depth?.toFixed(2) || "0.00";
   };
-
-  if (loading) {
+  if (projectLoading || apiquesLoading) {
     return (
       <Container sx={{ py: 4 }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
@@ -173,7 +215,8 @@ const ProjectApiques = () => {
     );
   }
 
-  if (error) {
+  if (projectError || apiquesError) {
+    const errorMessage = projectError || apiquesError;
     return (
       <Container sx={{ py: 4 }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
@@ -185,215 +228,341 @@ const ProjectApiques = () => {
           </IconButton>
           <Typography variant="h5">Error</Typography>
         </Box>
-        <Paper sx={{ p: 3, backgroundColor: "#fff4f4" }}>
-          <Typography color="error" aria-live="polite">
-            {error}
-          </Typography>
-        </Paper>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {errorMessage}
+        </Alert>
+        <Button variant="contained" onClick={() => window.location.reload()}>
+          Reintentar
+        </Button>
       </Container>
     );
   }
 
+  const apiques = paginatedApiques?.data || [];
+  const pagination = paginatedApiques?.pagination;
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
-        <Tooltip title="Volver a proyectos">
-          <IconButton
-            onClick={() => navigate(-1)}
-            aria-label="Volver a proyectos"
-          >
-            <ArrowBackIcon />
-          </IconButton>
-        </Tooltip>
-        <Typography variant="h4" sx={{ ml: 2, fontWeight: "bold" }}>
-          Apiques de Suelo
-        </Typography>
-        <Box sx={{ flexGrow: 1 }} />
-        <Tooltip title="Crear nuevo apique">
-          <IconButton
-            color="primary"
-            onClick={handleCreateApique}
-            sx={{
-              backgroundColor: (theme) => theme.palette.primary.main,
-              color: "white",
-              "&:hover": {
-                backgroundColor: (theme) => theme.palette.primary.dark,
-              },
-            }}
-            aria-label="Crear nuevo apique"
-          >
-            <AddIcon />
-          </IconButton>
-        </Tooltip>
-      </Box>
-
-      {project && (
-        <Paper
-          sx={{ p: 3, mb: 4, backgroundColor: "#f5f9ff", borderRadius: 2 }}
-        >
-          <Typography variant="h5" fontWeight="bold" gutterBottom>
-            PROYECTO: {project.nombre.toUpperCase()}
+    <LoadingOverlay
+      loading={projectLoading || apiquesLoading}
+      message={projectLoading ? "Cargando proyecto..." : "Cargando apiques..."}
+    >
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
+          <Tooltip title="Volver a proyectos">
+            <IconButton
+              onClick={() => navigate(-1)}
+              aria-label="Volver a proyectos"
+            >
+              <ArrowBackIcon />
+            </IconButton>
+          </Tooltip>
+          <Typography variant="h4" sx={{ ml: 2, fontWeight: "bold" }}>
+            Apiques de Suelo
           </Typography>
-          <Typography variant="body1" sx={{ mb: 1 }}>
-            <strong>UBICACIÓN:</strong> {project.ubicacion || "No especificada"}
-          </Typography>
-          {project.descripcion && (
-            <Typography variant="body2">
-              <strong>DESCRIPCIÓN:</strong> {project.descripcion}
-            </Typography>
+          <Box sx={{ flexGrow: 1 }} />
+          <Tooltip title="Filtrar apiques">
+            <IconButton
+              onClick={() => setShowFilters(!showFilters)}
+              color={showFilters ? "primary" : "default"}
+            >
+              <FilterListIcon />
+            </IconButton>
+          </Tooltip>
+          {hasAnyRole(["admin", "lab"]) && (
+            <Tooltip title="Crear nuevo apique">
+              <IconButton
+                color="primary"
+                onClick={handleCreateApique}
+                sx={{
+                  backgroundColor: (theme) => theme.palette.primary.main,
+                  color: "white",
+                  "&:hover": {
+                    backgroundColor: (theme) => theme.palette.primary.dark,
+                  },
+                  ml: 1,
+                }}
+                aria-label="Crear nuevo apique"
+              >
+                <AddIcon />
+              </IconButton>
+            </Tooltip>
           )}
-        </Paper>
-      )}
+        </Box>
 
-      {apiques.length === 0 ? (
-        <Paper sx={{ p: 5, textAlign: "center", borderRadius: 2 }}>
-          <TerrainIcon sx={{ fontSize: 60, color: "text.secondary", mb: 2 }} />
-          <Typography variant="h6">
-            No hay apiques registrados para este proyecto
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Haz clic en el botón + para crear un nuevo apique
-          </Typography>
-        </Paper>
-      ) : (
-        <Grid2 container spacing={3}>
-          {apiques.map((apique) => (
-            <Grid2 size={{ xs: 12, sm: 6 }} key={apique.apique_id}>
-              <StyledCard>
-                <CardContent sx={{ py: 3 }}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      mb: 2,
-                    }}
+        {/* Filtros */}
+        {showFilters && (
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Filtros
+            </Typography>
+            <Grid2 container spacing={2}>
+              <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Estado</InputLabel>
+                  <Select
+                    value={filters.status || "all"}
+                    label="Estado"
+                    onChange={(e) => handleStatusChange(e.target.value)}
                   >
-                    <Typography variant="h6" fontWeight="bold">
-                      APIQUE #{apique.apique.toUpperCase()}
-                    </Typography>
-                    <Box>
-                      <Tooltip title="Editar apique">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEditApique(apique.apique_id)}
-                          color="primary"
-                          aria-label="Editar apique"
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Eliminar apique">
-                        <IconButton
-                          size="small"
-                          onClick={() => openDeleteDialog(apique.apique_id)}
-                          color="error"
-                          aria-label="Eliminar apique"
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </Box>
-                  <Divider sx={{ mb: 2 }} />
-                  <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
-                  >
-                    <Typography variant="body1">
-                      <strong>FECHA:</strong> {formatDate(apique.date)}
-                    </Typography>
-                    <Typography variant="body1">
-                      <strong>UBICACIÓN:</strong>{" "}
-                      {apique.location || "No especificada"}
-                    </Typography>
-                    <Typography variant="body1">
-                      <strong>PROFUNDIDAD TOTAL:</strong>{" "}
-                      {getMaxDepth(apique.layers)} m
-                    </Typography>
-                    <Typography variant="body1">
-                      <strong>CAPAS:</strong> {getLayersCount(apique.layers)}
-                    </Typography>
-                    <Typography variant="body1">
-                      <strong>MUESTRAS:</strong>{" "}
-                      {getSamplesCount(apique.layers)}
-                    </Typography>
-                    {apique.cbr_unaltered && (
-                      <Typography variant="body1">
-                        <strong>ESTADO:</strong> CBR Inalterado
-                      </Typography>
-                    )}
-                  </Box>
-                  <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
-                    <Chip
-                      icon={<LayersIcon fontSize="small" />}
-                      label={`${getLayersCount(apique.layers)} capas`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                    <Chip
-                      icon={<ScienceIcon fontSize="small" />}
-                      label={`${getSamplesCount(apique.layers)} muestras`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                    {apique.cbr_unaltered && (
-                      <Chip
-                        label="CBR Inalterado"
-                        size="small"
-                        color="secondary"
-                      />
-                    )}
-                  </Box>
-                </CardContent>
-              </StyledCard>
+                    <MenuItem value="all">Todos</MenuItem>
+                    <MenuItem value="collected">Recolectado</MenuItem>
+                    <MenuItem value="analyzing">Analizando</MenuItem>
+                    <MenuItem value="completed">Completado</MenuItem>
+                    <MenuItem value="reported">Reportado</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid2>
+              <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+                <TextField
+                  fullWidth
+                  label="Número de muestra"
+                  value={filters.sampleNumber || ""}
+                  onChange={(e) =>
+                    handleFilterChange({ sampleNumber: e.target.value })
+                  }
+                />
+              </Grid2>
+              <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+                <TextField
+                  fullWidth
+                  label="Profundidad mínima"
+                  type="number"
+                  value={filters.minDepth || ""}
+                  onChange={(e) =>
+                    handleFilterChange({
+                      minDepth: parseFloat(e.target.value) || undefined,
+                    })
+                  }
+                />
+              </Grid2>
+              <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+                <TextField
+                  fullWidth
+                  label="Profundidad máxima"
+                  type="number"
+                  value={filters.maxDepth || ""}
+                  onChange={(e) =>
+                    handleFilterChange({
+                      maxDepth: parseFloat(e.target.value) || undefined,
+                    })
+                  }
+                />
+              </Grid2>
             </Grid2>
-          ))}
-        </Grid2>
-      )}
+          </Paper>
+        )}
 
-      {isMobile && (
-        <Tooltip title="Crear nuevo apique">
-          <Fab
-            color="primary"
-            onClick={handleCreateApique}
-            sx={{ position: "fixed", bottom: 16, right: 16 }}
-            aria-label="Crear nuevo apique"
+        {project && (
+          <Paper
+            sx={{ p: 3, mb: 4, backgroundColor: "#f5f9ff", borderRadius: 2 }}
           >
-            <AddIcon />
-          </Fab>
-        </Tooltip>
-      )}
+            <Typography variant="h5" fontWeight="bold" gutterBottom>
+              PROYECTO: {project.nombreProyecto.toUpperCase()}
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 1 }}>
+              <strong>UBICACIÓN:</strong>{" "}
+              {project.ubicacion || "No especificada"}
+            </Typography>
+            {project.descripcion && (
+              <Typography variant="body2">
+                <strong>DESCRIPCIÓN:</strong> {project.descripcion}
+              </Typography>
+            )}
+            {pagination && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                Mostrando {apiques.length} de {pagination.totalItems} apiques
+              </Typography>
+            )}
+          </Paper>
+        )}
 
-      <Dialog
-        open={deleteDialog.open}
-        onClose={closeDeleteDialog}
-        aria-labelledby="delete-dialog-title"
-        aria-describedby="delete-dialog-description"
-      >
-        <DialogTitle id="delete-dialog-title">
-          Confirmar Eliminación
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="delete-dialog-description">
-            ¿Estás seguro de que deseas eliminar este apique? Esta acción no se
-            puede deshacer.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeDeleteDialog}>Cancelar</Button>
-          <Button
-            onClick={() =>
-              deleteDialog.apiqueId && handleDeleteApique(deleteDialog.apiqueId)
-            }
-            color="error"
-            autoFocus
-          >
-            Eliminar
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+        {apiques.length === 0 ? (
+          <Paper sx={{ p: 5, textAlign: "center", borderRadius: 2 }}>
+            <TerrainIcon
+              sx={{ fontSize: 60, color: "text.secondary", mb: 2 }}
+            />
+            <Typography variant="h6">
+              No hay apiques registrados para este proyecto
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {hasAnyRole(["admin", "lab"])
+                ? "Haz clic en el botón + para crear un nuevo apique"
+                : "No tienes permisos para crear apiques"}
+            </Typography>
+          </Paper>
+        ) : (
+          <>
+            <Grid2 container spacing={3}>
+              {apiques.map((apique) => (
+                <Grid2 size={{ xs: 12, sm: 6 }} key={apique.id}>
+                  <StyledCard>
+                    <CardContent sx={{ py: 3 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          mb: 2,
+                        }}
+                      >
+                        <Typography variant="h6" fontWeight="bold">
+                          APIQUE #{apique.sampleNumber.toUpperCase()}
+                        </Typography>
+                        {hasAnyRole(["admin", "lab"]) && (
+                          <Box>
+                            <Tooltip title="Editar apique">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleEditApique(apique.id)}
+                                color="primary"
+                                aria-label="Editar apique"
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Eliminar apique">
+                              <IconButton
+                                size="small"
+                                onClick={() => openDeleteDialog(apique.id)}
+                                color="error"
+                                aria-label="Eliminar apique"
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        )}
+                      </Box>
+                      <Divider sx={{ mb: 2 }} />
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 1,
+                        }}
+                      >
+                        <Typography variant="body1">
+                          <strong>FECHA:</strong>{" "}
+                          {formatDate(apique.collectionDate)}
+                        </Typography>
+                        <Typography variant="body1">
+                          <strong>UBICACIÓN:</strong>{" "}
+                          {apique.location || "No especificada"}
+                        </Typography>
+                        <Typography variant="body1">
+                          <strong>PROFUNDIDAD:</strong> {getMaxDepth(apique)} m
+                        </Typography>
+                        <Typography variant="body1">
+                          <strong>CAPAS:</strong>{" "}
+                          {getLayersCount(apique.layers)}
+                        </Typography>
+                        <Typography variant="body1">
+                          <strong>MUESTRAS:</strong>{" "}
+                          {getSamplesCount(apique.layers)}
+                        </Typography>
+                        <Typography variant="body1">
+                          <strong>ESTADO:</strong> {apique.status}
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 1,
+                          mt: 2,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <Chip
+                          icon={<LayersIcon fontSize="small" />}
+                          label={`${getLayersCount(apique.layers)} capas`}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                        />
+                        <Chip
+                          icon={<ScienceIcon fontSize="small" />}
+                          label={`${getSamplesCount(apique.layers)} muestras`}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                        />
+                        {apique.cbrUnaltered && (
+                          <Chip
+                            label="CBR Inalterado"
+                            size="small"
+                            color="secondary"
+                          />
+                        )}
+                        <Chip
+                          label={apique.status}
+                          size="small"
+                          color={
+                            apique.status === "completed"
+                              ? "success"
+                              : apique.status === "analyzing"
+                              ? "warning"
+                              : apique.status === "reported"
+                              ? "info"
+                              : "default"
+                          }
+                        />
+                      </Box>
+                    </CardContent>
+                  </StyledCard>
+                </Grid2>
+              ))}
+            </Grid2>
+
+            {/* Paginación */}
+            {pagination && pagination.totalPages > 1 && (
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+                <Pagination
+                  count={pagination.totalPages}
+                  page={pagination.currentPage}
+                  onChange={handlePageChange}
+                  color="primary"
+                  size={isMobile ? "small" : "medium"}
+                />
+              </Box>
+            )}
+          </>
+        )}
+
+        {isMobile && hasAnyRole(["admin", "lab"]) && (
+          <Tooltip title="Crear nuevo apique">
+            <Fab
+              color="primary"
+              onClick={handleCreateApique}
+              sx={{ position: "fixed", bottom: 16, right: 16 }}
+              aria-label="Crear nuevo apique"
+            >
+              <AddIcon />
+            </Fab>
+          </Tooltip>
+        )}
+
+        <Dialog
+          open={deleteDialog.open}
+          onClose={closeDeleteDialog}
+          aria-labelledby="delete-dialog-title"
+          aria-describedby="delete-dialog-description"
+        >
+          <DialogTitle id="delete-dialog-title">
+            Confirmar Eliminación
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="delete-dialog-description">
+              ¿Estás seguro de que deseas eliminar este apique? Esta acción no
+              se puede deshacer.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeDeleteDialog}>Cancelar</Button>
+            <Button onClick={handleDeleteApique} color="error" autoFocus>
+              Eliminar
+            </Button>{" "}
+          </DialogActions>
+        </Dialog>
+      </Container>
+    </LoadingOverlay>
   );
 };
 

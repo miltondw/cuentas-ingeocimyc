@@ -14,12 +14,12 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import api from "@api";
+import api from "@/api";
 import { fetchMonthData, transformFormData } from "./form-create-month.api";
 import { parseNumber, formatNumber } from "@utils/formatNumber";
 import {
   validationSchema,
-  FormData,
+  MonthFormData,
   defaultValues,
 } from "./form-create-month.types";
 
@@ -32,7 +32,7 @@ const FormCreateMonth: React.FC = () => {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<FormData>({
+  } = useForm<MonthFormData>({
     resolver: yupResolver(validationSchema),
     defaultValues,
     mode: "onBlur",
@@ -55,7 +55,7 @@ const FormCreateMonth: React.FC = () => {
     }
   }, [id, reset]);
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: MonthFormData) => {
     try {
       const payload = transformFormData(data);
       const endpoint = id ? `/gastos-mes/${id}` : "/gastos-mes";
@@ -110,7 +110,7 @@ const FormCreateMonth: React.FC = () => {
               fullWidth
               value={formatNumber(field.value)}
               onChange={(e) =>
-                field.onChange(parseNumber(e.target.value) as any)
+                field.onChange(Number(parseNumber(e.target.value)))
               }
               error={!!errors.salarios}
               helperText={errors.salarios?.message}
@@ -129,7 +129,7 @@ const FormCreateMonth: React.FC = () => {
               fullWidth
               value={formatNumber(field.value)}
               onChange={(e) =>
-                field.onChange(parseNumber(e.target.value) as any)
+                field.onChange(Number(parseNumber(e.target.value)))
               }
               error={!!errors.luz}
               helperText={errors.luz?.message}
@@ -148,7 +148,7 @@ const FormCreateMonth: React.FC = () => {
               fullWidth
               value={formatNumber(field.value)}
               onChange={(e) =>
-                field.onChange(parseNumber(e.target.value) as any)
+                field.onChange(Number(parseNumber(e.target.value)))
               }
               error={!!errors.agua}
               helperText={errors.agua?.message}
@@ -167,7 +167,7 @@ const FormCreateMonth: React.FC = () => {
               fullWidth
               value={formatNumber(field.value)}
               onChange={(e) =>
-                field.onChange(parseNumber(e.target.value) as any)
+                field.onChange(Number(parseNumber(e.target.value)))
               }
               error={!!errors.arriendo}
               helperText={errors.arriendo?.message}
@@ -186,7 +186,7 @@ const FormCreateMonth: React.FC = () => {
               fullWidth
               value={formatNumber(field.value)}
               onChange={(e) =>
-                field.onChange(parseNumber(e.target.value) as any)
+                field.onChange(Number(parseNumber(e.target.value)))
               }
               error={!!errors.internet}
               helperText={errors.internet?.message}
@@ -205,7 +205,7 @@ const FormCreateMonth: React.FC = () => {
               fullWidth
               value={formatNumber(field.value)}
               onChange={(e) =>
-                field.onChange(parseNumber(e.target.value) as any)
+                field.onChange(Number(parseNumber(e.target.value)))
               }
               error={!!errors.salud}
               helperText={errors.salud?.message}
@@ -246,7 +246,7 @@ const FormCreateMonth: React.FC = () => {
                   fullWidth
                   value={formatNumber(field.value)}
                   onChange={(e) =>
-                    field.onChange(parseNumber(e.target.value) as any)
+                    field.onChange(Number(parseNumber(e.target.value)))
                   }
                   error={!!errors.extras?.[index]?.value}
                   helperText={errors.extras?.[index]?.value?.message}

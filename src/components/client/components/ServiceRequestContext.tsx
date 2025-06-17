@@ -2,7 +2,7 @@ import React, { useReducer, useCallback, useEffect } from "react";
 import { ServiceItem } from "./types";
 import { v4 as uuidv4 } from "uuid";
 import { debounce } from "@mui/material";
-import type { ServiceRequestApiResponse } from "@api/serviceRequestsApi";
+import type { ServiceRequestApiResponse } from "@/api/serviceRequestsApi";
 
 interface FormData {
   name: string;
@@ -304,7 +304,8 @@ export const ServiceRequestProvider: React.FC<{
   const reset = useCallback(() => {
     dispatch({ type: "RESET" });
     localStorage.removeItem("serviceRequestState");
-  }, []);  const validateForm = useCallback(async () => {
+  }, []);
+  const validateForm = useCallback(async () => {
     const {
       name,
       nameProject,
@@ -327,10 +328,10 @@ export const ServiceRequestProvider: React.FC<{
 
     // Store validation warnings but don't block submission
     let warnings = [];
-    
+
     if (!isFormValid) {
       warnings.push("Hay campos del formulario incompletos o inválidos");
-    }    // No service-specific field warnings now that we know areaPredio is valid
+    } // No service-specific field warnings now that we know areaPredio is valid
     const invalidServices: SelectedService[] = [];
 
     if (invalidServices.length > 0) {
@@ -341,14 +342,15 @@ export const ServiceRequestProvider: React.FC<{
         `Datos potencialmente inválidos para servicios: ${invalidServiceNames}. El campo "areaPredio" podría no ser válido para este tipo de servicio.`
       );
     }
-    
+
     // Set form validity to true even with warnings
     // But store the warnings for optional display
     if (warnings.length > 0) {
       setError(warnings.join(". "));
     } else {
       setError(null);
-    }    setFormValidity(true);
+    }
+    setFormValidity(true);
     return true;
   }, [state.formData, setFormValidity, setError]);
   const submitForm =
@@ -356,7 +358,7 @@ export const ServiceRequestProvider: React.FC<{
       try {
         setLoading(true);
         // Don't clear the error here, as we want to keep validation warnings
-        
+
         // Validate form data and selected services - but continue even with warnings
         await validateForm();
         // Display warnings for 3 seconds if any exist
@@ -365,12 +367,9 @@ export const ServiceRequestProvider: React.FC<{
           setTimeout(() => {
             setError(null);
           }, 3000);
-        }
-
-        // Import dynamically to avoid circular dependencies
-        const { createServiceRequest } = await import(
-          "@api/serviceRequestsApi"
-        );
+        } // Import dynamically to avoid circular dependencies
+        const serviceModule = await import("@/api/serviceRequestsApi");
+        const { createServiceRequest } = serviceModule;
 
         // Send the data to the API
         const response = await createServiceRequest(
@@ -382,7 +381,8 @@ export const ServiceRequestProvider: React.FC<{
           // Clean up the state after successful submission
           reset();
           return response;
-        } else {          // Handle API error responses
+        } else {
+          // Handle API error responses
           const errorMsg = response.message || "Error al procesar la solicitud";
 
           // Check for field validation errors
@@ -392,17 +392,19 @@ export const ServiceRequestProvider: React.FC<{
             if (match && match.length === 3) {
               const [, serviceCode, fieldName] = match;
               // Show warning message instead of throwing error
-              setError(`El campo "${fieldName}" no es válido para el servicio ${serviceCode}. Se continuará con el proceso.`);
-              
+              setError(
+                `El campo "${fieldName}" no es válido para el servicio ${serviceCode}. Se continuará con el proceso.`
+              );
+
               // Auto-hide error after 3 seconds
               setTimeout(() => {
                 setError(null);
               }, 3000);
-              
+
               // Continue with process instead of throwing error
               return {
                 success: true,
-                message: "La solicitud se ha enviado con advertencias."
+                message: "La solicitud se ha enviado con advertencias.",
               };
             }
           }
@@ -412,11 +414,11 @@ export const ServiceRequestProvider: React.FC<{
           setTimeout(() => {
             setError(null);
           }, 3000);
-          
+
           // Return successful response to allow flow to continue
           return {
             success: true,
-            message: "La solicitud se ha procesado con advertencias."
+            message: "La solicitud se ha procesado con advertencias.",
           };
         }
       } catch (error) {
@@ -424,17 +426,17 @@ export const ServiceRequestProvider: React.FC<{
           error instanceof Error
             ? error.message
             : "Error al procesar la solicitud";
-        
+
         // Show error for 3 seconds then clear it
         setError(errorMessage);
         setTimeout(() => {
           setError(null);
         }, 3000);
-        
+
         // Don't throw the error to avoid blocking the flow
         return {
           success: true,
-          message: "La solicitud se ha procesado con advertencias."
+          message: "La solicitud se ha procesado con advertencias.",
         };
       } finally {
         setLoading(false);

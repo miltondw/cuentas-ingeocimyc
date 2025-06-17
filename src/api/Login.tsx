@@ -13,7 +13,7 @@ import {
   IconButton,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@api/AuthContext";
+import { useAuth } from "@/api/useAuth";
 import { Lock, Email, Visibility, VisibilityOff } from "@mui/icons-material";
 
 interface LoginResponse {

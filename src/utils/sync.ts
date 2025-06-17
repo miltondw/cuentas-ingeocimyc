@@ -1,5 +1,5 @@
-import api from "@api/index";
-import { getPendingRequests, deleteRequest } from "@utils/offlineStorage";
+import apiClient from "@/lib/axios/apiClient";
+import { getStoredRequests, removeRequest } from "@/utils/offlineStorage";
 
 export async function syncPendingRequests(): Promise<void> {
   if (!navigator.onLine) {
@@ -7,18 +7,25 @@ export async function syncPendingRequests(): Promise<void> {
     return;
   }
 
-  const requests = await getPendingRequests();
-  for (const request of requests) {
+  const requests = getStoredRequests();
+  if (requests.length === 0) {
+    return;
+  }
+
+  console.log(`Synchronizing ${requests.length} pending requests...`);
+
+  // Ordenar por prioridad (mayor prioridad primero)
+  const sortedRequests = [...requests].sort((a, b) => b.priority - a.priority);
+
+  for (const request of sortedRequests) {
     try {
-      await api({
+      await apiClient({
         url: request.url,
-        method: request.method,
+        method: request.method as "get" | "post" | "put" | "delete" | "patch",
         data: request.data,
         headers: request.headers,
       });
-      if (request.id !== undefined) {
-        await deleteRequest(request.id);
-      }
+      removeRequest(request.id);
     } catch (error: unknown) {
       if (typeof error === "object" && error !== null && "response" in error) {
         const err = error as {

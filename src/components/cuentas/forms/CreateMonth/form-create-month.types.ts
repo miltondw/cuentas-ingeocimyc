@@ -6,7 +6,7 @@ export interface ExtraField {
   value: string;
 }
 
-export interface FormData {
+export interface MonthFormData {
   mes: string;
   salarios: number;
   luz: number;
@@ -17,7 +17,7 @@ export interface FormData {
   extras: ExtraField[];
 }
 
-export const validationSchema: yup.ObjectSchema<FormData> = yup.object({
+export const validationSchema: yup.ObjectSchema<MonthFormData> = yup.object({
   mes: yup.string().required("El mes es requerido"),
   salarios: yup.number().required("Salarios es requerido"),
   luz: yup.number().required("Luz es requerida"),
@@ -37,7 +37,7 @@ export const validationSchema: yup.ObjectSchema<FormData> = yup.object({
     .default([]),
 });
 
-export const defaultValues: FormData = {
+export const defaultValues: MonthFormData = {
   mes: "",
   salarios: 1680000,
   luz: 29000,

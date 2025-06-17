@@ -311,9 +311,8 @@ const MobileProfileView = ({
                   justifyContent: "space-between",
                   alignItems: "center",
                 }}
-              >
-                <Typography variant="body2" color="text.secondary">
-                  Valor N (12" + 18"):
+              >                <Typography variant="body2" color="text.secondary">
+                  Valor N (12&quot; + 18&quot;):
                 </Typography>
                 <Chip
                   label={row.n}

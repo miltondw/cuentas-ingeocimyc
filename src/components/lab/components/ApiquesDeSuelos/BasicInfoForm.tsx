@@ -1,4 +1,5 @@
 // components/ApiquesDeSuelos/BasicInfoForm.tsx
+import React from "react";
 import { TextField, Grid2, FormControlLabel, Checkbox } from "@mui/material";
 import { ApiqueFormData } from "./apiqueTypes";
 
@@ -41,14 +42,14 @@ const BasicInfoForm = ({ formData, handleChange }: BasicInfoFormProps) => {
           fullWidth
           slotProps={{ inputLabel: { shrink: true } }}
         />
-      </Grid2>
-      <Grid2 size={{ xs: 12, sm: 6 }}>
+      </Grid2>      <Grid2 size={{ xs: 12, sm: 6 }}>
         <TextField
-          label="Profundidad (m)"
+          label="Profundidad Total (m)"
           name="depth"
           value={formData.depth || ""}
           disabled
           fullWidth
+          helperText="Se calcula automáticamente basado en las capas"
         />
       </Grid2>
       <Grid2 size={{ xs: 12, sm: 6 }}>
@@ -62,7 +63,7 @@ const BasicInfoForm = ({ formData, handleChange }: BasicInfoFormProps) => {
           inputProps={{ step: "0.01", min: 0 }}
         />
       </Grid2>
-      <Grid2 size={{ xs: 12, sm: 6 }}>
+      <Grid2 size={{ xs: 12 }}>
         <FormControlLabel
           control={
             <Checkbox

@@ -67,7 +67,7 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-f89d6064'], (function (workbox) { 'use strict';
+define(['./workbox-418c2b01'], (function (workbox) { 'use strict';
 
   self.skipWaiting();
   workbox.clientsClaim();
@@ -78,21 +78,29 @@ define(['./workbox-f89d6064'], (function (workbox) { 'use strict';
    * See https://goo.gl/S9QRab
    */
   workbox.precacheAndRoute([{
+    "url": "registerSW.js",
+    "revision": "3ca0b8505b4bec776b69afdba2768812"
+  }, {
     "url": "suppress-warnings.js",
     "revision": "d41d8cd98f00b204e9800998ecf8427e"
   }, {
-    "url": "/index.html",
-    "revision": "0.9gniahb24ag"
+    "url": "index.html",
+    "revision": "0.rubr1h36u78"
   }], {});
   workbox.cleanupOutdatedCaches();
-  workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/index.html"), {
-    allowlist: [/^\/$/],
-    denylist: [/^\/api\//, /^\/@.*/]
+  workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
+    allowlist: [/^\/$/]
   }));
-  workbox.registerRoute(/^https:\/\/api-cuentas-zlut\.onrender\.com\/api\/.*/i, new workbox.NetworkOnly({
-    plugins: [new workbox.BackgroundSyncPlugin("api-sync-queue", {
-      maxRetentionTime: 1440
+  workbox.registerRoute(/^https:\/\/api-cuentas-zlut\.onrender\.com\/api\/.*/i, new workbox.NetworkFirst({
+    "cacheName": "api-cache",
+    plugins: [new workbox.ExpirationPlugin({
+      maxEntries: 100,
+      maxAgeSeconds: 604800
+    }), new workbox.CacheableResponsePlugin({
+      statuses: [0, 200]
     })]
   }), 'GET');
+  workbox.registerRoute(/\.(js|css|json)$/, new workbox.StaleWhileRevalidate(), 'GET');
 
 }));
+//# sourceMappingURL=sw.js.map

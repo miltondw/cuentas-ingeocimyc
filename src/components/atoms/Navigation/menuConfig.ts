@@ -40,13 +40,13 @@ export const menuConfig: MenuConfig = {
       key: "profiles",
       label: "Laboratorio",
       items: [{ title: "Proyectos", link: "lab/proyectos" }],
-      roles: ["admin", "usuario"], // Visible para admin y usuario
+      roles: ["admin", "lab"], // Visible para admin y lab
     },
     {
       key: "client",
       label: "Cliente",
       items: [{ title: "Cliente", link: "cliente" }],
-      roles: ["admin", "usuario"], // Visible para admin y usuario
+      roles: ["admin", "lab"], // Visible para admin y lab
     },
   ],
 };

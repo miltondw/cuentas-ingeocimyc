@@ -15,7 +15,7 @@ export interface GastoFields {
   peajes: number;
   combustible: number;
   hospedaje: number;
-  extras: ExtraGasto[];
+  extras?: ExtraGasto[];
 }
 
 export interface ProjectFormData {
@@ -25,10 +25,10 @@ export interface ProjectFormData {
   obrero: string;
   costo_servicio: number;
   abono: number;
-  factura: string | undefined;
+  factura?: string;
   metodo_de_pago: string;
-  valor_retencion: number | undefined;
-  retencionIva: boolean;
+  valor_retencion?: number;
+  retencionIva?: boolean;
   gastos: GastoFields;
 }
 
@@ -117,9 +117,7 @@ export const defaultValues: ProjectFormData = {
   obrero: "",
   costo_servicio: 0,
   abono: 0,
-  factura: "",
   metodo_de_pago: "",
-  valor_retencion: 0,
   retencionIva: false,
   gastos: {
     camioneta: 0,
@@ -130,6 +128,6 @@ export const defaultValues: ProjectFormData = {
     peajes: 0,
     combustible: 0,
     hospedaje: 0,
-    extras: [{ id: "0", field: "", value: 0 }], // Cambiado value a number
+    extras: [],
   },
 };

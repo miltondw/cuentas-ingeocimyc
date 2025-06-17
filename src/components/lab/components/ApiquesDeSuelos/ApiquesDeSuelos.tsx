@@ -1,9 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Button,
-  Snackbar,
-  Alert,
   Typography,
   Grid2,
   IconButton,
@@ -14,11 +12,13 @@ import {
 } from "@mui/material";
 
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import api from "@api";
-import { ApiqueFormData, Layer, Notification } from "./apiqueTypes";
+import { apiquesService } from "@/api/services";
+import { ApiqueFormData, Layer } from "./apiqueTypes";
+import type { CreateApiqueDto } from "@/types/api";
 import BasicInfoForm from "./BasicInfoForm";
 import LayersTable from "./LayersTable";
 import MobileLayersAccordion from "./MobileLayersAccordion";
+import { useNotifications } from "@/api/hooks/useNotifications";
 
 const ApiquesDeSuelos = () => {
   const { projectId, apiqueId } = useParams<{
@@ -28,6 +28,7 @@ const ApiquesDeSuelos = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const { showNotification, showSuccess, showError } = useNotifications();
 
   const [formData, setFormData] = useState<ApiqueFormData>({
     apique: null,
@@ -41,11 +42,6 @@ const ApiquesDeSuelos = () => {
   });
 
   const [loading, setLoading] = useState<boolean>(false);
-  const [notification, setNotification] = useState<Notification>({
-    open: false,
-    message: "",
-    severity: "success",
-  });
 
   // Load data from API
   useEffect(() => {
@@ -54,46 +50,37 @@ const ApiquesDeSuelos = () => {
     const fetchApique = async () => {
       try {
         setLoading(true);
-        const res = await api.get(`/projects/${projectId}/apiques/${apiqueId}`);
-        const apiqueData = res.data.apique;
+        const apiqueIdNum = parseInt(apiqueId);
+        const apiqueData = await apiquesService.getApique(apiqueIdNum);
 
         setFormData({
-          apique: apiqueData.apique,
+          apique: apiqueData.sampleNumber,
           location: apiqueData.location,
           depth: apiqueData.depth,
-          date: apiqueData.date.split("T")[0],
-          cbr_unaltered: apiqueData.cbr_unaltered,
-          depth_tomo: apiqueData.depth_tomo,
-          molde: apiqueData.molde,
-          layers: apiqueData.layers.map((layer: Layer) => ({
-            layer_number: layer.layer_number,
-            thickness: layer.thickness,
-            sample_id: layer.sample_id,
-            observation: layer.observation,
-          })),
+          date: apiqueData.collectionDate.split("T")[0],
+          cbr_unaltered: apiqueData.cbrUnaltered,
+          depth_tomo: "", // No disponible en la nueva API, mantener vacío
+          molde: "", // No disponible en la nueva API, mantener vacío
+          layers:
+            apiqueData.layers?.map((layer) => ({
+              layer_number: layer.layerNumber,
+              thickness: layer.thickness,
+              sample_id: layer.sampleId || "",
+              observation: layer.observation || "",
+            })) || [],
         });
 
-        setNotification({
-          open: true,
-          message: "Apique cargado correctamente",
-          severity: "success",
-        });
+        showSuccess("Apique cargado correctamente");
       } catch (error) {
         console.error("Error cargando apique:", error);
-        setNotification({
-          open: true,
-          message:
-            (error as any).response?.data?.message ||
-            "Error al cargar el apique",
-          severity: "error",
-        });
+
+        showError((error as Error).message || "Error al cargar el apique");
       } finally {
         setLoading(false);
       }
     };
-
     fetchApique();
-  }, [projectId, apiqueId]);
+  }, [projectId, apiqueId, showSuccess, showError]);
 
   // Handle basic field changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,22 +139,47 @@ const ApiquesDeSuelos = () => {
 
   // Update depth in formData
   useEffect(() => {
-    setFormData((prev) => ({ ...prev, depth: parseFloat(totalDepth) }));
+    setFormData((prev) => ({
+      ...prev,
+      depth: parseFloat(totalDepth) || 0,
+    }));
   }, [totalDepth]);
-
   // Validate form
   const validateForm = (): boolean => {
+    if (!formData.apique || formData.apique.trim() === "") {
+      showError("El número de apique es requerido");
+      return false;
+    }
+
+    if (!formData.location.trim()) {
+      showError("La ubicación es requerida");
+      return false;
+    }
+
+    if (formData.layers.length === 0) {
+      showError("Debe agregar al menos una capa");
+      return false;
+    }
+
+    // Validar depth_tomo si está presente
     if (
       formData.depth_tomo &&
       (isNaN(Number(formData.depth_tomo)) || Number(formData.depth_tomo) < 0)
     ) {
-      setNotification({
-        open: true,
-        message: "Profundidad de toma debe ser un número positivo",
-        severity: "error",
-      });
+      showError("Profundidad de toma debe ser un número positivo");
       return false;
     }
+
+    // Validar molde si CBR está activo
+    if (
+      formData.cbr_unaltered &&
+      formData.molde &&
+      (isNaN(Number(formData.molde)) || Number(formData.molde) < 0)
+    ) {
+      showError("El número de molde debe ser un número positivo");
+      return false;
+    }
+
     return true;
   };
 
@@ -178,27 +190,45 @@ const ApiquesDeSuelos = () => {
 
     try {
       setLoading(true);
-      const payload = {
-        ...formData,
+      const projectIdNum = parseInt(projectId!);
+
+      const payload: CreateApiqueDto = {
+        projectId: projectIdNum,
+        sampleNumber: formData.apique || "",
+        location: formData.location,
+        depth: formData.depth || 0,
+        collectionDate: formData.date,
+        status: "collected" as const,
+        cbrUnaltered: formData.cbr_unaltered,
         layers: formData.layers.map((layer) => ({
-          ...layer,
+          layerNumber: layer.layer_number,
           thickness: parseFloat(layer.thickness as string),
+          sampleId: layer.sample_id || undefined,
+          observation: layer.observation || undefined,
         })),
       };
+      if (apiqueId && apiqueId !== "nuevo") {
+        const apiqueIdNum = parseInt(apiqueId);
+        await apiquesService.updateApique(apiqueIdNum, payload);
+      } else {
+        await apiquesService.createApique(payload);
+      }
 
-      const endpoint =
-        apiqueId && apiqueId !== "nuevo"
-          ? `/projects/${projectId}/apiques/${apiqueId}`
-          : `/projects/${projectId}/apiques`;
-      const method = apiqueId && apiqueId !== "nuevo" ? "put" : "post";
-
-      await api[method](endpoint, payload);
-      setNotification({
-        open: true,
-        message: `Apique ${
-          method === "put" ? "actualizado" : "creado"
+      showNotification({
+        type: "success",
+        title: "Apique Guardado",
+        message: `El apique ha sido ${
+          apiqueId && apiqueId !== "nuevo" ? "actualizado" : "creado"
         } correctamente`,
-        severity: "success",
+        duration: 3000,
+        actions: [
+          {
+            label: "Ver Apiques",
+            action: () => navigate(`/lab/proyectos/${projectId}/apiques`),
+            variant: "outlined",
+            color: "primary",
+          },
+        ],
       });
 
       setTimeout(() => {
@@ -206,20 +236,24 @@ const ApiquesDeSuelos = () => {
       }, 1500);
     } catch (error) {
       console.error("Error guardando apique:", error);
-      setNotification({
-        open: true,
-        message:
-          (error as any).response?.data?.message ||
-          "Error al guardar el apique",
-        severity: "error",
+
+      showNotification({
+        type: "error",
+        title: "Error al Guardar",
+        message: (error as Error).message || "Error al guardar el apique",
+        persistent: true,
+        actions: [
+          {
+            label: "Reintentar",
+            action: () => handleSubmit(e),
+            variant: "contained",
+            color: "error",
+          },
+        ],
       });
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleCloseNotification = () => {
-    setNotification((prev) => ({ ...prev, open: false }));
   };
 
   if (loading) {
@@ -292,20 +326,6 @@ const ApiquesDeSuelos = () => {
           </Button>
         </Grid2>
       </form>
-
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={1000}
-        onClose={handleCloseNotification}
-      >
-        <Alert
-          onClose={handleCloseNotification}
-          severity={notification.severity}
-          sx={{ width: "100%" }}
-        >
-          {notification.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

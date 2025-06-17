@@ -22,6 +22,9 @@ import {
   DialogActions,
   Button,
   styled,
+  Alert,
+  Pagination,
+  TextField,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
@@ -30,28 +33,15 @@ import EditIcon from "@mui/icons-material/Edit";
 import WaterDropIcon from "@mui/icons-material/WaterDrop";
 import LandscapeIcon from "@mui/icons-material/Landscape";
 import HardnessIcon from "@mui/icons-material/Terrain";
-import api from "@api";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import { projectsService } from "@/api/services";
+import { useAuth } from "@/api/useAuth";
+import { useProfiles } from "../hooks/useProfiles";
+import type { Project, ProfilesFilters, Profile } from "@/types/api";
 
-interface BlowData {
-  depth: string;
-  n: number;
-}
-
-interface Profile {
-  profile_id: string;
-  sounding_number: string;
-  location?: string;
-  profile_date?: string;
-  water_level?: string;
-  samples_number?: number;
-  blows_data?: BlowData[];
-}
-
-interface Project {
-  nombre: string;
-  ubicacion?: string;
-  descripcion?: string;
-}
+// Import modern components
+import { LoadingOverlay } from "@/components/common/LoadingOverlay";
+import { useNotifications } from "@/api/hooks/useNotifications";
 
 const StyledCard = styled(Card)(({ theme }) => ({
   transition: "transform 0.2s, box-shadow 0.2s",
@@ -62,62 +52,103 @@ const StyledCard = styled(Card)(({ theme }) => ({
 }));
 
 const ProjectProfiles = () => {
-  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [project, setProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [projectLoading, setProjectLoading] = useState(true);
+  const [projectError, setProjectError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
-    profileId: string | null;
+    profileId: number | null;
   }>({ open: false, profileId: null });
+
+  const [showFilters, setShowFilters] = useState(false);
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const isMobile = useMediaQuery("(max-width:768px)");
+  const { hasAnyRole } = useAuth();
+  const { showNotification } = useNotifications();
+
+  const projectIdNum = projectId ? parseInt(projectId) : 0;
+  const {
+    paginatedProfiles,
+    loading: profilesLoading,
+    error: profilesError,
+    filters,
+    updateFilters,
+    deleteProfile,
+  } = useProfiles(projectIdNum);
 
   useEffect(() => {
-    const fetchProjectAndProfiles = async () => {
-      try {
-        setLoading(true);
-        const projectResponse = await api.get(`/projects/${projectId}`);
-        setProject(projectResponse.data.project);
+    const fetchProject = async () => {
+      if (!projectIdNum) return;
 
-        const profilesResponse = await api.get(
-          `/projects/${projectId}/profiles`
-        );
-        setProfiles(profilesResponse.data.perfiles || []);
+      try {
+        setProjectLoading(true);
+        setProjectError(null);
+        const projectResponse = await projectsService.getProject(projectIdNum);
+        setProject(projectResponse);
       } catch (err) {
-        console.error("Error al cargar datos:", err);
-        setError("Error al cargar los perfiles. Por favor, intenta de nuevo.");
+        console.error("Error al cargar proyecto:", err);
+        setProjectError(
+          err instanceof Error ? err.message : "Error al cargar el proyecto"
+        );
       } finally {
-        setLoading(false);
+        setProjectLoading(false);
       }
     };
 
-    fetchProjectAndProfiles();
-  }, [projectId]);
+    fetchProject();
+  }, [projectIdNum]);
 
   const handleCreateProfile = () => {
     navigate(`/lab/proyectos/${projectId}/perfil/nuevo`);
   };
 
-  const handleEditProfile = (profileId: string) => {
+  const handleEditProfile = (profileId: number) => {
     navigate(`/lab/proyectos/${projectId}/perfil/${profileId}`);
   };
+  const handleDeleteProfile = async () => {
+    if (!deleteDialog.profileId) return;
 
-  const handleDeleteProfile = async (profileId: string) => {
     try {
-      await api.delete(`/projects/${projectId}/profiles/${profileId}`);
-      setProfiles(
-        profiles.filter((profile) => profile.profile_id !== profileId)
-      );
-      setDeleteDialog({ open: false, profileId: null });
+      const result = await deleteProfile(deleteDialog.profileId);
+      if (result.success) {
+        setDeleteDialog({ open: false, profileId: null });
+        showNotification({
+          type: "success",
+          title: "Perfil eliminado",
+          message: "El perfil se eliminó correctamente",
+          duration: 3000,
+        });
+      } else {
+        console.error("Error al eliminar perfil:", result.error);
+        showNotification({
+          type: "error",
+          title: "Error al eliminar",
+          message: result.error || "Error desconocido al eliminar el perfil",
+          duration: 5000,
+        });
+      }
     } catch (err) {
       console.error("Error al eliminar perfil:", err);
-      setError("No se pudo eliminar el perfil. Intenta de nuevo.");
+      showNotification({
+        type: "error",
+        title: "Error al eliminar",
+        message:
+          err instanceof Error ? err.message : "Error al eliminar el perfil",
+        duration: 5000,
+      });
     }
   };
 
-  const openDeleteDialog = (profileId: string) => {
+  const handlePageChange = (_event: unknown, newPage: number) => {
+    updateFilters({ page: newPage });
+  };
+
+  const handleFilterChange = (newFilters: Partial<ProfilesFilters>) => {
+    updateFilters({ ...newFilters, page: 1 }); // Reset to page 1 when filtering
+  };
+
+  const openDeleteDialog = (profileId: number) => {
     setDeleteDialog({ open: true, profileId });
   };
 
@@ -135,23 +166,25 @@ const ProjectProfiles = () => {
     });
   };
 
-  const getCompletedDepthsCount = (blowsData?: BlowData[]): number => {
+  const getCompletedDepthsCount = (
+    blowsData?: Profile["blowsData"]
+  ): number => {
     if (!blowsData || !blowsData.length) return 0;
     return blowsData.filter((blow) => blow.n > 0).length;
   };
 
-  const getMaxN = (blowsData?: BlowData[]): number => {
+  const getMaxN = (blowsData?: Profile["blowsData"]): number => {
     if (!blowsData || !blowsData.length) return 0;
     return Math.max(...blowsData.map((blow) => blow.n || 0));
   };
 
-  const getMaxDepth = (blowsData?: BlowData[]): string => {
+  const getMaxDepth = (blowsData?: Profile["blowsData"]): string => {
     if (!blowsData || !blowsData.length) return "0.00";
     const depthsWithData = blowsData.filter((blow) => blow.n > 0);
     if (depthsWithData.length === 0) return "0.00";
-    return Math.max(
-      ...depthsWithData.map((blow) => parseFloat(blow.depth) || 0)
-    ).toFixed(2);
+    return Math.max(...depthsWithData.map((blow) => blow.depth || 0)).toFixed(
+      2
+    );
   };
 
   const getSoilHardnessColor = (maxN: number): string => {
@@ -168,7 +201,7 @@ const ProjectProfiles = () => {
     return "Suelo blando";
   };
 
-  if (loading) {
+  if (projectLoading || profilesLoading) {
     return (
       <Container sx={{ py: 4 }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
@@ -192,7 +225,8 @@ const ProjectProfiles = () => {
     );
   }
 
-  if (error) {
+  if (projectError || profilesError) {
+    const errorMessage = projectError || profilesError;
     return (
       <Container sx={{ py: 4 }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
@@ -204,17 +238,26 @@ const ProjectProfiles = () => {
           </IconButton>
           <Typography variant="h5">Error</Typography>
         </Box>
-        <Paper sx={{ p: 3, backgroundColor: "#fff4f4" }}>
-          <Typography color="error" aria-live="polite">
-            {error}
-          </Typography>
-        </Paper>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {errorMessage}
+        </Alert>
+        <Button variant="contained" onClick={() => window.location.reload()}>
+          Reintentar
+        </Button>
       </Container>
     );
   }
 
+  const profiles = paginatedProfiles?.data || [];
+  const pagination = paginatedProfiles?.pagination;
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      {(projectLoading || profilesLoading) && (
+        <LoadingOverlay loading={true}>
+          <div />
+        </LoadingOverlay>
+      )}
+
       <Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
         <Tooltip title="Volver a proyectos">
           <IconButton
@@ -228,30 +271,98 @@ const ProjectProfiles = () => {
           Perfiles de Suelo
         </Typography>
         <Box sx={{ flexGrow: 1 }} />
-        <Tooltip title="Crear nuevo perfil">
+        <Tooltip title="Filtrar perfiles">
           <IconButton
-            color="primary"
-            onClick={handleCreateProfile}
-            sx={{
-              backgroundColor: (theme) => theme.palette.primary.main,
-              color: "white",
-              "&:hover": {
-                backgroundColor: (theme) => theme.palette.primary.dark,
-              },
-            }}
-            aria-label="Crear nuevo perfil"
+            onClick={() => setShowFilters(!showFilters)}
+            color={showFilters ? "primary" : "default"}
           >
-            <AddIcon />
+            <FilterListIcon />
           </IconButton>
         </Tooltip>
+        {hasAnyRole(["admin", "lab"]) && (
+          <Tooltip title="Crear nuevo perfil">
+            <IconButton
+              color="primary"
+              onClick={handleCreateProfile}
+              sx={{
+                backgroundColor: (theme) => theme.palette.primary.main,
+                color: "white",
+                "&:hover": {
+                  backgroundColor: (theme) => theme.palette.primary.dark,
+                },
+                ml: 1,
+              }}
+              aria-label="Crear nuevo perfil"
+            >
+              <AddIcon />
+            </IconButton>
+          </Tooltip>
+        )}
       </Box>
+
+      {/* Filtros */}
+      {showFilters && (
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Filtros
+          </Typography>
+          <Grid2 container spacing={2}>
+            {" "}
+            <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+              <TextField
+                fullWidth
+                label="Número de perfil"
+                value={filters.profileNumber || ""}
+                onChange={(e) =>
+                  handleFilterChange({ profileNumber: e.target.value })
+                }
+              />
+            </Grid2>
+            <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+              <TextField
+                fullWidth
+                label="Tipo de suelo"
+                value={filters.soilType || ""}
+                onChange={(e) =>
+                  handleFilterChange({ soilType: e.target.value })
+                }
+              />
+            </Grid2>
+            <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+              <TextField
+                fullWidth
+                label="Fecha desde"
+                type="date"
+                value={filters.drillingDate || ""}
+                onChange={(e) =>
+                  handleFilterChange({ drillingDate: e.target.value })
+                }
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid2>
+            <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+              <TextField
+                fullWidth
+                label="Profundidad mínima"
+                type="number"
+                value={filters.minDepth || ""}
+                onChange={(e) =>
+                  handleFilterChange({
+                    minDepth: parseFloat(e.target.value) || undefined,
+                  })
+                }
+              />
+            </Grid2>
+          </Grid2>
+        </Paper>
+      )}
 
       {project && (
         <Paper
           sx={{ p: 3, mb: 4, backgroundColor: "#f5f9ff", borderRadius: 2 }}
         >
           <Typography variant="h5" fontWeight="bold" gutterBottom>
-            PROYECTO: {project.nombre.toUpperCase()}
+            PROYECTO: {project.nombreProyecto.toUpperCase()}
           </Typography>
           <Typography variant="body1" sx={{ mb: 1 }}>
             <strong>UBICACIÓN:</strong> {project.ubicacion || "No especificada"}
@@ -259,6 +370,11 @@ const ProjectProfiles = () => {
           {project.descripcion && (
             <Typography variant="body2">
               <strong>DESCRIPCIÓN:</strong> {project.descripcion}
+            </Typography>
+          )}
+          {pagination && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              Mostrando {profiles.length} de {pagination.totalItems} perfiles
             </Typography>
           )}
         </Paper>
@@ -273,132 +389,150 @@ const ProjectProfiles = () => {
             No hay perfiles de suelo registrados para este proyecto
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Haz clic en el botón + para crear un nuevo perfil
+            {hasAnyRole(["admin", "lab"])
+              ? "Haz clic en el botón + para crear un nuevo perfil"
+              : "No tienes permisos para crear perfiles"}
           </Typography>
         </Paper>
       ) : (
-        <Grid2 container spacing={3}>
-          {profiles.map((profile) => (
-            <Grid2 size={{ xs: 12, sm: 6 }} key={profile.profile_id}>
-              <StyledCard>
-                <CardContent sx={{ py: 3 }}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      mb: 2,
-                    }}
-                  >
-                    <Typography variant="h6" fontWeight="bold">
-                      SONDEO #{profile.sounding_number.toUpperCase()}
-                    </Typography>
-                    <Box>
-                      <Tooltip title="Editar perfil">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEditProfile(profile.profile_id)}
-                          color="primary"
-                          aria-label="Editar perfil"
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Eliminar perfil">
-                        <IconButton
-                          size="small"
-                          onClick={() => openDeleteDialog(profile.profile_id)}
-                          color="error"
-                          aria-label="Eliminar perfil"
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </Box>
-                  <Divider sx={{ mb: 2 }} />
-                  <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
-                  >
-                    {profile.location && (
-                      <Typography variant="body1">
-                        <strong>UBICACIÓN:</strong> {profile.location}
+        <>
+          <Grid2 container spacing={3}>
+            {profiles.map((profile) => (
+              <Grid2 size={{ xs: 12, sm: 6 }} key={profile.id}>
+                <StyledCard>
+                  <CardContent sx={{ py: 3 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        mb: 2,
+                      }}
+                    >
+                      {" "}
+                      <Typography variant="h6" fontWeight="bold">
+                        PERFIL #{profile.profileNumber.toUpperCase()}
                       </Typography>
-                    )}
-                    <Typography variant="body1">
-                      <strong>FECHA:</strong> {formatDate(profile.profile_date)}
-                    </Typography>
-                    {profile.water_level &&
-                      profile.water_level !== "ninguno" && (
+                      {hasAnyRole(["admin", "lab"]) && (
+                        <Box>
+                          <Tooltip title="Editar perfil">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleEditProfile(profile.id)}
+                              color="primary"
+                              aria-label="Editar perfil"
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Eliminar perfil">
+                            <IconButton
+                              size="small"
+                              onClick={() => openDeleteDialog(profile.id)}
+                              color="error"
+                              aria-label="Eliminar perfil"
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      )}
+                    </Box>
+                    <Divider sx={{ mb: 2 }} />
+                    <Box
+                      sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                    >
+                      {" "}
+                      <Typography variant="body1">
+                        <strong>TIPO:</strong> {profile.profileType}
+                      </Typography>
+                      <Typography variant="body1">
+                        <strong>FECHA:</strong>{" "}
+                        {formatDate(profile.drillingDate)}
+                      </Typography>
+                      {profile.waterLevel && profile.waterLevel > 0 && (
                         <Typography variant="body1">
-                          <strong>NIVEL FREÁTICO:</strong> {profile.water_level}{" "}
+                          <strong>NIVEL FREÁTICO:</strong> {profile.waterLevel}{" "}
                           m
                         </Typography>
                       )}
-                    <Typography variant="body1">
-                      <strong>MUESTRAS:</strong> {profile.samples_number || 0}
-                    </Typography>
-                    <Typography variant="body1">
-                      <strong>PROFUNDIDADES CON DATOS:</strong>{" "}
-                      {getCompletedDepthsCount(profile.blows_data)} /{" "}
-                      {profile.blows_data?.length || 0}
-                    </Typography>
-                    <Typography variant="body1">
-                      <strong>PROFUNDIDAD MÁXIMA:</strong>{" "}
-                      {getMaxDepth(profile.blows_data)} m
-                    </Typography>
-                    <Typography variant="body1">
-                      <strong>N MÁXIMO:</strong> {getMaxN(profile.blows_data)}
-                    </Typography>
-                    <Typography variant="body1">
-                      <strong>DUREZA DEL SUELO:</strong>{" "}
-                      {getSoilHardnessText(getMaxN(profile.blows_data))}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
-                    <Chip
-                      icon={<WaterDropIcon fontSize="small" />}
-                      label={`${profile.samples_number || 0} muestras`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                    <Chip
-                      icon={<LandscapeIcon fontSize="small" />}
-                      label={`${getCompletedDepthsCount(
-                        profile.blows_data
-                      )} / ${profile.blows_data?.length || 0} profundidades`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                    <Tooltip
-                      title={getSoilHardnessText(getMaxN(profile.blows_data))}
+                      <Typography variant="body1">
+                        <strong>CAPAS:</strong> {profile.layerCount || 0}
+                      </Typography>
+                      <Typography variant="body1">
+                        <strong>PROFUNDIDADES CON DATOS:</strong>{" "}
+                        {getCompletedDepthsCount(profile.blowsData)} /{" "}
+                        {profile.blowsData?.length || 0}
+                      </Typography>
+                      <Typography variant="body1">
+                        <strong>PROFUNDIDAD MÁXIMA:</strong>{" "}
+                        {getMaxDepth(profile.blowsData)} m
+                      </Typography>
+                      <Typography variant="body1">
+                        <strong>N MÁXIMO:</strong> {getMaxN(profile.blowsData)}
+                      </Typography>
+                      <Typography variant="body1">
+                        <strong>DUREZA DEL SUELO:</strong>{" "}
+                        {getSoilHardnessText(getMaxN(profile.blowsData))}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{ display: "flex", gap: 1, mt: 2, flexWrap: "wrap" }}
                     >
+                      {" "}
+                      <Chip
+                        icon={<WaterDropIcon fontSize="small" />}
+                        label={`${profile.layerCount || 0} capas`}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
+                      <Chip
+                        icon={<LandscapeIcon fontSize="small" />}
+                        label={`${getCompletedDepthsCount(
+                          profile.blowsData
+                        )} / ${profile.blowsData?.length || 0} profundidades`}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
                       <Chip
                         icon={
                           <HardnessIcon
                             sx={{
                               color: getSoilHardnessColor(
-                                getMaxN(profile.blows_data)
+                                getMaxN(profile.blowsData)
                               ),
                             }}
                           />
                         }
-                        label={getSoilHardnessText(getMaxN(profile.blows_data))}
+                        label={getSoilHardnessText(getMaxN(profile.blowsData))}
                         size="small"
                         color="default"
                         variant="outlined"
                       />
-                    </Tooltip>
-                  </Box>
-                </CardContent>
-              </StyledCard>
-            </Grid2>
-          ))}
-        </Grid2>
+                    </Box>
+                  </CardContent>
+                </StyledCard>
+              </Grid2>
+            ))}
+          </Grid2>
+
+          {/* Paginación */}
+          {pagination && pagination.totalPages > 1 && (
+            <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+              <Pagination
+                count={pagination.totalPages}
+                page={pagination.currentPage}
+                onChange={handlePageChange}
+                color="primary"
+                size={isMobile ? "small" : "medium"}
+              />
+            </Box>
+          )}
+        </>
       )}
 
-      {isMobile && (
+      {isMobile && hasAnyRole(["admin", "lab"]) && (
         <Tooltip title="Crear nuevo perfil">
           <Fab
             color="primary"
@@ -428,14 +562,7 @@ const ProjectProfiles = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={closeDeleteDialog}>Cancelar</Button>
-          <Button
-            onClick={() =>
-              deleteDialog.profileId &&
-              handleDeleteProfile(deleteDialog.profileId)
-            }
-            color="error"
-            autoFocus
-          >
+          <Button onClick={handleDeleteProfile} color="error" autoFocus>
             Eliminar
           </Button>
         </DialogActions>

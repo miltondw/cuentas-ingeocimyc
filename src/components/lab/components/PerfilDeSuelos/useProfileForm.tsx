@@ -1,17 +1,16 @@
 import { useState, useEffect, useMemo, ChangeEvent, FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import api from "@api";
-import {
-  ProfileFormData,
-  Notification,
-  ProfileStats,
-  BlowData,
-} from "./profileTypes";
+import { profilesService } from "@/api/services";
+import { useNotifications } from "@/api/hooks/useNotifications";
+import type { CreateProfileDto } from "@/types/api";
+import { ProfileFormData, ProfileStats, BlowData } from "./profileTypes";
 
 export const DEPTH_INCREMENT = 0.45;
 export const DEPTH_LEVELS = 14;
 
 export const useProfileForm = () => {
+  const { showNotification, showError, showWarning } = useNotifications();
+
   const [formData, setFormData] = useState<ProfileFormData>({
     sounding_number: "",
     location: "",
@@ -32,65 +31,75 @@ export const useProfileForm = () => {
     Partial<Record<keyof ProfileFormData, string>>
   >({});
   const [loading, setLoading] = useState<boolean>(false);
-  const [notification, setNotification] = useState<Notification>({
-    open: false,
-    message: "",
-    severity: "info",
-  });
 
   const navigate = useNavigate();
   const { projectId, profileId } = useParams<{
     projectId: string;
     profileId: string;
   }>();
-
   useEffect(() => {
     if (!profileId || profileId === "nuevo") return;
 
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        const res = await api.get(
-          `/projects/${projectId}/profiles/${profileId}`
-        );
-        const profile = res.data.perfil;
-
+        const profileIdNum = parseInt(profileId);
+        const profile = await profilesService.getProfile(profileIdNum);
         setFormData({
-          sounding_number: profile.sounding_number || "",
-          location: profile.location || "",
-          water_level: profile.water_level || "",
-          profile_date: profile.profile_date
-            ? profile.profile_date.split("T")[0]
+          sounding_number: profile.profileNumber || "",
+          location: profile.profileType || "",
+          water_level: profile.waterLevel?.toString() || "",
+          profile_date: profile.drillingDate
+            ? profile.drillingDate.split("T")[0]
             : new Date().toISOString().split("T")[0],
-          samples_number: profile.samples_number || 0,
-          blows_data: profile.blows_data.map((blow: BlowData) => ({
-            ...blow,
-            blows6: blow.blows6 !== null ? blow.blows6.toString() : "",
-            blows12: blow.blows12 !== null ? blow.blows12.toString() : "",
-            blows18: blow.blows18 !== null ? blow.blows18.toString() : "",
-            n: blow.n !== null ? blow.n.toString() : "0",
-            observation: blow.observation || "",
-          })),
+          samples_number: profile.layerCount || 0,
+          blows_data:
+            profile.blowsData?.map((blow) => ({
+              depth: blow.depth.toString(),
+              blows6: blow.blows6 !== null ? blow.blows6.toString() : "",
+              blows12: blow.blows12 !== null ? blow.blows12.toString() : "",
+              blows18: blow.blows18 !== null ? blow.blows18.toString() : "",
+              n: blow.n !== null ? blow.n.toString() : "0",
+              observation: blow.observation || "",
+            })) ||
+            Array.from({ length: DEPTH_LEVELS }, (_, i) => ({
+              depth: ((i + 1) * DEPTH_INCREMENT).toFixed(2),
+              blows6: "",
+              blows12: "",
+              blows18: "",
+              n: 0,
+              observation: "",
+            })),
         });
-        setNotification({
-          open: true,
-          message: "Perfil cargado exitosamente",
-          severity: "success",
+        showNotification({
+          type: "success",
+          title: "Perfil Cargado",
+          message: "Los datos del perfil se han cargado exitosamente",
+          duration: 3000,
         });
       } catch (error) {
         console.error("Error fetching profile:", error);
-        setNotification({
-          open: true,
-          message: "Error al cargar el perfil",
-          severity: "error",
+        showNotification({
+          type: "error",
+          title: "Error al Cargar Perfil",
+          message:
+            "No se pudo cargar el perfil. Verifique su conexión e intente nuevamente.",
+          persistent: true,
+          actions: [
+            {
+              label: "Reintentar",
+              action: () => fetchProfile(),
+              variant: "contained",
+              color: "primary",
+            },
+          ],
         });
       } finally {
         setLoading(false);
       }
     };
-
     fetchProfile();
-  }, [projectId, profileId]);
+  }, [projectId, profileId, showNotification]);
   const validateForm = () => {
     const newErrors: Partial<Record<keyof ProfileFormData, string>> = {};
 
@@ -105,15 +114,9 @@ export const useProfileForm = () => {
     }
 
     // Mostrar los errores en el formulario
-    setErrors(newErrors);
-
-    // Notificar al usuario sobre los campos con error
+    setErrors(newErrors); // Notificar al usuario sobre los campos con error
     if (Object.keys(newErrors).length > 0) {
-      setNotification({
-        open: true,
-        message: "Por favor, completa los campos obligatorios",
-        severity: "warning",
-      });
+      showWarning("Por favor, completa los campos obligatorios");
     }
 
     return Object.keys(newErrors).length === 0;
@@ -200,28 +203,33 @@ export const useProfileForm = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
-      setNotification({
-        open: true,
-        message: "Por favor, corrige los errores en el formulario",
-        severity: "error",
-      });
+      showError("Por favor, corrige los errores en el formulario");
       return;
     }
 
     try {
       setLoading(true);
+      const projectIdNum = parseInt(projectId!);
 
       // Convertir de manera segura los datos para enviar al backend
-      const payload = {
-        sounding_number: formData.sounding_number.trim(),
-        location: formData.location.trim(),
-        water_level: formData.water_level.trim() || "",
-        profile_date: formData.profile_date,
-        samples_number:
+      const payload: CreateProfileDto = {
+        projectId: projectIdNum,
+        profileNumber: formData.sounding_number.trim(),
+        profileType: formData.location.trim(),
+        totalDepth: Math.max(
+          ...formData.blows_data.map((blow) => parseFloat(blow.depth))
+        ),
+        soilType: "Standard", // Valor por defecto
+        layerCount:
           typeof formData.samples_number === "string"
             ? parseInt(formData.samples_number) || 0
             : formData.samples_number,
-        blows_data: formData.blows_data.map((blow) => {
+        drillingDate: formData.profile_date,
+        waterLevel: formData.water_level.trim()
+          ? parseFloat(formData.water_level)
+          : undefined,
+        status: "drilling" as const,
+        blowsData: formData.blows_data.map((blow) => {
           const safeParseInt = (value: string | number) => {
             if (value === "" || value === null || value === undefined) return 0;
             const parsed = typeof value === "string" ? parseInt(value) : value;
@@ -234,29 +242,36 @@ export const useProfileForm = () => {
             blows12: safeParseInt(blow.blows12),
             blows18: safeParseInt(blow.blows18),
             n: safeParseInt(blow.n),
-            observation: (blow.observation || "").trim(),
+            observation: (blow.observation || "").trim() || undefined,
           };
         }),
       };
+      if (profileId && profileId !== "nuevo") {
+        const profileIdNum = parseInt(profileId);
+        await profilesService.updateProfile(profileIdNum, payload);
+      } else {
+        await profilesService.createProfile(payload);
+      }
 
-      const endpoint =
-        profileId && profileId !== "nuevo"
-          ? `/projects/${projectId}/profiles/${profileId}`
-          : `/projects/${projectId}/profiles`;
-
-      const method = profileId && profileId !== "nuevo" ? "put" : "post";
-
-      await api[method](endpoint, payload);
-      setNotification({
-        open: true,
-        message: `Perfil ${
-          method === "put" ? "actualizado" : "creado"
+      showNotification({
+        type: "success",
+        title: "Perfil Guardado",
+        message: `El perfil ha sido ${
+          profileId && profileId !== "nuevo" ? "actualizado" : "creado"
         } exitosamente`,
-        severity: "success",
+        duration: 4000,
+        actions: [
+          {
+            label: "Ver Perfiles",
+            action: () => navigate(`/lab/proyectos/${projectId}/perfiles`),
+            variant: "outlined",
+            color: "primary",
+          },
+        ],
       });
 
-      // Esperar a que el usuario vea la notificación antes de redirigir
-      setTimeout(() => navigate(`/lab/proyectos/${projectId}/perfiles`), 1500);
+      // Esperar a que el usuario vea la notificación antes de redirigir automáticamente
+      setTimeout(() => navigate(`/lab/proyectos/${projectId}/perfiles`), 2000);
     } catch (error) {
       console.error("Error saving profile:", error);
 
@@ -281,30 +296,39 @@ export const useProfileForm = () => {
         console.error("Error parsing error response:", parseError);
       }
 
-      setNotification({
-        open: true,
+      showNotification({
+        type: "error",
+        title: "Error al Guardar",
         message: errorMessage,
-        severity: "error",
+        persistent: true,
+        actions: [
+          {
+            label: "Reintentar",
+            action: () => handleSubmit(e),
+            variant: "contained",
+            color: "error",
+          },
+          {
+            label: "Cancelar",
+            action: () => navigate(`/lab/proyectos/${projectId}/perfiles`),
+            variant: "outlined",
+            color: "secondary",
+          },
+        ],
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCloseNotification = () => {
-    setNotification((prev) => ({ ...prev, open: false }));
-  };
-
   return {
     formData,
     errors,
     loading,
-    notification,
     profileStats,
     handleChange,
     handleBlowChange,
     handleSubmit,
-    handleCloseNotification,
     navigate,
     profileId,
     projectId,

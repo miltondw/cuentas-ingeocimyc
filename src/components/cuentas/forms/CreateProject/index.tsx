@@ -15,10 +15,9 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import api from "@api";
+import api from "@/api";
 import {
   ProjectFormData,
-  GastoFields,
   validationSchema,
   defaultValues,
 } from "./form-create-project.types";
@@ -74,10 +73,11 @@ const FormCreateProject: React.FC = () => {
       const endpoint = id ? `/projects/${id}` : "/projects";
       await api[id ? "put" : "post"](endpoint, payload);
       navigate(-1);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error submitting form:", error);
       setError(
-        error.response?.data?.message || "Error al enviar el formulario"
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message || "Error al enviar el formulario"
       );
     }
   };
@@ -280,6 +280,7 @@ const FormCreateProject: React.FC = () => {
           spacing={2}
           sx={{ mb: 2, border: "1px solid #ccc", p: 2, borderRadius: 1 }}
         >
+          {" "}
           {(
             [
               "camioneta",
@@ -290,7 +291,7 @@ const FormCreateProject: React.FC = () => {
               "peajes",
               "combustible",
               "hospedaje",
-            ] as (keyof GastoFields)[]
+            ] as const
           ).map((field) => (
             <Grid2 size={{ xs: 12, sm: 3 }} key={field}>
               <Controller
@@ -302,7 +303,7 @@ const FormCreateProject: React.FC = () => {
                     label={field.charAt(0).toUpperCase() + field.slice(1)}
                     fullWidth
                     type="text"
-                    value={formatNumber(gastoField.value) || ""}
+                    value={formatNumber(gastoField.value as number) || ""}
                     onChange={(e) =>
                       gastoField.onChange(parseNumber(e.target.value))
                     }
@@ -313,7 +314,6 @@ const FormCreateProject: React.FC = () => {
               />
             </Grid2>
           ))}
-
           {extrasFields.map((extra, index) => (
             <Grid2 container spacing={1} key={extra.id} sx={{ mb: 1 }}>
               <Grid2 size={{ xs: 5 }}>
@@ -362,15 +362,15 @@ const FormCreateProject: React.FC = () => {
               </Grid2>
             </Grid2>
           ))}
-
           <Grid2 size={{ xs: 12 }}>
+            {" "}
             <Button
               variant="outlined"
               onClick={() =>
                 extrasAppend({
                   id: Date.now().toString(),
                   field: "",
-                  value: "",
+                  value: 0,
                 })
               }
             >

@@ -12,13 +12,7 @@ export interface ApiqueFormData {
   depth: number | null;
   date: string;
   cbr_unaltered: boolean;
-  depth_tomo: string;
-  molde: string;
+  depth_tomo: string; // Campo para uso interno del formulario
+  molde: string; // Campo para uso interno del formulario
   layers: Layer[];
-}
-
-export interface Notification {
-  open: boolean;
-  message: string;
-  severity: "success" | "error" | "warning" | "info";
 }

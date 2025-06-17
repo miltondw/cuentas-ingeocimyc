@@ -57,12 +57,11 @@ const BlowDataTable = ({ blowsData, handleBlowChange }: BlowDataTableProps) => {
   return (
     <StyledBox>
       <StyledTable aria-label="Tabla de datos de golpes">
-        <thead>
-          <tr>
+        <thead>          <tr>
             <th>Profundidad (m)</th>
-            <th className="centered">6"</th>
-            <th className="centered">12"</th>
-            <th className="centered">18"</th>
+            <th className="centered">6&quot;</th>
+            <th className="centered">12&quot;</th>
+            <th className="centered">18&quot;</th>
             <th className="centered">N</th>
             <th>Observaciones</th>
           </tr>

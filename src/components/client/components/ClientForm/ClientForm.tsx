@@ -18,7 +18,7 @@ import ServiceSelection from "../ServiceSelection/ServiceSelection";
 import ServiceReview from "./ServiceReview";
 import ConfirmationModal from "./ConfirmationModal";
 import { useServiceRequest } from "../hooks/useServiceRequest";
-import * as serviceRequestsApi from "@api/serviceRequestsApi";
+import * as serviceRequestsApi from "@/api/serviceRequestsApi";
 import { Service } from "../types";
 
 interface LocationState {

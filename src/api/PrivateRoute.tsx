@@ -1,105 +1,88 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Navigate } from "react-router-dom";
 import { CircularProgress, Box, Typography } from "@mui/material";
-import api from "@api/index";
+import { useAuth } from "./useAuth";
 
 interface PrivateRouteProps {
   children: React.ReactNode;
-  requiredRole?: string;
+  requiredRole?: 'admin' | 'lab' | 'client';
+  requiredRoles?: Array<'admin' | 'lab' | 'client'>;
 }
 
-interface AuthState {
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  userRole: string | null;
-  error: string | null;
-}
+const PrivateRoute = ({ children, requiredRole, requiredRoles }: PrivateRouteProps) => {
+  const { isAuthenticated, user, loading, hasRole, hasAnyRole } = useAuth();
 
-const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
-  const [authState, setAuthState] = useState<AuthState>({
-    isLoading: true,
-    isAuthenticated: false,
-    userRole: null,
-    error: null,
-  });
-
-  useEffect(() => {
-    const verifyAuth = async () => {
-      try {
-        if (!navigator.onLine) {
-          const userData = JSON.parse(
-            localStorage.getItem("userData") || "null"
-          );
-          if (userData?.rol) {
-            setAuthState({
-              isLoading: false,
-              isAuthenticated: true,
-              userRole: userData.rol,
-              error: null,
-            });
-            return;
-          }
-          throw new Error("No user data available offline");
-        }
-
-        const response = await api.get<{ user: { rol: string } }>(
-          "/auth/verify"
-        );
-        setAuthState({
-          isLoading: false,
-          isAuthenticated: true,
-          userRole: response.data.user.rol,
-          error: null,
-        });
-      } catch (error: unknown) {
-        console.error("Verification error:", error);
-        localStorage.removeItem("userData");
-        setAuthState({
-          isLoading: false,
-          isAuthenticated: false,
-          userRole: null,
-          error:
-            error instanceof Error
-              ? error.message
-              : typeof error === "object" &&
-                error !== null &&
-                "response" in error
-              ? (error as { response?: { data?: { message?: string } } })
-                  .response?.data?.message || "Authentication error"
-              : "Authentication error",
-        });
-      }
-    };
-
-    verifyAuth();
-  }, []);
-
-  if (authState.isLoading) {
+  // Mostrar loading mientras se verifica la autenticación
+  if (loading) {
     return (
       <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-        }}
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="50vh"
+        flexDirection="column"
+        gap={2}
       >
         <CircularProgress />
-        <Typography variant="body1" sx={{ ml: 2 }}>
+        <Typography variant="body2" color="textSecondary">
           Verificando autenticación...
         </Typography>
       </Box>
     );
   }
 
-  if (!authState.isAuthenticated) {
-    return <Navigate to="/login" />;
+  // Si no está autenticado, redirigir al login
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && authState.userRole !== requiredRole) {
-    return <Navigate to="/unauthorized" />;
+  // Verificar roles si se especificaron
+  if (requiredRole && !hasRole(requiredRole)) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="50vh"
+        flexDirection="column"
+        gap={2}
+      >
+        <Typography variant="h6" color="error">
+          Acceso Denegado
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          No tienes permisos para acceder a esta sección.
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          Rol requerido: {requiredRole}, tu rol: {user.role}
+        </Typography>
+      </Box>
+    );
   }
 
+  if (requiredRoles && !hasAnyRole(requiredRoles)) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="50vh"
+        flexDirection="column"
+        gap={2}
+      >
+        <Typography variant="h6" color="error">
+          Acceso Denegado
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          No tienes permisos para acceder a esta sección.
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          Roles requeridos: {requiredRoles.join(', ')}, tu rol: {user.role}
+        </Typography>
+      </Box>
+    );
+  }
+  // Si todo está bien, mostrar el contenido
   return <>{children}</>;
 };
 

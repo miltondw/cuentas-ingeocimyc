@@ -2,43 +2,44 @@
 import "./App.css";
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { Suspense, lazy, useEffect, useState } from "react";
-import { AuthProvider, useAuth } from "./api/AuthContext";
-import { CircularProgress, Box, Typography, Container, Alert, Button } from "@mui/material";
+import { AuthProvider } from "./api/AuthContext";
+import { useAuth } from "./api/useAuth";
+import { Container, Alert, Button, Typography } from "@mui/material";
 import Navigation from "./components/atoms/Navigation";
-import ProjectApiques from "./components/lab/pages/ProjectApiques/ProjectApiques";
 import { ThemeProvider } from '@mui/material/styles';
 import theme from './theme';
-import ClientForm from "./components/client/components/ClientForm/ClientForm";
 import { syncPendingRequests } from "./utils/sync";
 import { ServiceRequestProvider } from "./components/client/components/ServiceRequestContext";
-// Componentes de carga perezosa
+import { PageLoadingFallback } from "./components/common/PageLoadingFallback";
+
+// Componentes de carga perezosa - Lab
+const ProjectApiques = lazy(() => import("./components/lab/pages/ProjectApiques"));
+const ProjectProfiles = lazy(() => import("./components/lab/pages/ProjectProfiles"));
+const ProjectsDashboard = lazy(() => import("./components/lab/pages/ProjectsDashboard"));
+const PerfilesDeSuelo = lazy(() => import("./components/lab/components/PerfilDeSuelos/PerfilDeSuelos"));
+const ApiquesDeSuelos = lazy(() => import("./components/lab/components/ApiquesDeSuelos/ApiquesDeSuelos"));
+
+// Componentes de carga perezosa - Auth
 const Login = lazy(() => import("./api/Login"));
 const Logout = lazy(() => import("./api/Logout"));
+
+// Componentes de carga perezosa - Cuentas  
 const GastosProject = lazy(() => import("./components/cuentas/tablas/gasto-project"));
 const TablaGastosEmpresa = lazy(() => import("./components/cuentas/tablas/gasto-mes"));
 const FormCreateMonth = lazy(() => import("./components/cuentas/forms/CreateMonth"));
-const FormCreateProject = lazy(() => import("./components/cuentas/forms/CreateProject"));
+const CreateProject = lazy(() => import("./components/cuentas/forms/CreateProject"));
 const TablaUtilidades = lazy(() => import("./components/cuentas/tablas/TablaUtilidades"));
-const PerfilesDeSuelo = lazy(() => import("./components/lab/components/PerfilDeSuelos/PerfilDeSuelos"));
-const ProjectProfiles = lazy(() => import("./components/lab/pages/ProjectProfiles"));
-const ProjectsDashboard = lazy(() => import("./components/lab/pages/ProjectsDashboard"));
-const ApiquesDeSuelos = lazy(() => import("./components/lab/components/ApiquesDeSuelos/ApiquesDeSuelos"));
 
-// Componentes comunes
-const LoadingFallback = () => (
-  <Box sx={{
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100vh',
-    gap: 2
-  }}>
-    <CircularProgress size={60} thickness={4} />
-    <Typography variant="h6" color="textSecondary">
-      Cargando módulos...
-    </Typography>
-  </Box>
+// Componentes de carga perezosa - Client
+const ClientForm = lazy(() => import("./components/client/components/ClientForm/ClientForm"));
+
+// Componentes comunes optimizados
+const LoadingFallback = ({ message = "Cargando módulos..." }) => (
+  <PageLoadingFallback message={message} type="component" height="400px" />
+);
+
+const FullPageLoadingFallback = () => (
+  <PageLoadingFallback message="Cargando página..." type="page" height="100vh" />
 );
 
 const Unauthorized = () => (
@@ -68,10 +69,9 @@ const NotFound = () => (
 
 // Layout principal
 const MainLayout = () => (
-  <>
-    <Navigation />
+  <>    <Navigation />
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Suspense fallback={<LoadingFallback />}>
+      <Suspense fallback={<LoadingFallback message="Cargando página..." />}>
         <Outlet />
       </Suspense>
     </Container>
@@ -84,7 +84,7 @@ const PrivateRouteWrapper = ({ children, requiredRoles }) => {
 
   if (loading) return <LoadingFallback />;
   if (!user) return <Navigate to="/login" replace />;
-  if (requiredRoles && !requiredRoles.includes(user.rol)) {
+  if (requiredRoles && !requiredRoles.includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
   }
   return children || <Outlet />;
@@ -92,7 +92,7 @@ const PrivateRouteWrapper = ({ children, requiredRoles }) => {
 // Gestión de rutas de autenticación
 const AuthRedirect = () => {
   const { user } = useAuth();
-  return user ? <Navigate to={user.rol == "admin" ? "/proyectos" : "/lab/proyectos"} replace /> : <Navigate to="/login" replace />;
+  return user ? <Navigate to={user.role == "admin" ? "/proyectos" : "/lab/proyectos"} replace /> : <Navigate to="/login" replace />;
 };
 
 // Configuración principal de rutas
@@ -122,12 +122,11 @@ const AppRoutes = () => (
     {/* Rutas protegidas */}
     <Route element={<PrivateRouteWrapper><MainLayout /></PrivateRouteWrapper>}>
 
-      {/* Ruta padre para admin */}
-      <Route element={<PrivateRouteWrapper requiredRoles={["admin"]} />}>
+      {/* Ruta padre para admin */}      <Route element={<PrivateRouteWrapper requiredRoles={["admin"]} />}>
         <Route path="/proyectos" element={<GastosProject />} />
         <Route path="/gastos" element={<TablaGastosEmpresa />} />
-        <Route path="/crear-proyecto" element={<FormCreateProject />} />
-        <Route path="/crear-proyecto/:id" element={<FormCreateProject />} />
+        <Route path="/crear-proyecto" element={<CreateProject />} />
+        <Route path="/crear-proyecto/:id" element={<CreateProject />} />
         <Route path="/crear-gasto-mes" element={<FormCreateMonth />} />
         <Route path="/crear-gasto-mes/:id" element={<FormCreateMonth />} />
         <Route path="/utilidades" element={<TablaUtilidades />} />
@@ -213,8 +212,9 @@ const App = () => {
         }
         setInstallPrompt(null); // Limpiar el prompt después de la instalación
       });
-    }  };
-  
+    }
+  };
+
   // Service worker update handling is now completely managed in main.jsx
   // We don't need duplicate event listeners here
   return (
@@ -229,9 +229,8 @@ const App = () => {
           {isOffline && (
             <Alert severity="warning" sx={{ m: 2 }}>
               Estás sin conexión. Los datos se sincronizarán cuando tengas señal.
-            </Alert>
-          )}
-          <Suspense fallback={<LoadingFallback />}>
+            </Alert>)}
+          <Suspense fallback={<FullPageLoadingFallback />}>
             <AppRoutes />
           </Suspense>
         </Router>
