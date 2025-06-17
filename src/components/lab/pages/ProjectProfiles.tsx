@@ -337,7 +337,7 @@ const ProjectProfiles = () => {
                 onChange={(e) =>
                   handleFilterChange({ drillingDate: e.target.value })
                 }
-                InputLabelProps={{ shrink: true }}
+                slotProps={{ inputLabel: { shrink: true } }}
               />
             </Grid2>
             <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>

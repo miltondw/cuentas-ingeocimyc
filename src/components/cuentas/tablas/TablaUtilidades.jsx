@@ -73,7 +73,7 @@ const TablaResumen = () => {
         Number(gasto.arriendo) +
         Number(gasto.internet) +
         Number(gasto.salud) +
-        sumOtrosCampos(gasto.otros_campos);
+        sumOtrosCampos(gasto.otrosCampos);
     });
 
     // Procesar proyectos y sus gastos (corregido)
@@ -89,10 +89,10 @@ const TablaResumen = () => {
         Ingresos: 0,
       };
 
-      monthlyData[mes].Ingresos += Number(proyecto.costo_servicio);
-      monthlyData[mes].CostoServicio += Number(proyecto.costo_servicio);
-      monthlyData[mes].TotalRetencion += Number(proyecto.costo_servicio) * (Number(proyecto.valor_retencion) / 100);
-      monthlyData[mes].TotalIva += Number(proyecto.costo_servicio) * 0.19;
+      monthlyData[mes].Ingresos += Number(proyecto.costoServicio);
+      monthlyData[mes].CostoServicio += Number(proyecto.costoServicio);
+      monthlyData[mes].TotalRetencion += Number(proyecto.costoServicio) * (Number(proyecto.valorRetencion) / 100);
+      monthlyData[mes].TotalIva += Number(proyecto.costoServicio) * 0.19;
 
       // Procesar el objeto "gastos" directamente
       const gasto = proyecto.gastos;
@@ -101,7 +101,7 @@ const TablaResumen = () => {
         'otros', 'peajes', 'combustible', 'hospedaje'
       ].reduce((acc, key) => acc + (Number(gasto[key]) || 0), 0);
 
-      monthlyData[mes].GastosProyectos += gastoProyecto + sumOtrosCampos(gasto.otros_campos);
+      monthlyData[mes].GastosProyectos += gastoProyecto + sumOtrosCampos(gasto.otrosCampos);
     });
 
     //console.log(proyectos)

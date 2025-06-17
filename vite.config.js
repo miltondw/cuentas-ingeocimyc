@@ -102,10 +102,6 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5173,
-      https: {
-        key: "./certs/localhost-key.pem",
-        cert: "./certs/localhost.pem",
-      },
     },
   };
 });

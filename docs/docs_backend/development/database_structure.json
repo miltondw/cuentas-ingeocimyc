@@ -17,7 +17,7 @@
       "Extra": ""
     },
     {
-      "Field": "proyecto_id",
+      "Field": "id",
       "Type": "int(11)",
       "Null": "NO",
       "Key": "",
@@ -205,7 +205,7 @@
       "Extra": ""
     },
     {
-      "Field": "otros_campos",
+      "Field": "otrosCampos",
       "Type": "json",
       "Null": "YES",
       "Key": "",
@@ -223,7 +223,7 @@
       "Extra": "auto_increment"
     },
     {
-      "Field": "proyecto_id",
+      "Field": "id",
       "Type": "int(11)",
       "Null": "YES",
       "Key": "MUL",
@@ -295,7 +295,7 @@
       "Extra": ""
     },
     {
-      "Field": "otros_campos",
+      "Field": "otrosCampos",
       "Type": "json",
       "Null": "YES",
       "Key": "",
@@ -551,7 +551,7 @@
   ],
   "proyectos": [
     {
-      "Field": "proyecto_id",
+      "Field": "id",
       "Type": "int(11)",
       "Null": "NO",
       "Key": "PRI",
@@ -575,7 +575,7 @@
       "Extra": ""
     },
     {
-      "Field": "nombre_proyecto",
+      "Field": "nombreProyecto",
       "Type": "varchar(255)",
       "Null": "NO",
       "Key": "",
@@ -591,7 +591,7 @@
       "Extra": ""
     },
     {
-      "Field": "costo_servicio",
+      "Field": "costoServicio",
       "Type": "decimal(15,2)",
       "Null": "NO",
       "Key": "",
@@ -615,7 +615,7 @@
       "Extra": ""
     },
     {
-      "Field": "valor_retencion",
+      "Field": "valorRetencion",
       "Type": "decimal(10,2)",
       "Null": "YES",
       "Key": "",
@@ -623,7 +623,7 @@
       "Extra": ""
     },
     {
-      "Field": "metodo_de_pago",
+      "Field": "metodoDePago",
       "Type": "varchar(100)",
       "Null": "YES",
       "Key": "",

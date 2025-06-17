@@ -32,7 +32,7 @@ Generated: 2025-05-30T01:26:06.835Z
 CREATE TABLE `apiques` (
   `apique_id` int(11) NOT NULL AUTO_INCREMENT,
   `apique` int(11) DEFAULT NULL COMMENT 'Número identificador del apique',
-  `proyecto_id` int(11) NOT NULL,
+  `id` int(11) NOT NULL,
   `location` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `depth` decimal(5,2) DEFAULT NULL COMMENT 'Profundidad total en metros',
   `date` date DEFAULT NULL,
@@ -49,7 +49,7 @@ CREATE TABLE `apiques` (
 | ------------- | ------------ | ---- | --- | ------- | -------------- |
 | apique_id     | int(11)      | NO   | PRI |         | auto_increment |
 | apique        | int(11)      | YES  |     |         |                |
-| proyecto_id   | int(11)      | NO   |     |         |                |
+| id            | int(11)      | NO   |     |         |                |
 | location      | varchar(255) | YES  |     |         |                |
 | depth         | decimal(5,2) | YES  |     |         |                |
 | date          | date         | YES  |     |         |                |
@@ -118,7 +118,7 @@ CREATE TABLE `gastos_empresa` (
   `arriendo` decimal(15,2) DEFAULT '0.00',
   `internet` decimal(15,2) DEFAULT '0.00',
   `salud` decimal(15,2) DEFAULT '0.00',
-  `otros_campos` json DEFAULT NULL,
+  `otrosCampos` json DEFAULT NULL,
   PRIMARY KEY (`gasto_empresa_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci
 ```
@@ -135,7 +135,7 @@ CREATE TABLE `gastos_empresa` (
 | arriendo         | decimal(15,2) | YES  |     | 0.00    |                |
 | internet         | decimal(15,2) | YES  |     | 0.00    |                |
 | salud            | decimal(15,2) | YES  |     | 0.00    |                |
-| otros_campos     | json          | YES  |     |         |                |
+| otrosCampos      | json          | YES  |     |         |                |
 
 ### Índices:
 
@@ -152,7 +152,7 @@ CREATE TABLE `gastos_empresa` (
 ```sql
 CREATE TABLE `gastos_proyectos` (
   `gasto_proyecto_id` int(11) NOT NULL AUTO_INCREMENT,
-  `proyecto_id` int(11) DEFAULT NULL,
+  `id` int(11) DEFAULT NULL,
   `camioneta` decimal(15,2) DEFAULT '0.00',
   `campo` decimal(15,2) DEFAULT '0.00',
   `obreros` decimal(15,2) DEFAULT '0.00',
@@ -161,10 +161,10 @@ CREATE TABLE `gastos_proyectos` (
   `peajes` decimal(15,2) DEFAULT '0.00',
   `combustible` decimal(15,2) DEFAULT '0.00',
   `hospedaje` decimal(15,2) DEFAULT '0.00',
-  `otros_campos` json DEFAULT NULL,
+  `otrosCampos` json DEFAULT NULL,
   PRIMARY KEY (`gasto_proyecto_id`),
-  KEY `fk_proyecto` (`proyecto_id`),
-  CONSTRAINT `fk_proyecto` FOREIGN KEY (`proyecto_id`) REFERENCES `proyectos` (`proyecto_id`) ON DELETE CASCADE
+  KEY `fk_proyecto` (`id`),
+  CONSTRAINT `fk_proyecto` FOREIGN KEY (`id`) REFERENCES `proyectos` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci
 ```
 
@@ -173,7 +173,7 @@ CREATE TABLE `gastos_proyectos` (
 | Field             | Type          | Null | Key | Default | Extra          |
 | ----------------- | ------------- | ---- | --- | ------- | -------------- |
 | gasto_proyecto_id | int(11)       | NO   | PRI |         | auto_increment |
-| proyecto_id       | int(11)       | YES  | MUL |         |                |
+| id                | int(11)       | YES  | MUL |         |                |
 | camioneta         | decimal(15,2) | YES  |     | 0.00    |                |
 | campo             | decimal(15,2) | YES  |     | 0.00    |                |
 | obreros           | decimal(15,2) | YES  |     | 0.00    |                |
@@ -182,14 +182,14 @@ CREATE TABLE `gastos_proyectos` (
 | peajes            | decimal(15,2) | YES  |     | 0.00    |                |
 | combustible       | decimal(15,2) | YES  |     | 0.00    |                |
 | hospedaje         | decimal(15,2) | YES  |     | 0.00    |                |
-| otros_campos      | json          | YES  |     |         |                |
+| otrosCampos       | json          | YES  |     |         |                |
 
 ### Índices:
 
 | Key_name    | Column_name       | Unique | Seq_in_index |
 | ----------- | ----------------- | ------ | ------------ |
 | PRIMARY     | gasto_proyecto_id | YES    | 1            |
-| fk_proyecto | proyecto_id       | NO     | 1            |
+| fk_proyecto | id                | NO     | 1            |
 
 ---
 
@@ -298,7 +298,7 @@ CREATE TABLE `profiles` (
   `location` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`profile_id`),
   UNIQUE KEY `unique_sounding` (`project_id`,`sounding_number`),
-  CONSTRAINT `profiles_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `proyectos` (`proyecto_id`) ON DELETE CASCADE
+  CONSTRAINT `profiles_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `proyectos` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci
 ```
 
@@ -332,40 +332,40 @@ CREATE TABLE `profiles` (
 
 ```sql
 CREATE TABLE `proyectos` (
-  `proyecto_id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `fecha` date NOT NULL,
   `solicitante` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `nombre_proyecto` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `nombreProyecto` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `obrero` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `costo_servicio` decimal(15,2) NOT NULL,
+  `costoServicio` decimal(15,2) NOT NULL,
   `abono` decimal(15,2) DEFAULT '0.00',
   `factura` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
-  `valor_retencion` decimal(10,2) DEFAULT '0.00',
-  `metodo_de_pago` varchar(100) COLLATE utf8_unicode_ci DEFAULT NULL,
-  PRIMARY KEY (`proyecto_id`)
+  `valorRetencion` decimal(10,2) DEFAULT '0.00',
+  `metodoDePago` varchar(100) COLLATE utf8_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci
 ```
 
 ### Columnas:
 
-| Field           | Type          | Null | Key | Default | Extra          |
-| --------------- | ------------- | ---- | --- | ------- | -------------- |
-| proyecto_id     | int(11)       | NO   | PRI |         | auto_increment |
-| fecha           | date          | NO   |     |         |                |
-| solicitante     | varchar(255)  | NO   |     |         |                |
-| nombre_proyecto | varchar(255)  | NO   |     |         |                |
-| obrero          | varchar(255)  | NO   |     |         |                |
-| costo_servicio  | decimal(15,2) | NO   |     |         |                |
-| abono           | decimal(15,2) | YES  |     | 0.00    |                |
-| factura         | varchar(255)  | YES  |     |         |                |
-| valor_retencion | decimal(10,2) | YES  |     | 0.00    |                |
-| metodo_de_pago  | varchar(100)  | YES  |     |         |                |
+| Field          | Type          | Null | Key | Default | Extra          |
+| -------------- | ------------- | ---- | --- | ------- | -------------- |
+| id             | int(11)       | NO   | PRI |         | auto_increment |
+| fecha          | date          | NO   |     |         |                |
+| solicitante    | varchar(255)  | NO   |     |         |                |
+| nombreProyecto | varchar(255)  | NO   |     |         |                |
+| obrero         | varchar(255)  | NO   |     |         |                |
+| costoServicio  | decimal(15,2) | NO   |     |         |                |
+| abono          | decimal(15,2) | YES  |     | 0.00    |                |
+| factura        | varchar(255)  | YES  |     |         |                |
+| valorRetencion | decimal(10,2) | YES  |     | 0.00    |                |
+| metodoDePago   | varchar(100)  | YES  |     |         |                |
 
 ### Índices:
 
 | Key_name | Column_name | Unique | Seq_in_index |
 | -------- | ----------- | ------ | ------------ |
-| PRIMARY  | proyecto_id | YES    | 1            |
+| PRIMARY  | id          | YES    | 1            |
 
 ---
 

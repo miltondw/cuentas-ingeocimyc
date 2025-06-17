@@ -11,7 +11,7 @@ export {
   ServiceRequestsService,
   submitServiceRequest,
 } from "./serviceRequestsNew";
-export {
+export {export {
   gastosMensualesService,
   GastosMensualesService,
 } from "./gastosMensualesService";
@@ -32,9 +32,17 @@ export { default as api } from "./index";
 // Re-exportar tipos importantes
 export type {
   Project,
+  CreateProjectDto,
+  ProjectFilters,
   Apique,
+  CreateApiqueDto,
+  ApiquesFilters,
   Profile,
+  CreateProfileDto,
+  ProfilesFilters,
   ServiceRequest,
+  CreateServiceRequestDto,
+  ServiceRequestFilters,
   PaginatedResponse,
   ApiResponse,
   User,

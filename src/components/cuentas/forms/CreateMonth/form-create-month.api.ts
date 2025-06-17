@@ -5,8 +5,8 @@ export const fetchMonthData = async (id: string) => {
   const res = await api.get(`/gastos-mes/${id}`);
   const data = res.data;
 
-  const extras = data.otros_campos
-    ? Object.entries(data.otros_campos).map(([field, value]) => ({
+  const extras = data.otrosCampos
+    ? Object.entries(data.otrosCampos).map(([field, value]) => ({
         id: field,
         field,
         value:
@@ -36,10 +36,10 @@ export const transformFormData = (data: MonthFormData) => {
   );
 
   const payload: Omit<MonthFormData, "extras"> & {
-    otros_campos: Record<string, number> | null;
+    otrosCampos: Record<string, number> | null;
   } = {
     ...data,
-    otros_campos: Object.keys(otrosCampos).length > 0 ? otrosCampos : null,
+    otrosCampos: Object.keys(otrosCampos).length > 0 ? otrosCampos : null,
   };
 
   if ("extras" in payload) {

@@ -225,7 +225,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
             label={filter.label}
             value={value}
             onChange={(e) => onFilterChange(filter.key, e.target.value)}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{ inputLabel: { shrink: true } }}
           />
         );
 

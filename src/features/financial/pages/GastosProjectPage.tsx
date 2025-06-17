@@ -1,4 +1,5 @@
-import { Box, Typography, Paper } from "@mui/material";
+import { Box, Paper } from "@mui/material";
+import { ProjectFormCorrected } from "../components";
 
 /**
  * Página de gastos de proyectos
@@ -8,13 +9,7 @@ const GastosProjectPage = () => {
   return (
     <Box sx={{ maxWidth: 1200, mx: "auto" }}>
       <Paper sx={{ p: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          Gastos por Proyecto
-        </Typography>
-        <Typography>
-          Esta página contendrá la tabla de gastos por proyecto. Se migrará
-          completamente en una fase posterior.
-        </Typography>
+        <ProjectFormCorrected />
       </Paper>
     </Box>
   );

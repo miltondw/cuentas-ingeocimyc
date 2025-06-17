@@ -38,7 +38,7 @@ const dbPromise: Promise<IDBPDatabase<MyDB>> = openDB<MyDB>(DB_NAME, 1, {
       keyPath: "id",
       autoIncrement: true,
     });
-    db.createObjectStore(PROJECTS_STORE, { keyPath: "proyecto_id" });
+    db.createObjectStore(PROJECTS_STORE, { keyPath: "id" });
   },
 });
 

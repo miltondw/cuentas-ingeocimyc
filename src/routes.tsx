@@ -4,6 +4,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { PageLoadingFallback } from "@/components/ui/PageLoadingFallback";
 import { ROUTES } from "@/utils/routes";
 import type { UserRole } from "@/types/api";
+import GastosProject from "./features/projects/components/GastosProject";
 
 // Layout principal
 const MainLayout = lazy(() => import("@/components/layout/MainLayout"));
@@ -57,7 +58,7 @@ const GastosMensualesPage = lazy(
   () => import("@/features/financial/pages/GastosMensualesPage")
 );
 const CreateProjectPage = lazy(
-  () => import("@/features/financial/pages/CreateProjectPage")
+  () => import("@/features/financial/pages/CreateProjectPageCorrected")
 );
 const CreateMonthExpensePage = lazy(
   () => import("@/features/financial/pages/CreateMonthExpensePage")
@@ -148,10 +149,7 @@ const AppRoutes = () => {
         {/* Rutas protegidas - Admin */}
         <Route element={<PrivateRoute requiredRoles={["admin"]} />}>
           <Route element={<MainLayout />}>
-            <Route
-              path={ROUTES.ADMIN.PROJECTS}
-              element={<GastosProjectPage />}
-            />
+            <Route path={ROUTES.ADMIN.PROJECTS} element={<GastosProject />} />
             <Route
               path={ROUTES.ADMIN.EXPENSES}
               element={<GastosMensualesPage />}

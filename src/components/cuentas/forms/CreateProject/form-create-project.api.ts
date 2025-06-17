@@ -17,8 +17,8 @@ export const fetchProjectData = async (id: string) => {
       extras: [],
     };
     const extras =
-      gastoFromApi.otros_campos &&
-      Object.entries(gastoFromApi.otros_campos).map(([key, value]) => ({
+      gastoFromApi.otrosCampos &&
+      Object.entries(gastoFromApi.otrosCampos).map(([key, value]) => ({
         id: key,
         field: key,
         value: Number(value), // Aseguramos que value sea un número
@@ -27,7 +27,7 @@ export const fetchProjectData = async (id: string) => {
     const formattedData: ProjectFormData = {
       ...data,
       fecha: data.fecha ? new Date(data.fecha).toISOString().split("T")[0] : "",
-      retencionIva: Boolean(data.valor_retencion),
+      retencionIva: Boolean(data.valorRetencion),
       gastos: {
         ...gastoFromApi,
         extras: extras || [],
@@ -51,22 +51,22 @@ export const transformProjectData = (data: ProjectFormData) => {
   );
   const basePayload = {
     ...data,
-    costo_servicio: Number(data.costo_servicio),
+    costoServicio: Number(data.costoServicio),
     abono: Number(data.abono),
-    valor_retencion: data.retencionIva ? Number(data.valor_retencion) : 0,
+    valorRetencion: data.retencionIva ? Number(data.valorRetencion) : 0,
   };
 
   // Crear el objeto final sin los campos innecesarios
   return {
     fecha: basePayload.fecha,
     solicitante: basePayload.solicitante,
-    nombre_proyecto: basePayload.nombre_proyecto,
+    nombreProyecto: basePayload.nombreProyecto,
     obrero: basePayload.obrero,
-    costo_servicio: basePayload.costo_servicio,
+    costoServicio: basePayload.costoServicio,
     abono: basePayload.abono,
     factura: basePayload.factura,
-    metodo_de_pago: basePayload.metodo_de_pago,
-    valor_retencion: basePayload.valor_retencion,
+    metodoDePago: basePayload.metodoDePago,
+    valorRetencion: basePayload.valorRetencion,
     gastos: {
       camioneta: data.gastos.camioneta,
       campo: data.gastos.campo,
@@ -76,7 +76,7 @@ export const transformProjectData = (data: ProjectFormData) => {
       peajes: data.gastos.peajes,
       combustible: data.gastos.combustible,
       hospedaje: data.gastos.hospedaje,
-      otros_campos: Object.keys(otrosCampos).length > 0 ? otrosCampos : null,
+      otrosCampos: Object.keys(otrosCampos).length > 0 ? otrosCampos : null,
     },
   };
 };

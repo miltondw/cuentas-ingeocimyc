@@ -153,7 +153,7 @@ export interface ProjectFilters extends PaginationParams {
 }
 
 export interface Project {
-  proyecto_id: number;
+  id: number;
   nombre: string;
   descripcion?: string;
   ubicacion?: string;
@@ -169,7 +169,7 @@ export interface Project {
 export interface Apique {
   apique_id: number;
   apique: number;
-  proyecto_id: number;
+  id: number;
   location?: string;
   depth?: number;
   date?: string;
@@ -181,7 +181,7 @@ export interface Apique {
 export interface Profile {
   profile_id: number;
   profile: number;
-  proyecto_id: number;
+  id: number;
   location?: string;
   depth?: number;
   date?: string;
@@ -223,12 +223,12 @@ export interface GastoEmpresa {
   arriendo: number;
   internet: number;
   salud: number;
-  otros_campos?: Record<string, string | number>;
+  otrosCampos?: Record<string, string | number>;
 }
 
 export interface GastoProyecto {
   gasto_proyecto_id: number;
-  proyecto_id: number;
+  id: number;
   camioneta: number;
   campo: number;
   obreros: number;
@@ -237,12 +237,12 @@ export interface GastoProyecto {
   peajes: number;
   combustible: number;
   hospedaje: number;
-  otros_campos?: Record<string, string | number>;
+  otrosCampos?: Record<string, string | number>;
 }
 
 export interface ResumenFinanciero {
   id: number;
-  proyecto_id: number;
+  project_id: number;
   fecha: string;
   total_ingresos: number;
   total_gastos: number;

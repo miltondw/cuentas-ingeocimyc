@@ -37,7 +37,7 @@ const transformData = (data) => {
     const gastos = Object.entries(item)
       .filter(
         ([key, value]) =>
-          !["gasto_empresa_id", "mes", "otros_campos"].includes(key) &&
+          !["gasto_empresa_id", "mes", "otrosCampos"].includes(key) &&
           value !== null
       )
       .map(([key, value]) => ({
@@ -45,8 +45,8 @@ const transformData = (data) => {
         value: parseFloat(value),
       }));
 
-    if (item.otros_campos && typeof item.otros_campos === "object") {
-      Object.entries(item.otros_campos).forEach(([nombre, monto]) => {
+    if (item.otrosCampos && typeof item.otrosCampos === "object") {
+      Object.entries(item.otrosCampos).forEach(([nombre, monto]) => {
         gastos.push({
           name: nombre.replace(/_/g, " ").toUpperCase(),
           value: parseFloat(monto),

@@ -31,19 +31,19 @@ const defaultGasto = {
 const defaultProject = {
   fecha: "",
   solicitante: "",
-  nombre_proyecto: "",
+  nombreProyecto: "",
   obrero: "",
-  costo_servicio: 0,
+  costoServicio: 0,
   abono: 0,
   factura: "",
-  metodo_de_pago: "",
-  valor_retencion: 0,
+  metodoDePago: "",
+  valorRetencion: 0,
   retencionIva: false,
   gastos: defaultGasto,
 };
 
 // Formatear y desformatear números
-const formatNumber = (value) => (value === "" || isNaN(value) ? "" : Number(value).toLocaleString("en-US"));
+const formatNumber = (value) => (value === "" || isNaN(value) ? "" : Number(value).toLocaleString("es-CO"));
 const unformatNumber = (value) => value.replace(/,/g, "");
 
 const FormCreateProject = () => {
@@ -62,8 +62,8 @@ const FormCreateProject = () => {
           if (response.data.success) {
             const data = response.data.proyecto; // Ajusta según la estructura de tu API
             const gastoFromApi = data.gastos || defaultGasto; // Asegúrate de que gastos no sea undefined
-            const extras = gastoFromApi.otros_campos
-              ? Object.entries(gastoFromApi.otros_campos).map(([key, value]) => ({
+            const extras = gastoFromApi.otrosCampos
+              ? Object.entries(gastoFromApi.otrosCampos).map(([key, value]) => ({
                 field: key,
                 value: value.toString(),
               }))
@@ -72,7 +72,7 @@ const FormCreateProject = () => {
             setProject({
               ...data,
               fecha: data.fecha ? new Date(data.fecha).toISOString().substring(0, 10) : "",
-              retencionIva: Boolean(data.valor_retencion),
+              retencionIva: Boolean(data.valorRetencion),
               gastos: { ...gastoFromApi, extras }, // Ahora es un objeto
             });
           }
@@ -88,7 +88,7 @@ const FormCreateProject = () => {
   // Manejar cambios en los campos del proyecto
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const unformattedValue = ["valor_retencion", "abono", "costo_servicio"].includes(name)
+    const unformattedValue = ["valorRetencion", "abono", "costoServicio"].includes(name)
       ? unformatNumber(value)
       : value;
     setProject((prev) => ({ ...prev, [name]: unformattedValue }));
@@ -139,7 +139,7 @@ const FormCreateProject = () => {
     setProject((prev) => ({
       ...prev,
       retencionIva: checked,
-      valor_retencion: checked ? prev.valor_retencion : 0,
+      valorRetencion: checked ? prev.valorRetencion : 0,
     }));
   };
 
@@ -159,12 +159,12 @@ const FormCreateProject = () => {
       // Construir el payload
       const payload = {
         ...project,
-        costo_servicio: Number(project.costo_servicio),
+        costoServicio: Number(project.costoServicio),
         abono: Number(project.abono),
-        valor_retencion: project.retencionIva ? Number(project.valor_retencion) : 0,
+        valorRetencion: project.retencionIva ? Number(project.valorRetencion) : 0,
         gastos: {
           ...project.gastos,
-          otros_campos: Object.keys(otrosCampos).length > 0 ? otrosCampos : null,
+          otrosCampos: Object.keys(otrosCampos).length > 0 ? otrosCampos : null,
         },
       };
 
@@ -208,7 +208,7 @@ const FormCreateProject = () => {
               slotProps={{ inputLabel: { shrink: true } }}
             />
           </Grid2>
-          {["solicitante", "nombre_proyecto", "obrero"].map((field) => (
+          {["solicitante", "nombreProyecto", "obrero"].map((field) => (
             <Grid2 size={{ xs: 12, sm: 6 }} key={field}>
               <TextField
                 label={field.replace(/_/g, " ").toUpperCase()}
@@ -223,8 +223,8 @@ const FormCreateProject = () => {
             <TextField
               select
               label="Método de Pago"
-              name="metodo_de_pago"
-              value={project.metodo_de_pago || ""} // Asegúrate de que no sea null
+              name="metodoDePago"
+              value={project.metodoDePago || ""} // Asegúrate de que no sea null
               onChange={handleChange}
               fullWidth
             >
@@ -236,8 +236,8 @@ const FormCreateProject = () => {
           <Grid2 size={{ xs: 12, sm: 6 }}>
             <TextField
               label="COSTO DEL SERVICIO"
-              name="costo_servicio"
-              value={formatNumber(project.costo_servicio) || ""} // Asegúrate de que no sea null
+              name="costoServicio"
+              value={formatNumber(project.costoServicio) || ""} // Asegúrate de que no sea null
               onChange={handleChange}
               fullWidth
             />
@@ -258,7 +258,7 @@ const FormCreateProject = () => {
             />
           </Grid2>
           {project.retencionIva && (
-            ["factura", "valor_retencion"].map((field) => (
+            ["factura", "valorRetencion"].map((field) => (
               <Grid2 size={{ xs: 12, sm: 6 }} key={field}>
                 <TextField
                   label={field.replace(/_/g, " ").toUpperCase()}

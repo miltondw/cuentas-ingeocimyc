@@ -21,13 +21,13 @@ export interface GastoFields {
 export interface ProjectFormData {
   fecha: string;
   solicitante: string;
-  nombre_proyecto: string;
+  nombreProyecto: string;
   obrero: string;
-  costo_servicio: number;
+  costoServicio: number;
   abono: number;
   factura?: string;
-  metodo_de_pago: string;
-  valor_retencion?: number;
+  metodoDePago: string;
+  valorRetencion?: number;
   retencionIva?: boolean;
   gastos: GastoFields;
 }
@@ -35,9 +35,9 @@ export interface ProjectFormData {
 export const validationSchema: yup.ObjectSchema<ProjectFormData> = yup.object({
   fecha: yup.string().required("La fecha es requerida"),
   solicitante: yup.string().required("El solicitante es requerido"),
-  nombre_proyecto: yup.string().required("El nombre del proyecto es requerido"),
+  nombreProyecto: yup.string().required("El nombre del proyecto es requerido"),
   obrero: yup.string().required("El obrero es requerido"),
-  costo_servicio: yup
+  costoServicio: yup
     .number()
     .required("El costo del servicio es requerido")
     .typeError("El costo del servicio debe ser un número"),
@@ -50,8 +50,8 @@ export const validationSchema: yup.ObjectSchema<ProjectFormData> = yup.object({
     then: () => yup.string().required("La factura es requerida"),
     otherwise: () => yup.string().notRequired(),
   }),
-  metodo_de_pago: yup.string().required("El método de pago es requerido"),
-  valor_retencion: yup.number().when("retencionIva", {
+  metodoDePago: yup.string().required("El método de pago es requerido"),
+  valorRetencion: yup.number().when("retencionIva", {
     is: true,
     then: () =>
       yup
@@ -113,11 +113,11 @@ export const validationSchema: yup.ObjectSchema<ProjectFormData> = yup.object({
 export const defaultValues: ProjectFormData = {
   fecha: "",
   solicitante: "",
-  nombre_proyecto: "",
+  nombreProyecto: "",
   obrero: "",
-  costo_servicio: 0,
+  costoServicio: 0,
   abono: 0,
-  metodo_de_pago: "",
+  metodoDePago: "",
   retencionIva: false,
   gastos: {
     camioneta: 0,

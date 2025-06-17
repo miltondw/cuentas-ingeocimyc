@@ -19,7 +19,7 @@ export interface GastoMensual {
   arriendo: number;
   internet: number;
   salud: number;
-  otros_campos?: { [key: string]: number };
+  otrosCampos?: { [key: string]: number };
   created_at: string;
   updated_at: string;
 }
@@ -32,7 +32,7 @@ export interface CreateGastoMensualDto {
   arriendo: number;
   internet: number;
   salud: number;
-  otros_campos?: { [key: string]: number };
+  otrosCampos?: { [key: string]: number };
 }
 
 export interface GastosMensualesFilters extends FinancialFilters {
@@ -184,8 +184,8 @@ export class GastosMensualesService {
         Number(gasto.arriendo) +
         Number(gasto.internet) +
         Number(gasto.salud);
-      const totalOtros = gasto.otros_campos
-        ? Object.values(gasto.otros_campos).reduce(
+      const totalOtros = gasto.otrosCampos
+        ? Object.values(gasto.otrosCampos).reduce(
             (sum, val) => sum + Number(val),
             0
           )

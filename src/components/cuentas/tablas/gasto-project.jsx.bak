@@ -33,16 +33,16 @@ const tableRowInputs = [
   { id: "acciones", label: "Acciones", sortable: false, width: 150 },
   { id: "fecha", label: "Fecha", sortable: true, filterType: "date", width: 120 },
   { id: "solicitante", label: "Solicitante", sortable: true, filterType: "text", width: 150 },
-  { id: "nombre_proyecto", label: "Proyecto", sortable: true, filterType: "text", width: 200 },
+  { id: "nombreProyecto", label: "Proyecto", sortable: true, filterType: "text", width: 200 },
   { id: "factura", label: "N° Factura", sortable: true, filterType: "text", width: 120 },
-  { id: "valor_retencion", label: "% De Retención", sortable: true, filterType: "text", width: 120 },
+  { id: "valorRetencion", label: "% De Retención", sortable: true, filterType: "text", width: 120 },
 
   { id: "valor_iva", label: "Valor de Iva", sortable: true, filterType: "text", width: 120 },
   { id: "valor_re", label: "Valor de Retención", sortable: true, filterType: "text", width: 120 },
 
   { id: "obrero", label: "Obrero", sortable: true, filterType: "text", width: 150 },
-  { id: "metodo_de_pago", label: "Método de Pago", sortable: true, filterType: "text", width: 150 },
-  { id: "costo_servicio", label: "Costo Servicio", sortable: true, width: 150 },
+  { id: "metodoDePago", label: "Método de Pago", sortable: true, filterType: "text", width: 150 },
+  { id: "costoServicio", label: "Costo Servicio", sortable: true, width: 150 },
   { id: "abono", label: "Abonado", sortable: true, width: 120 },
   { id: "total_gastos", label: "Total Gastos", sortable: true, width: 150 },
   { id: "utilidad_neta", label: "Utilidad Neta", sortable: true, width: 150 },
@@ -61,7 +61,7 @@ const fixedGastoFields = [
   "hospedaje",
 ];
 
-const formatNumber = (value) => (value === "" || isNaN(value) ? "" : Number(value).toLocaleString("en-US"));
+const formatNumber = (value) => (value === "" || isNaN(value) ? "" : Number(value).toLocaleString("es-CO"));
 const unformatNumber = (value) => value.replace(/,/g, "");
 const formatDate = (dateStr) =>
   dateStr ? new Date(dateStr).toLocaleDateString("es", { timeZone: "UTC" }) : "";
@@ -69,17 +69,17 @@ const formatDate = (dateStr) =>
 const getGastos = (project) => {
   try {
     const gastos = project.gastos || {};
-    const otrosCampos = gastos.otros_campos || {};
+    const otrosCampos = gastos.otrosCampos || {};
 
     // Sumar los valores de los campos fijos
     const gastosFijos = Object.entries(gastos).reduce((total, [key, value]) => {
-      if (!["gasto_proyecto_id", "proyecto_id", "otros_campos"].includes(key)) {
+      if (!["gasto_proyecto_id", "id", "otrosCampos"].includes(key)) {
         total[key] = (parseFloat(total[key]) || 0) + (parseFloat(value) || 0);
       }
       return total;
     }, {});
 
-    // Sumar los valores de otros_campos
+    // Sumar los valores de otrosCampos
     const gastosOtrosCampos = Object.entries(otrosCampos).reduce((total, [key, value]) => {
       total[key] = (parseFloat(total[key]) || 0) + (parseFloat(value) || 0);
       return total;
@@ -94,12 +94,12 @@ const getGastos = (project) => {
 
 const calculateValues = (project) => {
   const gastos = getGastos(project);
-  const costo = parseFloat(project.costo_servicio) || 0;
+  const costo = parseFloat(project.costoServicio) || 0;
   const abono = Number(unformatNumber(project.abono)) || 0;
   const totalGastos = Object.values(gastos).reduce((sum, value) => sum + value, 0);
   const saldo = Math.max(costo - abono, 0);
   const estadoCuenta = abono === 0 ? "Pendiente" : abono >= costo ? "Pagado" : "Abonado";
-  const re = (Number(project.valor_retencion) / 100) * project.costo_servicio;
+  const re = (Number(project.valorRetencion) / 100) * project.costoServicio;
   const utilidadNeta = costo - totalGastos - re;
 
   return { totalGastos, saldo, estadoCuenta, utilidadNeta };
@@ -121,7 +121,7 @@ const GastosProject = () => {
       fechaInicio: "",
       fechaFin: "",
       solicitante: "",
-      nombre_proyecto: "",
+      nombreProyecto: "",
       estado_cuenta: "",
     },
     sortConfig: { field: "fecha", direction: "desc" },
@@ -157,8 +157,8 @@ const GastosProject = () => {
         const response = await api.get("/projects", { params });
         const proyectos = response.data?.proyectos?.map((p) => ({
           ...p,
-          valor_re: p.valor_retencion ? (Number(p.valor_retencion) / 100) * p.costo_servicio : 0,
-          valor_iva: p.costo_servicio ? 0.19 * p.costo_servicio : 0,
+          valor_re: p.valorRetencion ? (Number(p.valorRetencion) / 100) * p.costoServicio : 0,
+          valor_iva: p.costoServicio ? 0.19 * p.costoServicio : 0,
         })) || [];
 
         setState((prev) => ({
@@ -211,7 +211,7 @@ const GastosProject = () => {
         fechaInicio: "",
         fechaFin: "",
         solicitante: "",
-        nombre_proyecto: "",
+        nombreProyecto: "",
         estado_cuenta: "",
       },
       currentPage: 1,
@@ -225,7 +225,7 @@ const GastosProject = () => {
     try {
       setState((prev) => ({ ...prev, loading: true }));
       console.log(paymentAmount, "paymentAmount")
-      await api.patch(`/projects/${selectedProject.proyecto_id}/abonar`, {
+      await api.patch(`/projects/${selectedProject.id}/payment`, {
         abono: unformatNumber(paymentAmount),
       });
 
@@ -249,12 +249,12 @@ const GastosProject = () => {
   const handleDelete = async () => {
     try {
       setState((prev) => ({ ...prev, loading: true }));
-      await api.delete(`/projects/${state.selectedProject.proyecto_id}`);
+      await api.delete(`/projects/${state.selectedProject.id}`);
 
       setState((prev) => ({
         ...prev,
         allProjects: prev.allProjects.filter(
-          (project) => project.proyecto_id !== state.selectedProject.proyecto_id
+          (project) => project.id !== state.selectedProject.id
         ),
         modals: { ...prev.modals, delete: false },
         selectedProject: null,
@@ -274,13 +274,13 @@ const GastosProject = () => {
     state.allProjects.forEach((project) => {
       // Campos adicionales en el nivel principal de gastos
       Object.keys(getGastos(project)).forEach((key) => {
-        if (!fixedGastoFields.includes(key) && !["gasto_proyecto_id", "proyecto_id", "otros_campos"].includes(key)) {
+        if (!fixedGastoFields.includes(key) && !["gasto_proyecto_id", "id", "otrosCampos"].includes(key)) {
           fields.add(key);
         }
       });
 
-      // Campos dentro de otros_campos
-      const otrosCampos = project.gastos?.otros_campos || {};
+      // Campos dentro de otrosCampos
+      const otrosCampos = project.gastos?.otrosCampos || {};
       Object.keys(otrosCampos).forEach((key) => {
         fields.add(key);
       });
@@ -378,10 +378,10 @@ const GastosProject = () => {
                   const gastos = getGastos(project);
 
                   return (
-                    <TableRow key={project.proyecto_id} hover>
+                    <TableRow key={project.id} hover>
                       <TableCell sx={{ whiteSpace: "nowrap" }}>
                         <Tooltip title="Ver detalles">
-                          <Link to={`/crear-proyecto/${project.proyecto_id}`}>
+                          <Link to={`/crear-proyecto/${project.id}`}>
                             <Button size="small">Detalles</Button>
                           </Link>
                         </Tooltip>
@@ -417,7 +417,7 @@ const GastosProject = () => {
 
                       <TableCell sx={{ whiteSpace: "nowrap" }}>{formatDate(project.fecha)}</TableCell>
 
-                      {["solicitante", "nombre_proyecto", "factura"].map(
+                      {["solicitante", "nombreProyecto", "factura"].map(
                         (field, index) => (
                           <TableCell key={index} sx={{ whiteSpace: "nowrap", border: " 1px solid #ccc", textAlign: "center" }}>
                             {
@@ -429,17 +429,17 @@ const GastosProject = () => {
                         )
                       )}
 
-                      {["valor_retencion", "valor_iva", "valor_re"].map(
+                      {["valorRetencion", "valor_iva", "valor_re"].map(
                         (field, index) => (
                           <TableCell key={index} sx={{ whiteSpace: "nowrap", border: " 1px solid #ccc", textAlign: "center" }}>
                             {
-                              Number(project.valor_retencion) > 0 ? formatNumber(project[field]) : "-"
+                              Number(project.valorRetencion) > 0 ? formatNumber(project[field]) : "-"
                             }
                           </TableCell>
                         )
                       )}
 
-                      {["obrero", "metodo_de_pago"].map(
+                      {["obrero", "metodoDePago"].map(
                         (field, index) => (
                           <TableCell key={index} sx={{ whiteSpace: "nowrap", border: " 1px solid #ccc", textAlign: "center" }}>
 
@@ -450,7 +450,7 @@ const GastosProject = () => {
                         )
                       )}
 
-                      {[["costo_servicio", project.costo_servicio], ["abono", project.abono]].map(
+                      {[["costoServicio", project.costoServicio], ["abono", project.abono]].map(
                         ([, value], index) => (
                           <TableCell key={index} sx={{ whiteSpace: "nowrap", border: " 1px solid #ccc", textAlign: "center" }}>{`$ ${formatNumber(value)}`}</TableCell>
                         )
@@ -499,7 +499,7 @@ const GastosProject = () => {
           {state.selectedProject && (
             <>
               <DialogContentText>
-                Costo del servicio: $ {formatNumber(state.selectedProject.costo_servicio)}
+                Costo del servicio: $ {formatNumber(state.selectedProject.costoServicio)}
               </DialogContentText>
               <DialogContentText>
                 Abonado actualmente: $ {formatNumber(state.selectedProject.abono)}
@@ -546,7 +546,7 @@ const GastosProject = () => {
         <DialogTitle>Confirmar Eliminación</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            ¿Está seguro de eliminar el proyecto {state.selectedProject?.nombre_proyecto}? Esta acción no se puede
+            ¿Está seguro de eliminar el proyecto {state.selectedProject?.nombreProyecto}? Esta acción no se puede
             deshacer.
           </DialogContentText>
         </DialogContent>

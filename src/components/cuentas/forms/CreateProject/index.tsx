@@ -105,7 +105,7 @@ const FormCreateProject: React.FC = () => {
                   label="Fecha"
                   type="date"
                   fullWidth
-                  InputLabelProps={{ shrink: true }}
+                  slotProps={{ inputLabel: { shrink: true } }}
                   error={!!errors.fecha}
                   helperText={errors.fecha?.message}
                 />
@@ -129,15 +129,15 @@ const FormCreateProject: React.FC = () => {
           </Grid2>
           <Grid2 size={{ xs: 12, sm: 6 }}>
             <Controller
-              name="nombre_proyecto"
+              name="nombreProyecto"
               control={control}
               render={({ field }) => (
                 <TextField
                   {...field}
                   label="Nombre del Proyecto"
                   fullWidth
-                  error={!!errors.nombre_proyecto}
-                  helperText={errors.nombre_proyecto?.message}
+                  error={!!errors.nombreProyecto}
+                  helperText={errors.nombreProyecto?.message}
                 />
               )}
             />
@@ -159,7 +159,7 @@ const FormCreateProject: React.FC = () => {
           </Grid2>
           <Grid2 size={{ xs: 12, sm: 6 }}>
             <Controller
-              name="metodo_de_pago"
+              name="metodoDePago"
               control={control}
               render={({ field }) => (
                 <TextField
@@ -167,8 +167,8 @@ const FormCreateProject: React.FC = () => {
                   select
                   label="Método de Pago"
                   fullWidth
-                  error={!!errors.metodo_de_pago}
-                  helperText={errors.metodo_de_pago?.message}
+                  error={!!errors.metodoDePago}
+                  helperText={errors.metodoDePago?.message}
                 >
                   <MenuItem value="">Otro</MenuItem>
                   <MenuItem value="transferencia">Transferencia</MenuItem>
@@ -179,7 +179,7 @@ const FormCreateProject: React.FC = () => {
           </Grid2>
           <Grid2 size={{ xs: 12, sm: 6 }}>
             <Controller
-              name="costo_servicio"
+              name="costoServicio"
               control={control}
               render={({ field }) => (
                 <TextField
@@ -189,8 +189,8 @@ const FormCreateProject: React.FC = () => {
                   type="text"
                   value={formatNumber(field.value) || ""}
                   onChange={(e) => field.onChange(parseNumber(e.target.value))}
-                  error={!!errors.costo_servicio}
-                  helperText={errors.costo_servicio?.message}
+                  error={!!errors.costoServicio}
+                  helperText={errors.costoServicio?.message}
                 />
               )}
             />
@@ -249,7 +249,7 @@ const FormCreateProject: React.FC = () => {
               </Grid2>
               <Grid2 size={{ xs: 12, sm: 6 }}>
                 <Controller
-                  name="valor_retencion"
+                  name="valorRetencion"
                   control={control}
                   render={({ field }) => (
                     <TextField
@@ -261,8 +261,8 @@ const FormCreateProject: React.FC = () => {
                       onChange={(e) =>
                         field.onChange(parseNumber(e.target.value))
                       }
-                      error={!!errors.valor_retencion}
-                      helperText={errors.valor_retencion?.message}
+                      error={!!errors.valorRetencion}
+                      helperText={errors.valorRetencion?.message}
                     />
                   )}
                 />

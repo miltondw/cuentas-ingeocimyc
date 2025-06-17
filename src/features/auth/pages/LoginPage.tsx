@@ -60,7 +60,6 @@ const LoginPage = () => {
       const result = await login({
         email: data.email,
         password: data.password,
-        rememberMe: data.rememberMe,
       });
 
       if (result.success) {

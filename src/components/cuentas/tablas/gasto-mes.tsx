@@ -38,7 +38,7 @@ interface GastoItem {
 interface GastoMes {
   gasto_empresa_id: string;
   mes: string;
-  otros_campos?: { [key: string]: number };
+  otrosCampos?: { [key: string]: number };
   [key: string]: string | number | { [key: string]: number } | undefined;
 }
 
@@ -83,7 +83,7 @@ const transformData = (data: GastoMes[]): TransformedGasto[] => {
     const gastos: GastoItem[] = Object.entries(item)
       .filter(
         ([key, value]) =>
-          !["gasto_empresa_id", "mes", "otros_campos"].includes(key) &&
+          !["gasto_empresa_id", "mes", "otrosCampos"].includes(key) &&
           value !== null &&
           value !== undefined
       )
@@ -92,9 +92,9 @@ const transformData = (data: GastoMes[]): TransformedGasto[] => {
         value: parseFloat(String(value)),
       }));
 
-    // Add gastos from otros_campos
-    if (item.otros_campos && typeof item.otros_campos === "object") {
-      Object.entries(item.otros_campos).forEach(([nombre, monto]) => {
+    // Add gastos from otrosCampos
+    if (item.otrosCampos && typeof item.otrosCampos === "object") {
+      Object.entries(item.otrosCampos).forEach(([nombre, monto]) => {
         gastos.push({
           name: nombre.replace(/_/g, " ").toUpperCase(),
           value: parseFloat(String(monto)),

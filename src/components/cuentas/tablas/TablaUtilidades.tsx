@@ -45,7 +45,7 @@ interface GastoEmpresa {
   arriendo: number;
   internet: number;
   salud: number;
-  otros_campos?: { [key: string]: number };
+  otrosCampos?: { [key: string]: number };
 }
 
 interface ProjectGastos {
@@ -57,11 +57,11 @@ interface ProjectGastos {
   peajes?: number;
   combustible?: number;
   hospedaje?: number;
-  otros_campos?: { [key: string]: number };
+  otrosCampos?: { [key: string]: number };
 }
 
 interface ProjectWithGastos extends Project {
-  valor_retencion?: number; // Campo legacy
+  valorRetencion?: number; // Campo legacy
   gastos?: ProjectGastos; // Estructura de gastos legacy
 }
 
@@ -139,7 +139,7 @@ const TablaUtilidades: React.FC = () => {
           Number(gasto.arriendo || 0) +
           Number(gasto.internet || 0) +
           Number(gasto.salud || 0) +
-          sumOtrosCampos(gasto.otros_campos);
+          sumOtrosCampos(gasto.otrosCampos);
       }); // Procesar proyectos y sus gastos
       proyectos.forEach((proyecto) => {
         const mes = formatDate(proyecto.fechaInicio || proyecto.created_at);
@@ -159,7 +159,7 @@ const TablaUtilidades: React.FC = () => {
         const costoServicio = Number(proyecto.costoServicio || 0);
         // Casting para compatibilidad con datos legacy
         const projectoWithGastos = proyecto as ProjectWithGastos;
-        const valorRetencion = Number(projectoWithGastos.valor_retencion || 0);
+        const valorRetencion = Number(projectoWithGastos.valorRetencion || 0);
 
         monthlyData[mes].Ingresos += costoServicio;
         monthlyData[mes].CostoServicio += costoServicio;
@@ -185,7 +185,7 @@ const TablaUtilidades: React.FC = () => {
           }, 0);
 
           monthlyData[mes].GastosProyectos +=
-            gastoProyecto + sumOtrosCampos(gastos.otros_campos);
+            gastoProyecto + sumOtrosCampos(gastos.otrosCampos);
         }
       });
 
