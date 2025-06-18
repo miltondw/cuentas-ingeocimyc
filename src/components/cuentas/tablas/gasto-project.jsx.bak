@@ -114,7 +114,7 @@ const colorEstadoCuenta = (estado) => {
   }
 };
 
-const GastosProject = () => {
+const TablaGastosProject = () => {
   const [state, setState] = useState({
     allProjects: [],
     filters: {
@@ -563,4 +563,4 @@ const GastosProject = () => {
   );
 };
 
-export default GastosProject;
+export default TablaGastosProject;

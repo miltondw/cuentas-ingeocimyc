@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -29,11 +29,14 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import PaymentIcon from "@mui/icons-material/Payment";
 import EditIcon from "@mui/icons-material/Edit";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import api from "@/api";
 import { useNotifications } from "@/api/hooks/useNotifications";
 import { LoadingOverlay } from "@/components/common/LoadingOverlay";
 import { ProjectFilters } from "@/types/api";
-
+import { formatNumber, parseNumber } from "@/utils/formatNumber";
+import { useQueryClient } from "@tanstack/react-query";
 // Types
 interface TableColumn {
   id: string;
@@ -48,7 +51,7 @@ interface ProjectGastos {
 }
 
 interface Project {
-  id: string;
+  id: number;
   fecha: string;
   solicitante: string;
   nombreProyecto: string;
@@ -60,9 +63,21 @@ interface Project {
   metodoDePago: string;
   costoServicio: number;
   abono: number;
-  gastos?: {
-    [key: string]: number | { [key: string]: number };
-  };
+  estado: string;
+  created_at: string;
+  expenses?: Array<{
+    id: number;
+    proyectoId: number;
+    camioneta: string;
+    campo: string;
+    obreros: string;
+    comidas: string;
+    otros: string;
+    peajes: string;
+    combustible: string;
+    hospedaje: string;
+    otrosCampos: Record<string, number> | null;
+  }>;
 }
 
 interface ProjectCalculations {
@@ -94,6 +109,7 @@ interface AppState {
   };
   selectedProject: Project | null;
   paymentAmount: string;
+  expandedRows: Set<number>; // Para controlar qué filas están expandidas
 }
 
 // Constants
@@ -174,26 +190,15 @@ const tableRowInputs: TableColumn[] = [
     filterType: "select",
     width: 120,
   },
-];
-
-const fixedGastoFields = [
-  "camioneta",
-  "campo",
-  "obreros",
-  "comidas",
-  "otros",
-  "peajes",
-  "combustible",
-  "hospedaje",
+  {
+    id: "gastos",
+    label: "Gastos",
+    sortable: false,
+    width: 120,
+  },
 ];
 
 // Utility functions
-const formatNumber = (value: number | string): string =>
-  value === "" || isNaN(Number(value))
-    ? ""
-    : Number(value).toLocaleString("es-CO");
-
-const unformatNumber = (value: string): string => value.replace(/,/g, "");
 
 const formatDate = (dateStr: string): string =>
   dateStr
@@ -202,49 +207,72 @@ const formatDate = (dateStr: string): string =>
 
 const getGastos = (project: Project): ProjectGastos => {
   try {
-    const gastos = project.gastos || {};
-    const otrosCampos = (gastos.otrosCampos as { [key: string]: number }) || {};
+    // Usar la nueva estructura 'expenses' del backend
+    const expenses =
+      project?.expenses && project.expenses.length > 0
+        ? project.expenses[0]
+        : null; // Tomar el primer gasto (debería ser único por proyecto)
 
-    // Sumar los valores de los campos fijos
-    const gastosFijos = Object.entries(gastos).reduce(
-      (total: ProjectGastos, [key, value]) => {
-        if (!["gasto_proyecto_id", "id", "otrosCampos"].includes(key)) {
-          total[key] =
-            (parseFloat(String(total[key])) || 0) +
-            (parseFloat(String(value)) || 0);
+    if (!expenses) {
+      //console.info(`Proyecto ID ${project.id} no tiene datos de gastos.`);
+      return {};
+    }
+
+    const gastos: ProjectGastos = {};
+
+    // Procesar los campos de gastos fijos
+    const camposGastos = [
+      "camioneta",
+      "campo",
+      "obreros",
+      "comidas",
+      "otros",
+      "peajes",
+      "combustible",
+      "hospedaje",
+    ];
+
+    camposGastos.forEach((campo) => {
+      const valor = expenses[campo as keyof typeof expenses];
+      if (valor && typeof valor === "string") {
+        gastos[campo] = parseFloat(valor) || 0;
+      }
+    });
+
+    // Procesar otrosCampos si existe
+    if (
+      "otrosCampos" in expenses &&
+      expenses.otrosCampos &&
+      typeof expenses.otrosCampos === "object"
+    ) {
+      Object.entries(expenses.otrosCampos).forEach(([key, value]) => {
+        if (
+          typeof value === "number" &&
+          !["id", "gasto_proyecto_id", "id"].includes(key)
+        ) {
+          gastos[key] = value;
         }
-        return total;
-      },
-      {}
-    );
+      });
+    }
 
-    // Sumar los valores de otrosCampos
-    const gastosOtrosCampos = Object.entries(otrosCampos).reduce(
-      (total: ProjectGastos, [key, value]) => {
-        total[key] =
-          (parseFloat(String(total[key])) || 0) +
-          (parseFloat(String(value)) || 0);
-        return total;
-      },
-      {}
-    );
-
-    // Combinar ambos resultados
-    return { ...gastosFijos, ...gastosOtrosCampos };
-  } catch {
+    //  console.info(`✅ Gastos procesados para proyecto ${project.id}:`, gastos);
+    return gastos;
+  } catch (error) {
+    console.warn(`Error procesando gastos para proyecto ${project.id}:`, error);
     return {};
   }
 };
 
 const calculateValues = (project: Project): ProjectCalculations => {
   const gastos = getGastos(project);
-  const costo = parseFloat(String(project.costoServicio)) || 0;
-  const abono = Number(unformatNumber(String(project.abono))) || 0;
+  const costo = Number(project.costoServicio) || 0;
+  const abono = Number(project.abono) || 0;
   const totalGastos = Object.values(gastos).reduce(
     (sum, value) => sum + value,
     0
   );
   const saldo = Math.max(costo - abono, 0);
+
   const estadoCuenta: "Pendiente" | "Pagado" | "Abonado" =
     abono === 0 ? "Pendiente" : abono >= costo ? "Pagado" : "Abonado";
   const re = (Number(project.valorRetencion) / 100) * project.costoServicio;
@@ -268,6 +296,7 @@ const colorEstadoCuenta = (estado: string): string => {
 
 const TablaGastosProject: React.FC = () => {
   const { showNotification, showError } = useNotifications();
+  const queryClient = useQueryClient();
   const [state, setState] = useState<AppState>({
     allProjects: [],
     filters: {
@@ -287,6 +316,7 @@ const TablaGastosProject: React.FC = () => {
     modals: { delete: false, payment: false },
     selectedProject: null,
     paymentAmount: "",
+    expandedRows: new Set<number>(),
   });
 
   const rowsPerPage = 10;
@@ -310,8 +340,11 @@ const TablaGastosProject: React.FC = () => {
       try {
         const params = buildQueryParams();
         const response = await api.get("/projects", { params });
+
+        //console.info("Respuesta del backend:", response.data); // Debug
+
         const proyectos =
-          response.data?.proyectos?.map((p: Project) => ({
+          response.data.data?.map((p: Project) => ({
             ...p,
             valor_re: p.valorRetencion
               ? (Number(p.valorRetencion) / 100) * p.costoServicio
@@ -322,7 +355,7 @@ const TablaGastosProject: React.FC = () => {
         setState((prev) => ({
           ...prev,
           allProjects: proyectos,
-          totalPages: response.data?.totalPages || 1,
+          totalPages: Math.ceil((response.data.total || 0) / rowsPerPage),
           loading: false,
         }));
 
@@ -408,27 +441,39 @@ const TablaGastosProject: React.FC = () => {
     try {
       setState((prev) => ({ ...prev, loading: true }));
 
+      // Convertir a número para enviar al backend
+      const montoNumerico = Number(paymentAmount);
+
       await api.patch(`/projects/${selectedProject.id}/payment`, {
-        abono: unformatNumber(paymentAmount),
+        monto: montoNumerico,
       });
 
       showNotification({
         type: "success",
         title: "Pago Procesado",
         message: `Se ha registrado el abono de $${formatNumber(
-          paymentAmount
+          montoNumerico
         )} al proyecto ${selectedProject.nombreProyecto}`,
         duration: 4000,
       });
 
-      // Refresh projects
-      const response = await api.get("/projects");
+      // Invalidar las queries de proyectos para refrescar automáticamente
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+
       setState((prev) => ({
         ...prev,
-        allProjects: response.data.proyectos,
+        allProjects: prev.allProjects.map((project) => {
+          if (project.id === selectedProject.id) {
+            return {
+              ...project,
+              abono: Number(project.abono) + Number(montoNumerico),
+            };
+          }
+          return project;
+        }),
         modals: { ...prev.modals, payment: false },
-        paymentAmount: "",
         selectedProject: null,
+        paymentAmount: "",
         loading: false,
       }));
     } catch (error) {
@@ -458,11 +503,10 @@ const TablaGastosProject: React.FC = () => {
         message: `El proyecto "${state.selectedProject.nombreProyecto}" ha sido eliminado correctamente`,
         duration: 3000,
       });
-
       setState((prev) => ({
         ...prev,
         allProjects: prev.allProjects.filter(
-          (project) => project.id !== state.selectedProject!.id
+          (project) => project.id !== (state.selectedProject?.id || "")
         ),
         modals: { ...prev.modals, delete: false },
         selectedProject: null,
@@ -506,29 +550,33 @@ const TablaGastosProject: React.FC = () => {
       paymentAmount: "",
     }));
   };
-  const extraFields = useMemo(() => {
-    const fields = new Set<string>();
-    state.allProjects.forEach((project) => {
-      // Campos adicionales en el nivel principal de gastos
-      Object.keys(getGastos(project)).forEach((key) => {
-        if (
-          !fixedGastoFields.includes(key) &&
-          !["gasto_proyecto_id", "id", "otrosCampos"].includes(key)
-        ) {
-          fields.add(key);
-        }
-      });
 
-      // Campos dentro de otrosCampos
-      const gastos = project.gastos || {};
-      const otrosCampos =
-        (gastos.otrosCampos as { [key: string]: number }) || {};
-      Object.keys(otrosCampos).forEach((key) => {
-        fields.add(key);
-      });
+  // Función para alternar la expansión de una fila
+  const toggleRowExpansion = (projectId: number) => {
+    setState((prev) => {
+      const newExpandedRows = new Set(prev.expandedRows);
+      if (newExpandedRows.has(projectId)) {
+        newExpandedRows.delete(projectId);
+      } else {
+        newExpandedRows.add(projectId);
+      }
+      return {
+        ...prev,
+        expandedRows: newExpandedRows,
+      };
     });
-    return Array.from(fields);
-  }, [state.allProjects]);
+  };
+
+  const handlePaymentAmountChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = e.target.value;
+    // Permitir solo números y comas
+    const cleaned = value.replace(/[^\d,]/g, "");
+    // Guardar el valor sin comas para los cálculos
+    const numericValue = parseNumber(cleaned);
+    setState((prev) => ({ ...prev, paymentAmount: String(numericValue) }));
+  };
 
   if (state.loading) {
     return (
@@ -545,9 +593,17 @@ const TablaGastosProject: React.FC = () => {
             justifyContent: "space-between",
             alignItems: "center",
             mb: 3,
+            flexWrap: "wrap",
+            gap: "1rem",
+            placeContent: "center",
           }}
         >
-          <Typography variant="h4" component="h1" fontWeight="bold">
+          <Typography
+            textAlign="center"
+            variant="h4"
+            component="h1"
+            fontWeight="bold"
+          >
             Gestión de Proyectos
           </Typography>
           <Button
@@ -700,130 +756,199 @@ const TablaGastosProject: React.FC = () => {
                     )}
                   </TableCell>
                 ))}
-                {/* Columnas dinámicas para campos extra */}
-                {extraFields.map((field) => (
-                  <TableCell
-                    key={field}
-                    sx={{
-                      fontWeight: "bold",
-                      backgroundColor: "#f5f5f5",
-                      position: "sticky",
-                      top: 0,
-                      zIndex: 1,
-                      minWidth: 120,
-                    }}
-                  >
-                    {field
-                      .replace(/_/g, " ")
-                      .replace(/\b\w/g, (l) => l.toUpperCase())}
-                  </TableCell>
-                ))}
               </TableRow>
             </TableHead>
             <TableBody>
               {state.allProjects.map((project) => {
                 const calculations = calculateValues(project);
+                const isExpanded = state.expandedRows.has(project.id); // Verificar si la fila está expandida
                 return (
-                  <TableRow
-                    key={project.id}
-                    hover
-                    sx={{
-                      "&:nth-of-type(odd)": { backgroundColor: "#fafafa" },
-                      "&:hover": { backgroundColor: "#f0f0f0" },
-                    }}
-                  >
-                    {/* Columna de Acciones */}
-                    <TableCell>
-                      <Box sx={{ display: "flex", gap: 1 }}>
-                        <Tooltip title="Editar proyecto">
+                  <React.Fragment key={project.id}>
+                    <TableRow
+                      hover
+                      sx={{
+                        "&:nth-of-type(odd)": { backgroundColor: "#fafafa" },
+                        "&:hover": { backgroundColor: "#f0f0f0" },
+                      }}
+                    >
+                      {/* Columna de Acciones */}{" "}
+                      <TableCell>
+                        <Box sx={{ display: "flex", gap: 1 }}>
+                          <Tooltip title="Editar proyecto">
+                            <IconButton
+                              component={Link}
+                              to={`/crear-proyecto/${project.id}`}
+                              size="small"
+                              color="primary"
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Registrar pago">
+                            <IconButton
+                              onClick={() => openPaymentDialog(project)}
+                              size="small"
+                              color="success"
+                              disabled={calculations.estadoCuenta === "Pagado"}
+                            >
+                              <PaymentIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Eliminar proyecto">
+                            <IconButton
+                              onClick={() => openDeleteDialog(project)}
+                              size="small"
+                              color="error"
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                      {/* Datos del proyecto */}
+                      <TableCell>{formatDate(project.fecha)}</TableCell>
+                      <TableCell>{project.solicitante}</TableCell>
+                      <TableCell sx={{ fontWeight: "medium" }}>
+                        {project.nombreProyecto}
+                      </TableCell>
+                      <TableCell>{project.factura || "N/A"}</TableCell>
+                      <TableCell>{project.valorRetencion}%</TableCell>
+                      <TableCell>${formatNumber(project.valor_iva)}</TableCell>
+                      <TableCell>${formatNumber(project.valor_re)}</TableCell>
+                      <TableCell>{project.obrero}</TableCell>
+                      <TableCell>{project.metodoDePago}</TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>
+                        ${formatNumber(project.costoServicio)}
+                      </TableCell>
+                      <TableCell>${formatNumber(project.abono)}</TableCell>
+                      <TableCell>
+                        ${formatNumber(calculations.totalGastos)}
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontWeight: "bold",
+                          color:
+                            calculations.utilidadNeta >= 0 ? "green" : "red",
+                        }}
+                      >
+                        ${formatNumber(calculations.utilidadNeta)}
+                      </TableCell>
+                      <TableCell>${formatNumber(calculations.saldo)}</TableCell>
+                      <TableCell>
+                        <Box
+                          sx={{
+                            backgroundColor: colorEstadoCuenta(
+                              calculations.estadoCuenta
+                            ),
+                            color: "white",
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 1,
+                            textAlign: "center",
+                            fontSize: "0.875rem",
+                            fontWeight: "medium",
+                          }}
+                        >
+                          {calculations.estadoCuenta}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip
+                          title={isExpanded ? "Ocultar gastos" : "Ver gastos"}
+                        >
                           <IconButton
-                            component={Link}
-                            to={`/crear-proyecto/${project.id}`}
+                            onClick={() => toggleRowExpansion(project.id)}
                             size="small"
                             color="primary"
                           >
-                            <EditIcon fontSize="small" />
+                            {isExpanded ? (
+                              <ExpandLessIcon fontSize="small" />
+                            ) : (
+                              <ExpandMoreIcon fontSize="small" />
+                            )}
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Registrar pago">
-                          <IconButton
-                            onClick={() => openPaymentDialog(project)}
-                            size="small"
-                            color="success"
-                            disabled={calculations.estadoCuenta === "Pagado"}
-                          >
-                            <PaymentIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Eliminar proyecto">
-                          <IconButton
-                            onClick={() => openDeleteDialog(project)}
-                            size="small"
-                            color="error"
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-
-                    {/* Datos del proyecto */}
-                    <TableCell>{formatDate(project.fecha)}</TableCell>
-                    <TableCell>{project.solicitante}</TableCell>
-                    <TableCell sx={{ fontWeight: "medium" }}>
-                      {project.nombreProyecto}
-                    </TableCell>
-                    <TableCell>{project.factura || "N/A"}</TableCell>
-                    <TableCell>{project.valorRetencion}%</TableCell>
-                    <TableCell>${formatNumber(project.valor_iva)}</TableCell>
-                    <TableCell>${formatNumber(project.valor_re)}</TableCell>
-                    <TableCell>{project.obrero}</TableCell>
-                    <TableCell>{project.metodoDePago}</TableCell>
-                    <TableCell sx={{ fontWeight: "bold" }}>
-                      ${formatNumber(project.costoServicio)}
-                    </TableCell>
-                    <TableCell>${formatNumber(project.abono)}</TableCell>
-                    <TableCell>
-                      ${formatNumber(calculations.totalGastos)}
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontWeight: "bold",
-                        color: calculations.utilidadNeta >= 0 ? "green" : "red",
-                      }}
-                    >
-                      ${formatNumber(calculations.utilidadNeta)}
-                    </TableCell>
-                    <TableCell>${formatNumber(calculations.saldo)}</TableCell>
-                    <TableCell>
-                      <Box
-                        sx={{
-                          backgroundColor: colorEstadoCuenta(
-                            calculations.estadoCuenta
-                          ),
-                          color: "white",
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                          textAlign: "center",
-                          fontSize: "0.875rem",
-                          fontWeight: "medium",
-                        }}
-                      >
-                        {calculations.estadoCuenta}
-                      </Box>
-                    </TableCell>
-
-                    {/* Columnas dinámicas para campos extra */}
-                    {extraFields.map((field) => {
-                      const gastos = getGastos(project);
-                      return (
-                        <TableCell key={field}>
-                          ${formatNumber(gastos[field] || 0)}
+                      </TableCell>
+                      {/* Columnas dinámicas para campos extra */}
+                    </TableRow>{" "}
+                    {/* Fila expandida con detalles de gastos */}
+                    {isExpanded && (
+                      <TableRow>
+                        {/* Celdas vacías para las primeras columnas */}
+                        <TableCell /> {/* Acciones */}
+                        <TableCell /> {/* Fecha */}
+                        <TableCell /> {/* Solicitante */}
+                        <TableCell /> {/* Nombre Proyecto */}
+                        <TableCell /> {/* Factura */}
+                        <TableCell /> {/* Valor Retención */}
+                        <TableCell /> {/* Valor IVA */}
+                        <TableCell /> {/* Valor RE */}
+                        {/* Celda con el contenido de gastos que ocupa las últimas columnas */}
+                        <TableCell colSpan={8} sx={{ p: 0 }}>
+                          <Box sx={{ p: 2, backgroundColor: "#f9f9f9", ml: 2 }}>
+                            <Typography
+                              variant="subtitle2"
+                              gutterBottom
+                              sx={{ fontWeight: "bold", color: "#333" }}
+                            >
+                              📊 Detalles de Gastos
+                            </Typography>
+                            <Table
+                              size="small"
+                              sx={{ backgroundColor: "white", borderRadius: 1 }}
+                            >
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell
+                                    sx={{
+                                      fontWeight: "bold",
+                                      backgroundColor: "#e3f2fd",
+                                    }}
+                                  >
+                                    Descripción
+                                  </TableCell>
+                                  <TableCell
+                                    align="right"
+                                    sx={{
+                                      fontWeight: "bold",
+                                      backgroundColor: "#e3f2fd",
+                                    }}
+                                  >
+                                    Valor
+                                  </TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {Object.entries(getGastos(project)).map(
+                                  ([description, value]) =>
+                                    value > 0 && (
+                                      <TableRow key={description} hover>
+                                        <TableCell
+                                          sx={{
+                                            borderBottom: "1px solid #eee",
+                                          }}
+                                        >
+                                          {description}
+                                        </TableCell>
+                                        <TableCell
+                                          align="right"
+                                          sx={{
+                                            borderBottom: "1px solid #eee",
+                                            fontWeight: "medium",
+                                          }}
+                                        >
+                                          ${formatNumber(value)}
+                                        </TableCell>
+                                      </TableRow>
+                                    )
+                                )}
+                              </TableBody>
+                            </Table>
+                          </Box>
                         </TableCell>
-                      );
-                    })}
-                  </TableRow>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </TableBody>
@@ -885,19 +1010,27 @@ const TablaGastosProject: React.FC = () => {
             <br />
             Abonado:{" "}
             <strong>${formatNumber(state.selectedProject?.abono || 0)}</strong>
+            <br />
+            Saldo:
+            <strong>
+              $
+              {formatNumber(
+                (state.selectedProject?.costoServicio ?? 0) -
+                  (state.selectedProject?.abono ?? 0)
+              )}
+            </strong>
           </DialogContentText>
+
           <TextField
             fullWidth
             label="Monto del Pago"
-            value={state.paymentAmount}
-            onChange={(e) =>
-              setState((prev) => ({ ...prev, paymentAmount: e.target.value }))
-            }
+            value={formatNumber(state.paymentAmount)}
+            onChange={handlePaymentAmountChange}
             variant="outlined"
-            type="number"
-            inputProps={{ min: 0 }}
+            placeholder="0"
             sx={{ mt: 2 }}
             autoFocus
+            helperText="Ingrese el monto del pago"
           />
         </DialogContent>
         <DialogActions>

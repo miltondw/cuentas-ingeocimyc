@@ -11,7 +11,7 @@ import {
   AddCircleOutline as AddCircleOutlineIcon,
   RemoveCircleOutline as RemoveCircleOutlineIcon,
 } from "@mui/icons-material";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import api from "@/api";
@@ -23,8 +23,7 @@ import {
   defaultValues,
 } from "./form-create-month.types";
 
-const FormCreateMonth: React.FC = () => {
-  const { id } = useParams();
+const FormCreateMonth: React.FC<{ id?: string }> = ({ id }) => {
   const navigate = useNavigate();
 
   const {
@@ -58,11 +57,10 @@ const FormCreateMonth: React.FC = () => {
   const onSubmit = async (data: MonthFormData) => {
     try {
       const payload = transformFormData(data);
-      console.log(data, payload);
       const endpoint = id
         ? `/gastos-mes/expenses/${id}`
         : "/gastos-mes/expenses";
-      await api[id ? "put" : "post"](endpoint, payload);
+      await api[id ? "patch" : "post"](endpoint, payload);
       navigate("/gastos");
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -86,6 +84,7 @@ const FormCreateMonth: React.FC = () => {
           mx: "auto",
         }}
       >
+        {" "}
         <Controller
           name="mes"
           control={control}
@@ -93,7 +92,7 @@ const FormCreateMonth: React.FC = () => {
             <TextField
               {...field}
               label="MES"
-              type="date"
+              type="month"
               fullWidth
               slotProps={{ inputLabel: { shrink: true } }}
               error={!!errors.mes}
@@ -101,7 +100,6 @@ const FormCreateMonth: React.FC = () => {
             />
           )}
         />
-
         <Controller
           name="salarios"
           control={control}
@@ -120,7 +118,6 @@ const FormCreateMonth: React.FC = () => {
             />
           )}
         />
-
         <Controller
           name="luz"
           control={control}
@@ -139,7 +136,6 @@ const FormCreateMonth: React.FC = () => {
             />
           )}
         />
-
         <Controller
           name="agua"
           control={control}
@@ -158,7 +154,6 @@ const FormCreateMonth: React.FC = () => {
             />
           )}
         />
-
         <Controller
           name="arriendo"
           control={control}
@@ -177,7 +172,6 @@ const FormCreateMonth: React.FC = () => {
             />
           )}
         />
-
         <Controller
           name="internet"
           control={control}
@@ -196,7 +190,6 @@ const FormCreateMonth: React.FC = () => {
             />
           )}
         />
-
         <Controller
           name="salud"
           control={control}
@@ -215,7 +208,6 @@ const FormCreateMonth: React.FC = () => {
             />
           )}
         />
-
         {fields.map((item, index) => (
           <Box
             key={item.id}
@@ -238,7 +230,7 @@ const FormCreateMonth: React.FC = () => {
                   helperText={errors.extras?.[index]?.field?.message}
                 />
               )}
-            />{" "}
+            />
             <Controller
               name={`extras.${index}.value`}
               control={control}
@@ -248,7 +240,9 @@ const FormCreateMonth: React.FC = () => {
                   label="Monto"
                   fullWidth
                   value={formatNumber(field.value)}
-                  onChange={(e) => field.onChange(parseNumber(e.target.value))}
+                  onChange={(e) =>
+                    field.onChange(Number(parseNumber(e.target.value)))
+                  }
                   error={!!errors.extras?.[index]?.value}
                   helperText={errors.extras?.[index]?.value?.message}
                 />
@@ -263,7 +257,6 @@ const FormCreateMonth: React.FC = () => {
             </IconButton>
           </Box>
         ))}
-
         <Box sx={{ gridColumn: "span 3", display: "flex", gap: 2 }}>
           <Button
             variant="outlined"

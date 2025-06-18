@@ -20,6 +20,7 @@ import {
   Button,
   Alert,
   Grid2,
+  MenuItem,
 } from "@mui/material";
 import { Link } from "react-router-dom";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -28,44 +29,64 @@ import AddIcon from "@mui/icons-material/Add";
 import api from "@/api";
 import { useNotifications } from "@/api/hooks/useNotifications";
 import { LoadingOverlay } from "@/components/common/LoadingOverlay";
+import { formatNumber } from "@/utils/formatNumber";
 
-// Types
+// Types actualizados para la nueva estructura de la API
 interface GastoItem {
   name: string;
   value: number;
 }
 
 interface GastoMes {
-  gasto_empresa_id: string;
+  id: number;
   mes: string;
-  otrosCampos?: { [key: string]: number };
-  [key: string]: string | number | { [key: string]: number } | undefined;
+  salarios: string;
+  luz: string;
+  agua: string;
+  arriendo: string;
+  internet: string;
+  salud: string;
+  otrosCampos?: { [key: string]: number } | null;
+}
+
+interface ApiResponse {
+  data: GastoMes[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 interface TransformedGasto {
   id: string;
   mesDeGasto: string;
-  gastos: GastoItem[];
+  expenses: GastoItem[];
   originalDate: string;
   totalGastos: number;
 }
 
 interface AppState {
-  gastos: GastoMes[];
+  expenses: GastoMes[];
   currentPage: number;
-  selectedDate: string;
   totalPages: number;
   loading: boolean;
   error: string | null;
+  totalItems: number;
   deleteDialog: {
     open: boolean;
     selectedId: string | null;
   };
+  // Nuevos filtros
+  filters: {
+    year: string;
+    month: string;
+    minAmount: string;
+    maxAmount: string;
+    hasCategory: boolean | null;
+    categoryName: string;
+    sortBy: string;
+    sortOrder: "ASC" | "DESC";
+  };
 }
-
-// Utility functions
-const formatNumber = (value: number): string =>
-  new Intl.NumberFormat("es-ES").format(value);
 
 const formatDate = (dateStr: string): string => {
   const date = new Date(dateStr);
@@ -76,38 +97,51 @@ const formatDate = (dateStr: string): string => {
   });
 };
 
+// Campos fijos de gastos mensuales
+const fixedExpenseFields = [
+  { key: "salarios", label: "SALARIOS" },
+  { key: "luz", label: "LUZ" },
+  { key: "agua", label: "AGUA" },
+  { key: "arriendo", label: "ARRIENDO" },
+  { key: "internet", label: "INTERNET" },
+  { key: "salud", label: "SALUD" },
+];
+
 const transformData = (data: GastoMes[]): TransformedGasto[] => {
   return data.map((item) => {
     const formattedMonth = formatDate(item.mes);
 
-    const gastos: GastoItem[] = Object.entries(item)
-      .filter(
-        ([key, value]) =>
-          !["gasto_empresa_id", "mes", "otrosCampos"].includes(key) &&
-          value !== null &&
-          value !== undefined
-      )
-      .map(([key, value]) => ({
-        name: key.replace(/_/g, " ").toUpperCase(),
-        value: parseFloat(String(value)),
-      }));
+    const expenses: GastoItem[] = [];
 
-    // Add gastos from otrosCampos
+    // Agregar campos fijos
+    fixedExpenseFields.forEach((field) => {
+      const value =
+        parseFloat(item[field.key as keyof GastoMes] as string) || 0;
+      if (value > 0) {
+        expenses.push({
+          name: field.label,
+          value: value,
+        });
+      }
+    }); // Agregar campos de otrosCampos si existen
     if (item.otrosCampos && typeof item.otrosCampos === "object") {
       Object.entries(item.otrosCampos).forEach(([nombre, monto]) => {
-        gastos.push({
+        expenses.push({
           name: nombre.replace(/_/g, " ").toUpperCase(),
-          value: parseFloat(String(monto)),
+          value: parseFloat(String(monto)) || 0,
         });
       });
     }
 
-    const totalGastos = gastos.reduce((total, gasto) => total + gasto.value, 0);
+    const totalGastos = expenses.reduce(
+      (total, gasto) => total + gasto.value,
+      0
+    );
 
     return {
-      id: item.gasto_empresa_id,
-      mesDeGasto: `Gasto de ${formattedMonth}`,
-      gastos,
+      id: item.id.toString(),
+      mesDeGasto: `Gastos de ${formattedMonth}`,
+      expenses,
       originalDate: item.mes,
       totalGastos,
     };
@@ -116,46 +150,70 @@ const transformData = (data: GastoMes[]): TransformedGasto[] => {
 
 const TablaGastosEmpresa: React.FC = () => {
   const { showNotification, showError } = useNotifications();
-
   const [state, setState] = useState<AppState>({
-    gastos: [],
+    expenses: [],
     currentPage: 1,
-    selectedDate: "",
     totalPages: 1,
+    totalItems: 0,
     loading: false,
     error: null,
     deleteDialog: {
       open: false,
       selectedId: null,
     },
+    filters: {
+      year: "",
+      month: "",
+      minAmount: "",
+      maxAmount: "",
+      hasCategory: null,
+      categoryName: "",
+      sortBy: "mes",
+      sortOrder: "DESC",
+    },
   });
 
   const rowsPerPage = 10;
-
   const fetchGastos = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const response = await api.get("/gastos-mes", {
-        params: {
-          page: state.currentPage,
-          limit: rowsPerPage,
-        },
-      });
+      const params: Record<string, string | number | boolean> = {
+        page: state.currentPage,
+        limit: rowsPerPage,
+      };
 
-      const { data } = response;
+      // Agregar filtros solo si tienen valores
+      if (state.filters.year) params.year = state.filters.year;
+      if (state.filters.month) params.month = state.filters.month;
+      if (state.filters.minAmount)
+        params.minAmount = parseFloat(state.filters.minAmount);
+      if (state.filters.maxAmount)
+        params.maxAmount = parseFloat(state.filters.maxAmount);
+      if (state.filters.hasCategory !== null)
+        params.hasCategory = state.filters.hasCategory;
+      if (state.filters.categoryName)
+        params.categoryName = state.filters.categoryName;
+      if (state.filters.sortBy) params.sortBy = state.filters.sortBy;
+      if (state.filters.sortOrder) params.sortOrder = state.filters.sortOrder;
+
+      const response = await api.get("/gastos-mes/expenses", { params });
+
+      const apiData: ApiResponse = response.data;
+
       setState((prev) => ({
         ...prev,
-        gastos: data.data.gastos || [],
-        totalPages: Math.ceil((data.data.total || 0) / rowsPerPage),
+        expenses: apiData.data || [],
+        totalPages: Math.ceil(apiData.total / rowsPerPage),
+        totalItems: apiData.total,
         loading: false,
       }));
 
-      if (data.data.gastos?.length === 0) {
+      if (apiData.data?.length === 0) {
         showNotification({
           type: "info",
           title: "Sin resultados",
-          message: "No se encontraron gastos para el período seleccionado",
+          message: "No se encontraron gastos para los filtros seleccionados",
           duration: 3000,
         });
       }
@@ -170,7 +228,7 @@ const TablaGastosEmpresa: React.FC = () => {
       }));
       showError(errorMessage);
     }
-  }, [state.currentPage, showNotification, showError]);
+  }, [state.currentPage, state.filters, showNotification, showError]);
 
   useEffect(() => {
     fetchGastos();
@@ -182,15 +240,40 @@ const TablaGastosEmpresa: React.FC = () => {
   ) => {
     setState((prev) => ({ ...prev, currentPage: page }));
   };
-
-  const handleDateFilterChange = (
-    event: React.ChangeEvent<HTMLInputElement>
+  const handleFilterChange = (
+    filterName: keyof typeof state.filters,
+    value: string | boolean | null
   ) => {
     setState((prev) => ({
       ...prev,
-      selectedDate: event.target.value,
+      filters: {
+        ...prev.filters,
+        [filterName]: value,
+      },
+      currentPage: 1, // Reset to first page when filtering
+    }));
+  };
+
+  const clearAllFilters = () => {
+    setState((prev) => ({
+      ...prev,
+      filters: {
+        year: "",
+        month: "",
+        minAmount: "",
+        maxAmount: "",
+        hasCategory: null,
+        categoryName: "",
+        sortBy: "mes",
+        sortOrder: "DESC",
+      },
       currentPage: 1,
     }));
+    showNotification({
+      type: "info",
+      message: "Todos los filtros han sido eliminados",
+      duration: 2000,
+    });
   };
 
   const handleDelete = async () => {
@@ -243,33 +326,10 @@ const TablaGastosEmpresa: React.FC = () => {
       },
     }));
   };
-
   const gastosPorMes = useMemo(
-    () => transformData(state.gastos),
-    [state.gastos]
+    () => transformData(state.expenses),
+    [state.expenses]
   );
-
-  const filteredData = useMemo(() => {
-    if (!state.selectedDate) return gastosPorMes;
-
-    const selected = new Date(state.selectedDate);
-    return gastosPorMes.filter(({ originalDate }) => {
-      const date = new Date(originalDate);
-      return (
-        date.getUTCFullYear() === selected.getUTCFullYear() &&
-        date.getUTCMonth() === selected.getUTCMonth()
-      );
-    });
-  }, [state.selectedDate, gastosPorMes]);
-
-  const clearDateFilter = () => {
-    setState((prev) => ({ ...prev, selectedDate: "", currentPage: 1 }));
-    showNotification({
-      type: "info",
-      message: "Filtro de fecha eliminado",
-      duration: 2000,
-    });
-  };
 
   if (state.loading) {
     return (
@@ -289,6 +349,8 @@ const TablaGastosEmpresa: React.FC = () => {
             justifyContent: "space-between",
             alignItems: "center",
             mb: 3,
+            flexWrap: "wrap",
+            gap: 2,
           }}
         >
           <Typography variant="h4" component="h1" fontWeight="bold">
@@ -305,7 +367,6 @@ const TablaGastosEmpresa: React.FC = () => {
             Nuevo Gasto Mensual
           </Button>
         </Box>
-
         {/* Error Alert */}
         {state.error && (
           <Alert
@@ -315,62 +376,180 @@ const TablaGastosEmpresa: React.FC = () => {
           >
             {state.error}
           </Alert>
-        )}
-
+        )}{" "}
         {/* Filters */}
         <Paper sx={{ p: 2, mb: 3, backgroundColor: "#f8f9fa" }}>
           <Typography variant="h6" gutterBottom>
             Filtros de Búsqueda
           </Typography>
-          <Grid2 container spacing={2} alignItems="center">
-            <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
+          <Grid2 container spacing={2}>
+            {/* Filtros de fecha */}
+            <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
-                type="month"
-                label="Filtrar por Mes"
-                value={state.selectedDate}
-                onChange={handleDateFilterChange}
-                slotProps={{ inputLabel: { shrink: true } }}
+                label="Año"
+                value={state.filters.year}
+                onChange={(e) => handleFilterChange("year", e.target.value)}
+                placeholder="2025"
                 fullWidth
                 variant="outlined"
                 size="small"
               />
             </Grid2>
             <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+              <TextField
+                label="Mes"
+                value={state.filters.month}
+                onChange={(e) => handleFilterChange("month", e.target.value)}
+                placeholder="01-12"
+                fullWidth
+                variant="outlined"
+                size="small"
+                inputProps={{ min: "01", max: "12", pattern: "[0-9]{2}" }}
+              />
+            </Grid2>
+            {/* Filtros de montos */}
+            <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+              <TextField
+                label="Monto Mínimo"
+                value={state.filters.minAmount}
+                onChange={(e) =>
+                  handleFilterChange("minAmount", e.target.value)
+                }
+                placeholder="100000"
+                fullWidth
+                variant="outlined"
+                size="small"
+                type="number"
+              />
+            </Grid2>
+            <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+              <TextField
+                label="Monto Máximo"
+                value={state.filters.maxAmount}
+                onChange={(e) =>
+                  handleFilterChange("maxAmount", e.target.value)
+                }
+                placeholder="5000000"
+                fullWidth
+                variant="outlined"
+                size="small"
+                type="number"
+              />
+            </Grid2>{" "}
+            {/* Filtros de categoría */}
+            <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+              <TextField
+                select
+                label="Tiene Categorías Extras"
+                value={
+                  state.filters.hasCategory === null
+                    ? ""
+                    : state.filters.hasCategory.toString()
+                }
+                onChange={(e) => {
+                  const value =
+                    e.target.value === "" ? null : e.target.value === "true";
+                  handleFilterChange("hasCategory", value);
+                }}
+                fullWidth
+                variant="outlined"
+                size="small"
+              >
+                <MenuItem value="">Todos</MenuItem>
+                <MenuItem value="true">Con categorías extras</MenuItem>
+                <MenuItem value="false">Sin categorías extras</MenuItem>
+              </TextField>
+            </Grid2>
+            <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+              <TextField
+                label="Nombre de Categoría"
+                value={state.filters.categoryName}
+                onChange={(e) =>
+                  handleFilterChange("categoryName", e.target.value)
+                }
+                placeholder="COMPRA_DE_GATO"
+                fullWidth
+                variant="outlined"
+                size="small"
+              />
+            </Grid2>{" "}
+            {/* Filtros de ordenamiento */}
+            <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+              <TextField
+                select
+                label="Ordenar por"
+                value={state.filters.sortBy}
+                onChange={(e) => handleFilterChange("sortBy", e.target.value)}
+                fullWidth
+                variant="outlined"
+                size="small"
+              >
+                <MenuItem value="mes">Mes</MenuItem>
+                <MenuItem value="total">Total</MenuItem>
+                <MenuItem value="salarios">Salarios</MenuItem>
+                <MenuItem value="luz">Luz</MenuItem>
+                <MenuItem value="agua">Agua</MenuItem>
+                <MenuItem value="arriendo">Arriendo</MenuItem>
+                <MenuItem value="internet">Internet</MenuItem>
+                <MenuItem value="salud">Salud</MenuItem>
+              </TextField>
+            </Grid2>
+            <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+              <TextField
+                select
+                label="Orden"
+                value={state.filters.sortOrder}
+                onChange={(e) =>
+                  handleFilterChange(
+                    "sortOrder",
+                    e.target.value as "ASC" | "DESC"
+                  )
+                }
+                fullWidth
+                variant="outlined"
+                size="small"
+              >
+                <MenuItem value="DESC">Descendente</MenuItem>
+                <MenuItem value="ASC">Ascendente</MenuItem>
+              </TextField>
+            </Grid2>
+            {/* Botón para limpiar filtros */}
+            <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
               <Button
-                onClick={clearDateFilter}
+                onClick={clearAllFilters}
                 variant="outlined"
                 color="error"
                 fullWidth
                 sx={{ height: 40 }}
-                disabled={!state.selectedDate}
               >
-                Limpiar Filtro
+                Limpiar Filtros
               </Button>
             </Grid2>
-            <Grid2 size={{ xs: 12, md: 5 }}>
-              <Typography variant="body2" color="textSecondary">
-                {filteredData.length} resultado
-                {filteredData.length !== 1 ? "s" : ""} encontrado
-                {filteredData.length !== 1 ? "s" : ""}
+            {/* Información de resultados */}
+            <Grid2 size={{ xs: 12 }}>
+              <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                {state.totalItems} resultado{state.totalItems !== 1 ? "s" : ""}{" "}
+                encontrado
+                {state.totalItems !== 1 ? "s" : ""} - Página {state.currentPage}{" "}
+                de {state.totalPages}
               </Typography>
             </Grid2>
           </Grid2>
         </Paper>
-
         {/* Gastos Tables */}
-        {filteredData.length === 0 ? (
+        {gastosPorMes.length === 0 ? (
           <Paper sx={{ p: 4, textAlign: "center" }}>
             <Typography variant="h6" color="textSecondary">
               No se encontraron gastos mensuales
             </Typography>
             <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-              {state.selectedDate
+              {state.filters.year || state.filters.month
                 ? "Intenta cambiar el filtro de fecha o crear un nuevo registro"
                 : "Crea tu primer registro de gastos mensuales"}
             </Typography>
           </Paper>
         ) : (
-          filteredData.map((mesData) => (
+          gastosPorMes.map((mesData) => (
             <Box
               key={mesData.id}
               sx={{
@@ -383,7 +562,13 @@ const TablaGastosEmpresa: React.FC = () => {
             >
               {/* Month Header */}
               <Box
-                sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  mb: 2,
+                  flexWrap: "wrap",
+                  gap: 1,
+                }}
               >
                 <Typography variant="h5" component="div" fontWeight="bold">
                   {mesData.mesDeGasto}
@@ -429,21 +614,27 @@ const TablaGastosEmpresa: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {mesData.gastos.map((gasto, idx) => (
+                    {mesData.expenses.map((gasto, idx) => (
                       <TableRow
-                        key={idx}
+                        key={`${mesData.id}-${idx}`}
                         hover
                         sx={{
                           "&:nth-of-type(odd)": { backgroundColor: "#fafafa" },
                           "&:hover": { backgroundColor: "#f0f0f0" },
                         }}
                       >
-                        <TableCell>{gasto.name}</TableCell>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="medium">
+                            {gasto.name}
+                          </Typography>
+                        </TableCell>
                         <TableCell
                           align="right"
                           sx={{ fontFamily: "monospace" }}
                         >
-                          $ {formatNumber(gasto.value)}
+                          <Typography variant="body2" fontWeight="medium">
+                            $ {formatNumber(gasto.value)}
+                          </Typography>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -451,7 +642,9 @@ const TablaGastosEmpresa: React.FC = () => {
                       <TableCell
                         sx={{ fontWeight: "bold", fontSize: "1.1rem" }}
                       >
-                        Total Gastos
+                        <Typography variant="subtitle1" fontWeight="bold">
+                          Total Gastos del Mes
+                        </Typography>
                       </TableCell>
                       <TableCell
                         sx={{
@@ -462,7 +655,13 @@ const TablaGastosEmpresa: React.FC = () => {
                         }}
                         align="right"
                       >
-                        $ {formatNumber(mesData.totalGastos)}
+                        <Typography
+                          variant="subtitle1"
+                          fontWeight="bold"
+                          color="primary"
+                        >
+                          $ {formatNumber(mesData.totalGastos)}
+                        </Typography>
                       </TableCell>
                     </TableRow>
                   </TableBody>
@@ -471,7 +670,6 @@ const TablaGastosEmpresa: React.FC = () => {
             </Box>
           ))
         )}
-
         {/* Pagination */}
         {state.totalPages > 1 && (
           <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
@@ -482,6 +680,8 @@ const TablaGastosEmpresa: React.FC = () => {
               color="primary"
               showFirstButton
               showLastButton
+              siblingCount={1}
+              boundaryCount={1}
             />
           </Box>
         )}
@@ -494,11 +694,16 @@ const TablaGastosEmpresa: React.FC = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ pb: 1 }}>Confirmar Eliminación</DialogTitle>
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" fontWeight="bold">
+            Confirmar Eliminación
+          </Typography>
+        </DialogTitle>
         <DialogContent>
           <DialogContentText>
             ¿Estás seguro de que deseas eliminar este registro de gastos
-            mensuales? Esta acción no se puede deshacer.
+            mensuales? Esta acción no se puede deshacer y se perderán todos los
+            datos asociados.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

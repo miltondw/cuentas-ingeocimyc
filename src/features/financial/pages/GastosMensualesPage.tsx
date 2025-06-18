@@ -1,4 +1,5 @@
-import { Box, Typography, Paper } from "@mui/material";
+import { Box } from "@mui/material";
+import TablaGastosEmpresa from "../components/gasto-mes";
 
 /**
  * Página de gastos mensuales
@@ -7,15 +8,7 @@ import { Box, Typography, Paper } from "@mui/material";
 const GastosMensualesPage = () => {
   return (
     <Box sx={{ maxWidth: 1200, mx: "auto" }}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          Gastos Mensuales
-        </Typography>
-        <Typography>
-          Esta página contendrá la tabla de gastos mensuales de la empresa. Se
-          migrará completamente en una fase posterior.
-        </Typography>
-      </Paper>
+      <TablaGastosEmpresa />
     </Box>
   );
 };

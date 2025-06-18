@@ -1,7 +1,7 @@
 import * as yup from "yup";
 
 export interface ExtraField {
-  id: string;
+  id: string; // Añadido por react-hook-form
   field: string;
   value: string;
 }
@@ -32,7 +32,7 @@ export const validationSchema: yup.ObjectSchema<MonthFormData> = yup.object({
     .array()
     .of(
       yup.object({
-        id: yup.string().required(),
+        id: yup.string().required(), // Añadido por react-hook-form
         field: yup.string().required("Nombre del gasto es requerido"),
         value: yup.string().required("Monto es requerido"),
       })
@@ -48,5 +48,5 @@ export const defaultValues: MonthFormData = {
   arriendo: 540000,
   internet: 85000,
   salud: 480000,
-  extras: [{ id: "0", field: "", value: "" }],
+  extras: [{ id: "0", field: "", value: "" }], // Inicializa con un campo vacío
 };

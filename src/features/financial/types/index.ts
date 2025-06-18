@@ -46,7 +46,7 @@ export interface CreateProjectDto {
 }
 
 // DTO para actualizar proyecto
-export interface UpdateProjectDto extends Partial<CreateProjectDto> {}
+export type UpdateProjectDto = Partial<CreateProjectDto>;
 
 // DTO para crear gastos de proyecto
 export interface CreateProjectExpensesDto {
@@ -64,7 +64,7 @@ export interface CreateProjectExpensesDto {
 
 // Respuesta completa del proyecto con gastos
 export interface ProjectWithExpenses extends Project {
-  gastos?: ProjectExpenses;
+  expenses?: ProjectExpenses;
 }
 
 // Tipos para filtros y paginación
@@ -90,12 +90,12 @@ export interface ExtraExpense {
   amount: number;
 }
 
-export interface Project {
-  id: string;
+export interface ProjectDetails {
+  id: number;
   name: string;
   location: string;
   client: string;
-  gastos: ProjectExpenses;
+  expenses?: ProjectExpenses;
   valuation: number;
   porcentaje_utilidad: number;
   utilidad: number;
@@ -116,18 +116,11 @@ export type ProjectCategory =
   | "Consultoría"
   | "Otros";
 
-export type CreateProjectDto = Omit<
-  Project,
-  "utilidad" | "monto_total" | "created_at" | "updated_at"
->;
-
-export type UpdateProjectDto = Partial<CreateProjectDto>;
-
 export interface ProjectStats {
   total: number;
   active: number;
   completed: number;
   totalValue: number;
   byCategory: Record<ProjectCategory, number>;
-  recentProjects: Project[];
+  recentProjects: ProjectDetails[];
 }

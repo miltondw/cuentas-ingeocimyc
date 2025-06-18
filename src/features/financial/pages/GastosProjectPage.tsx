@@ -1,5 +1,5 @@
 import { Box, Paper } from "@mui/material";
-import { ProjectFormCorrected } from "../components";
+import TablaGastosProject from "@/features/projects/components/TablaGastosProject";
 
 /**
  * Página de gastos de proyectos
@@ -9,7 +9,7 @@ const GastosProjectPage = () => {
   return (
     <Box sx={{ maxWidth: 1200, mx: "auto" }}>
       <Paper sx={{ p: 3 }}>
-        <ProjectFormCorrected />
+        <TablaGastosProject />
       </Paper>
     </Box>
   );
