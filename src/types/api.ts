@@ -1,361 +1,265 @@
 /**
- * Tipos TypeScript para la API actualizada de NestJS
- * Basado en la documentación API_COMPLETE.md y AUTH_SYSTEM_UPDATE_2025.md
+ * API Interfaces for INGEOCIMYC Frontend
+ * @file api.ts
+ * @description Punto de entrada principal para todas las interfaces de API
+ * Centralized TypeScript interfaces for API consumption
+ * Updated based on real API data verification
  */
 
-// ================== TIPOS BASE ==================
+// =============== RE-EXPORTS DE MÓDULOS ESPECIALIZADOS ===============
 
-export type UserRole = "admin" | "lab" | "client";
+// Autenticación y usuarios
+export type {
+  UserRole,
+  LoginRequest,
+  LoginResponse,
+  UserInfo,
+  SessionInfo,
+  RegisterRequest,
+  RegisterResponse,
+  User,
+  UserDetails,
+  UserProfile,
+  SessionStats,
+  UserSession,
+  DeviceInfo,
+  LogoutRequest,
+  LogoutResponse,
+  ChangePasswordRequest,
+  ChangePasswordResponse,
+  AuthLog,
+  FailedLoginAttempt,
+  SecurityReport,
+  AuthResponse,
+} from "./auth";
 
-export interface User {
-  id: number;
-  email: string;
-  name?: string;
-  firstName?: string;
-  lastName?: string;
-  role: UserRole;
-  created_at: string;
-  updated_at: string;
-  lastLogin?: string;
-  isActive?: boolean;
-  // Campos de seguridad actualizados 2025
-  lastDevice?: string;
-  lastIp?: string;
-  failedAttempts?: number;
-}
+// Proyectos
+export type {
+  ProjectStatus,
+  Project,
+  CreateProjectRequest,
+  UpdateProjectRequest,
+  ProjectExpense,
+  CreateProjectExpenseRequest,
+  UpdateProjectExpenseRequest,
+  ProjectsListResponse,
+  ProjectSummary,
+  MonthlyProjectStats,
+  PaymentRequest,
+  ProjectFilters,
+  ProjectExpenseFilters,
+} from "./projects";
 
-export interface AuthResponse {
-  user: User;
-  accessToken: string;
-  refreshToken?: string;
-  expiresIn?: number;
-  message?: string;
-  // Campos de seguridad actualizados 2025
-  sessionId?: string;
-  deviceInfo?: {
-    deviceName: string;
-    browser: string;
-    os: string;
-    isNew: boolean;
-  };
-}
+// Apiques
+export type {
+  Apique,
+  ApiqueLayer,
+  CreateApiqueRequest,
+  UpdateApiqueRequest,
+  CreateApiqueLayerRequest,
+  UpdateApiqueLayerRequest,
+  ApiquesListResponse,
+  ProjectWithApiques,
+  ApiqueWithLayers,
+  ApiqueStatistics,
+  ApiqueFilters,
+  ApiqueLayerFilters,
+  ApiqueValidationRules,
+  LayerValidationRules,
+  CreateApiqueDto,
+  UpdateApiqueDto,
+} from "./apiques";
 
-// ================== AUTH ENDPOINTS ==================
+// Perfiles
+export type {
+  Profile,
+  ProfileBlow,
+  CreateProfileRequest,
+  UpdateProfileRequest,
+  CreateBlowRequest,
+  UpdateBlowRequest,
+  ProfilesListResponse,
+  ProjectWithProfiles,
+  ProfileWithBlows,
+  ProfileStatistics,
+  SPTAnalysis,
+  BlowAnalysis,
+  SPTSummary,
+  SoilClassification,
+  ProfileFilters,
+  BlowFilters,
+  ProfileValidationRules,
+  BlowValidationRules,
+  SPTConfig,
+  CreateProfileDto,
+  UpdateProfileDto,
+  CreateBlowDto,
+  UpdateBlowDto,
+} from "./profiles";
 
-export interface LoginDto {
-  email: string;
-  password: string;
-  rememberMe?: boolean;
-}
+// Solicitudes de servicio
+export type {
+  ServiceRequestStatus,
+  ServiceRequest,
+  CreateServiceRequestRequest,
+  UpdateServiceRequestRequest,
+  ServiceRequestsListResponse,
+  ServiceRequestSummary,
+  MonthlyServiceStats,
+  ServiceTypeStats,
+  ServiceRequestFilters,
+  ServiceType,
+  ServiceCategory,
+  ServiceRequestValidationRules,
+  CreateServiceRequestDto,
+  UpdateServiceRequestDto,
+} from "./serviceRequests";
 
-export interface RegisterDto {
-  email: string;
-  password: string;
-  firstName?: string;
-  lastName?: string;
-  role?: UserRole;
-  jwt2?: string; // Para crear admin
-}
+// Financiero
+export type {
+  CompanyExpense,
+  CreateCompanyExpenseRequest,
+  UpdateCompanyExpenseRequest,
+  ProjectExpenseFinancial,
+  CreateProjectExpenseFinancialRequest,
+  UpdateProjectExpenseFinancialRequest,
+  FinancialSummary,
+  CreateFinancialSummaryRequest,
+  UpdateFinancialSummaryRequest,
+  MonthlyFinancialReport,
+  YearlyFinancialReport,
+  ProjectFinancialAnalysis,
+  FinancialListResponse,
+  FinancialDashboard,
+  FinancialAlert,
+  CompanyExpenseFilters,
+  ProjectExpenseFinancialFilters,
+  FinancialSummaryFilters,
+  FinancialValidationRules,
+} from "./financial";
 
-export interface ChangePasswordDto {
-  currentPassword: string;
-  newPassword: string;
-  logoutAllDevices?: boolean;
-}
+// Sistema y utilidades
+export type {
+  ApiResponse,
+  PaginatedResponse,
+  ErrorResponse,
+  PaginationParams,
+  BaseFilters,
+  DateRangeFilter,
+  HealthCheckResponse,
+  APIRootResponse,
+  PDFGenerationRequest,
+  PDFOptions,
+  PDFGenerationResponse,
+  Service,
+  ServiceCategory as SystemServiceCategory,
+  ServiceInstance,
+  ServiceAdditionalField,
+  ServiceAdditionalValue,
+  ServiceFilters,
+  SortOrder,
+  ApiMethod,
+  RequestConfig,
+  ValidationError,
+  ValidationResult,
+  AppConfig,
+} from "./system";
 
-export interface SessionInfo {
-  id: string;
-  createdAt: string;
-  expiresAt: string;
-  lastUsedAt: string;
-  deviceInfo: {
-    deviceName: string;
-    browser: string;
-    os: string;
-    ip: string;
-  };
-  isCurrentSession: boolean;
-}
+// Enums y constantes (solo exportar una vez)
+export { API_ENDPOINTS } from "./system";
 
-// ================== FILTROS Y PAGINACIÓN ==================
+// =============== FILTROS UNIFICADOS ===============
 
-export interface PaginationParams {
-  page?: number; // Página actual (default: 1)
-  limit?: number; // Elementos por página (default: 10, max: 100)
-  sortBy?: string; // Campo para ordenar
-  sortOrder?: "ASC" | "DESC"; // Dirección del orden (default: 'DESC')
-}
+// Importar tipos necesarios para las interfaces locales
+import type { BaseFilters, SortOrder, ValidationError } from "./system";
 
-export interface PaginatedResponse<T> {
-  data: T[];
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    totalItems: number;
-    itemsPerPage: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-  };
-  filters?: Record<string, string | number | boolean>;
-  sort?: {
-    field: string;
-    direction: "ASC" | "DESC";
-  };
-}
-
-// ================== SERVICE REQUESTS ==================
-
-export interface ServiceRequestFilters extends PaginationParams {
-  status?: "pendiente" | "en_progreso" | "completado" | "cancelado";
-  name?: string;
-  email?: string;
-  serviceType?: string;
-  startDate?: string; // ISO date (YYYY-MM-DD)
-  endDate?: string; // ISO date (YYYY-MM-DD)
-  location?: string;
-}
-
-export interface ServiceRequest {
-  id: number;
-  nombre: string;
-  email: string;
-  telefono: string;
-  empresa: string;
-  tipoServicio: string;
-  descripcion: string;
-  ubicacionProyecto: string;
-  fechaSolicitud: string;
-  status: "pendiente" | "en_progreso" | "completado" | "cancelado";
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateServiceRequestDto {
-  nombre: string;
-  email: string;
-  telefono: string;
-  empresa: string;
-  tipoServicio: string;
-  descripcion: string;
-  ubicacionProyecto: string;
-}
-
-// ================== PROJECTS ==================
-
-export interface ProjectFilters extends PaginationParams {
-  status?: "activo" | "completado" | "suspendido" | "cancelado";
-  solicitante?: string;
-  nombreProyecto?: string;
-  obrero?: string;
+/**
+ * Filtros comunes que se pueden usar en múltiples endpoints
+ */
+export interface CommonFilters extends BaseFilters {
+  search?: string;
   startDate?: string;
   endDate?: string;
-  metodoDePago?: "efectivo" | "transferencia" | "cheque" | "credito";
 }
 
-// ================== LAB ENTITIES ==================
-
-export interface Apique {
-  apique_id: number;
-  apique: number;
-  id: number;
-  location?: string;
-  depth?: number;
-  date?: string;
-  cbr_unaltered?: boolean;
-  depth_tomo?: number;
-  molde?: number;
+/**
+ * Parámetros de paginación estándar
+ */
+export interface StandardPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages?: number;
 }
 
-export interface Profile {
-  profile_id: number;
-  profile: number;
-  id: number;
-  location?: string;
-  depth?: number;
-  date?: string;
+/**
+ * Respuesta estándar con paginación
+ */
+export interface StandardListResponse<T> {
+  data: T[];
+  pagination: StandardPagination;
+  filters?: Record<string, unknown>;
+  sort?: {
+    field: string;
+    direction: SortOrder;
+  };
 }
 
-export interface Blow {
-  blow_id: number;
-  profile_id: number;
-  depth: number;
-  blows6: number;
-  blows12: number;
-  blows18: number;
-  n: number;
-  observation?: string;
-}
+// =============== TIPOS DE UTILIDAD ADICIONALES ===============
 
-export interface Layer {
-  layer_id: number;
-  apique_id: number;
-  depth_from: number;
-  depth_to: number;
-  description?: string;
-  color?: string;
-  texture?: string;
-  humidity?: string;
-  aashto?: string;
-  sucs?: string;
-  observation?: string;
-}
+/**
+ * Tipo para IDs de entidades
+ */
+export type EntityId = number | string;
 
-// ================== FINANCIAL ENTITIES ==================
+/**
+ * Tipo para fechas ISO
+ */
+export type ISODate = string;
 
-export interface GastoEmpresa {
-  gasto_empresa_id: number;
-  mes: string;
-  salarios: number;
-  luz: number;
-  agua: number;
-  arriendo: number;
-  internet: number;
-  salud: number;
-  otrosCampos?: Record<string, string | number>;
-}
+/**
+ * Tipo para valores monetarios (siempre string en la API)
+ */
+export type MoneyValue = string;
 
-export interface GastoProyecto {
-  gasto_proyecto_id: number;
-  id: number;
-  camioneta: number;
-  campo: number;
-  obreros: number;
-  comidas: number;
-  otros: number;
-  peajes: number;
-  combustible: number;
-  hospedaje: number;
-  otrosCampos?: Record<string, string | number>;
-}
+/**
+ * Tipo para estados booleanos que pueden venir como 0/1 de la API
+ */
+export type BooleanFlag = boolean | 0 | 1;
 
-export interface ResumenFinanciero {
-  id: number;
-  project_id: number;
-  fecha: string;
-  total_ingresos: number;
-  total_gastos: number;
-  utilidad: number;
-  porcentaje_utilidad: number;
-}
-
-// ================== SERVICES ENTITIES ==================
-
-export interface Service {
-  service_id: number;
-  name: string;
-  description?: string;
-  price: number;
-  category_id?: number;
-  has_additional_fields?: boolean;
-}
-
-export interface ServiceCategory {
-  category_id: number;
-  name: string;
-  description?: string;
-}
-
-export interface ServiceInstance {
-  instance_id: number;
-  request_id: number;
-  service_id: number;
-  quantity: number;
-  price: number;
-  subtotal: number;
-  notes?: string;
-}
-
-export interface ServiceAdditionalField {
-  field_id: number;
-  service_id: number;
-  field_name: string;
-  field_type: "text" | "number" | "date" | "select" | "checkbox";
-  required: boolean;
-  options?: string;
-  default_value?: string;
-  order?: number;
-}
-
-export interface ServiceAdditionalValue {
-  value_id: number;
-  instance_id: number;
-  field_id: number;
-  value: string;
-}
-
-// ================== API RESPONSES ==================
-
-export interface ApiResponse<T = unknown> {
+/**
+ * Tipo para respuestas de operaciones CRUD
+ */
+export interface CrudResponse<T> {
   success: boolean;
   data?: T;
-  error?: string;
   message?: string;
-  timestamp?: string;
+  errors?: ValidationError[];
 }
 
-// ================== SECURITY ENTITIES ==================
-
-export interface AuthLog {
-  id: number;
-  userId: number;
-  eventType:
-    | "login"
-    | "logout"
-    | "failed_login"
-    | "password_change"
-    | "token_refresh";
+/**
+ * Tipo para operaciones de eliminación
+ */
+export interface DeleteResponse {
   success: boolean;
-  ipAddress: string;
-  userAgent: string;
-  deviceInfo?: string;
-  details?: string;
-  createdAt: string;
+  message: string;
+  deletedId: EntityId;
 }
 
-export interface FailedLoginAttempt {
-  id: number;
-  email: string;
-  ipAddress: string;
-  attempts: number;
-  lastAttempt: string;
-  blocked: boolean;
-  blockedUntil?: string;
-}
+// =============== METADATA DE INTERFACES ===============
 
-export interface SecurityReport {
-  totalUsers: number;
-  activeSessions: number;
-  failedLoginAttempts: number;
-  blockedAccounts: number;
-  suspiciousActivities: number;
-  recentLogins: AuthLog[];
-}
-export interface Project {
-  id: number;
-  fecha: string;
-  solicitante: string;
-  nombreProyecto: string;
-  factura?: string;
-  valorRetencion: number;
-  valor_iva: number;
-  valor_re: number;
-  obrero: string;
-  metodoDePago: string;
-  costoServicio: number;
-  abono: number;
-  estado: string;
-  created_at: string;
-  expenses?: Array<{
-    id: number;
-    proyectoId: number;
-    camioneta: string;
-    campo: string;
-    obreros: string;
-    comidas: string;
-    otros: string;
-    peajes: string;
-    combustible: string;
-    hospedaje: string;
-    otrosCampos: Record<string, number> | null;
-  }>;
-}
+/**
+ * Información sobre la versión de las interfaces
+ */
+export const INTERFACES_METADATA = {
+  version: "2.0.0",
+  lastUpdated: "2025-06-18",
+  description: "Interfaces TypeScript verificadas con datos reales de la API",
+  changes: [
+    "Reorganizado en módulos específicos",
+    "Añadidos filtros completos para todas las entidades",
+    "Corregidas interfaces de Project con campos reales",
+    "Añadidas validaciones y reglas de negocio",
+    "Separadas interfaces de sistema y utilidades",
+  ],
+} as const;

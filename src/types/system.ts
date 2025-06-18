@@ -1,0 +1,357 @@
+/**
+ * Interfaces de Sistema y Utilidades
+ * @file system.ts
+ * @description Interfaces para respuestas de API, paginación, errores y sistema
+ */
+
+// =============== RESPUESTAS DE API GENÉRICAS ===============
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+  timestamp?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+  filters?: Record<string, string | number | boolean>;
+  sort?: {
+    field: string;
+    direction: "ASC" | "DESC";
+  };
+}
+
+export interface ErrorResponse {
+  statusCode: number;
+  message: string | string[];
+  error?: string;
+  timestamp: string;
+  path: string;
+  method: string;
+}
+
+// =============== PAGINACIÓN Y FILTROS BASE ===============
+export interface PaginationParams {
+  page?: number; // Página actual (default: 1)
+  limit?: number; // Elementos por página (default: 10, max: 100)
+  sortBy?: string; // Campo para ordenar
+  sortOrder?: "ASC" | "DESC"; // Dirección del orden (default: 'DESC')
+}
+
+export interface BaseFilters {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: "ASC" | "DESC";
+  search?: string;
+}
+
+export interface DateRangeFilter {
+  startDate?: string; // ISO date (YYYY-MM-DD)
+  endDate?: string; // ISO date (YYYY-MM-DD)
+}
+
+// =============== HEALTH CHECK Y SISTEMA ===============
+export interface HealthCheckResponse {
+  status: "ok" | "error";
+  timestamp: string;
+  uptime: number;
+  version: string;
+  environment: string;
+  database?: {
+    status: "connected" | "disconnected";
+    latency?: number;
+  };
+  services?: {
+    name: string;
+    status: "up" | "down";
+    lastCheck: string;
+  }[];
+}
+
+export interface APIRootResponse {
+  name: string;
+  version: string;
+  description: string;
+  environment: string;
+  timestamp: string;
+  status: string;
+  docs: string;
+  endpoints: {
+    auth: string;
+    projects: string;
+    serviceRequests: string;
+    lab: string;
+    services: string;
+    health: string;
+  };
+  config: {
+    port: string;
+    nodeEnv: string;
+    renderUrl: string;
+    isProduction: boolean;
+  };
+}
+
+// =============== PDF INTERFACES ===============
+export interface PDFGenerationRequest {
+  serviceRequestId: number;
+  template?: string;
+  options?: PDFOptions;
+}
+
+export interface PDFOptions {
+  format?: "A4" | "Letter";
+  orientation?: "portrait" | "landscape";
+  margin?: {
+    top: string;
+    right: string;
+    bottom: string;
+    left: string;
+  };
+  header?: {
+    height: string;
+    contents: string;
+  };
+  footer?: {
+    height: string;
+    contents: string;
+  };
+}
+
+export interface PDFGenerationResponse {
+  success: boolean;
+  message: string;
+  filePath?: string;
+  size?: number;
+  downloadUrl?: string;
+}
+
+// =============== SERVICIOS INTERFACES ===============
+export interface Service {
+  service_id: number;
+  name: string;
+  description?: string;
+  price: number;
+  category_id?: number;
+  has_additional_fields?: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface ServiceCategory {
+  category_id: number;
+  name: string;
+  description?: string;
+  services?: Service[];
+}
+
+export interface ServiceInstance {
+  instance_id: number;
+  request_id: number;
+  service_id: number;
+  quantity: number;
+  price: number;
+  subtotal: number;
+  notes?: string;
+}
+
+export interface ServiceAdditionalField {
+  field_id: number;
+  service_id: number;
+  field_name: string;
+  field_type: "text" | "number" | "date" | "select" | "checkbox";
+  required: boolean;
+  options?: string;
+  default_value?: string;
+  order?: number;
+}
+
+export interface ServiceAdditionalValue {
+  value_id: number;
+  instance_id: number;
+  field_id: number;
+  value: string;
+}
+
+// =============== FILTROS DE SERVICIOS ===============
+export interface ServiceFilters {
+  // Categoría
+  category_id?: number;
+  categoryName?: string;
+
+  // Precio
+  priceMin?: number;
+  priceMax?: number;
+
+  // Campos adicionales
+  hasAdditionalFields?: boolean;
+
+  // Estado
+  isActive?: boolean;
+
+  // Búsqueda
+  search?: string; // Busca en name y description
+  nameContains?: string;
+  descriptionContains?: string;
+
+  // Ordenamiento
+  sortBy?: "service_id" | "name" | "price" | "category_id" | "created_at";
+  sortOrder?: "ASC" | "DESC";
+
+  // Paginación
+  page?: number;
+  limit?: number;
+}
+
+// =============== CONSTANTES Y ENUMS ===============
+export enum UserRole {
+  ADMIN = "admin",
+  LAB = "lab",
+  CLIENT = "client",
+}
+
+export enum ProjectStatus {
+  ACTIVE = "activo",
+  COMPLETED = "completado",
+  CANCELLED = "cancelado",
+  PAUSED = "pausado",
+}
+
+export enum ServiceRequestStatus {
+  PENDING = "pendiente",
+  IN_PROCESS = "en_proceso",
+  COMPLETED = "completada",
+  CANCELLED = "cancelada",
+}
+
+// =============== ENDPOINTS CONSTANTES ===============
+export const API_ENDPOINTS = {
+  AUTH: {
+    LOGIN: "/api/auth/login",
+    REGISTER: "/api/auth/register",
+    LOGOUT: "/api/auth/logout",
+    PROFILE: "/api/auth/profile",
+    SESSIONS: "/api/auth/sessions",
+    REFRESH: "/api/auth/refresh",
+    CHANGE_PASSWORD: "/api/auth/change-password",
+  },
+  PROJECTS: {
+    LIST: "/api/projects",
+    CREATE: "/api/projects",
+    DETAIL: (id: number) => `/api/projects/${id}`,
+    UPDATE: (id: number) => `/api/projects/${id}`,
+    DELETE: (id: number) => `/api/projects/${id}`,
+    SUMMARY: "/api/projects/summary",
+    EXPENSES: (id: number) => `/api/projects/${id}/expenses`,
+    PAYMENTS: (id: number) => `/api/projects/${id}/payment`,
+  },
+  APIQUES: {
+    LIST: "/api/lab/apiques",
+    CREATE: "/api/lab/apiques",
+    BY_PROJECT: (projectId: number) => `/api/lab/apiques/project/${projectId}`,
+    DETAIL: (projectId: number, apiqueId: number) =>
+      `/api/lab/apiques/${projectId}/${apiqueId}`,
+    UPDATE: (projectId: number, apiqueId: number) =>
+      `/api/lab/apiques/${projectId}/${apiqueId}`,
+    DELETE: (projectId: number, apiqueId: number) =>
+      `/api/lab/apiques/${projectId}/${apiqueId}`,
+    STATISTICS: (projectId: number) =>
+      `/api/lab/apiques/project/${projectId}/statistics`,
+  },
+  PROFILES: {
+    LIST: "/api/lab/profiles",
+    CREATE: "/api/lab/profiles",
+    BY_PROJECT: (projectId: number) => `/api/lab/profiles/project/${projectId}`,
+    BY_SOUNDING: (projectId: number, soundingNumber: string) =>
+      `/api/lab/profiles/project/${projectId}/sounding/${soundingNumber}`,
+    DETAIL: (id: number) => `/api/lab/profiles/${id}`,
+    UPDATE: (id: number) => `/api/lab/profiles/${id}`,
+    DELETE: (id: number) => `/api/lab/profiles/${id}`,
+    ADD_BLOW: (profileId: number) => `/api/lab/profiles/${profileId}/blows`,
+  },
+  SERVICE_REQUESTS: {
+    LIST: "/api/service-requests",
+    CREATE: "/api/service-requests",
+    DETAIL: (id: number) => `/api/service-requests/${id}`,
+    UPDATE: (id: number) => `/api/service-requests/${id}`,
+    DELETE: (id: number) => `/api/service-requests/${id}`,
+  },
+  SERVICES: {
+    LIST: "/api/services",
+    CREATE: "/api/services",
+    DETAIL: (id: number) => `/api/services/${id}`,
+    UPDATE: (id: number) => `/api/services/${id}`,
+    DELETE: (id: number) => `/api/services/${id}`,
+  },
+  FINANCIAL: {
+    EXPENSES: "/api/gastos-mes/expenses",
+    SUMMARIES: "/api/gastos-mes/summaries",
+    RESUMEN: "/api/resumen",
+  },
+  PDF: {
+    SERVICE_REQUEST: (id: number) => `/api/pdf/service-request/${id}`,
+    PREVIEW: (id: number) => `/api/pdf/service-request/${id}/preview`,
+    REGENERATE: (id: number) => `/api/pdf/service-request/${id}/regenerate`,
+  },
+  SYSTEM: {
+    HEALTH: "/api/health",
+    ROOT: "/api",
+  },
+} as const;
+
+// =============== TIPOS DE UTILIDAD ===============
+export type SortOrder = "ASC" | "DESC";
+export type ApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+export interface RequestConfig {
+  method: ApiMethod;
+  headers?: Record<string, string>;
+  body?: string;
+  timeout?: number;
+}
+
+// =============== TIPOS DE VALIDACIÓN ===============
+export interface ValidationError {
+  field: string;
+  message: string;
+  code: string;
+  value?: unknown;
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: ValidationError[];
+}
+
+// =============== CONFIGURACIÓN DE LA APP ===============
+export interface AppConfig {
+  api: {
+    baseUrl: string;
+    timeout: number;
+    retries: number;
+  };
+  auth: {
+    tokenKey: string;
+    refreshKey: string;
+    rememberMeKey: string;
+    sessionTimeout: number;
+  };
+  pagination: {
+    defaultLimit: number;
+    maxLimit: number;
+  };
+  validation: {
+    enableClientSide: boolean;
+    enableServerSide: boolean;
+  };
+}

@@ -5,10 +5,14 @@
 import api from "../index";
 import type {
   Profile,
-  CreateProfileDto,
-  ProfilesFilters,
-  PaginatedResponse,
+  ProfileBlow,
+  CreateProfileRequest,
+  UpdateProfileRequest,
+  CreateBlowRequest,
+  UpdateBlowRequest,
   ApiResponse,
+  ProfileFilters,
+  ProfilesListResponse,
 } from "@/types/api";
 
 export class ProfilesService {
@@ -16,24 +20,20 @@ export class ProfilesService {
 
   /**
    * Obtener todos los perfiles de un proyecto con filtros y paginación
-   */
-  async getProfiles(
-    filters: ProfilesFilters
-  ): Promise<PaginatedResponse<Profile>> {
+   */ async getProfiles(
+    filters?: ProfileFilters
+  ): Promise<ProfilesListResponse> {
     const params = new URLSearchParams();
 
-    // projectId es requerido
-    if (!filters.projectId) {
-      throw new Error("El ID del proyecto es requerido");
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+          params.append(key, String(value));
+        }
+      });
     }
 
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        params.append(key, String(value));
-      }
-    });
-
-    const response = await api.get<PaginatedResponse<Profile>>(
+    const response = await api.get<ProfilesListResponse>(
       `${this.basePath}?${params.toString()}`
     );
     return response.data;
@@ -51,11 +51,10 @@ export class ProfilesService {
     }
     return response.data.data;
   }
-
   /**
    * Crear un nuevo perfil
    */
-  async createProfile(profileData: CreateProfileDto): Promise<Profile> {
+  async createProfile(profileData: CreateProfileRequest): Promise<Profile> {
     const response = await api.post<ApiResponse<Profile>>(
       this.basePath,
       profileData
@@ -65,13 +64,12 @@ export class ProfilesService {
     }
     return response.data.data;
   }
-
   /**
    * Actualizar un perfil existente
    */
   async updateProfile(
     id: number,
-    profileData: Partial<CreateProfileDto>
+    profileData: UpdateProfileRequest
   ): Promise<Profile> {
     const response = await api.put<ApiResponse<Profile>>(
       `${this.basePath}/${id}`,
@@ -111,22 +109,14 @@ export class ProfilesService {
     }
     return response.data.data;
   }
-
   /**
    * Agregar datos de golpes a un perfil
    */
   async addBlowData(
     profileId: number,
-    blowData: {
-      depth: number;
-      blows6: number;
-      blows12: number;
-      blows18: number;
-      n: number;
-      observation?: string;
-    }
-  ): Promise<Profile> {
-    const response = await api.post<ApiResponse<Profile>>(
+    blowData: CreateBlowRequest
+  ): Promise<ProfileBlow> {
+    const response = await api.post<ApiResponse<ProfileBlow>>(
       `${this.basePath}/${profileId}/blows`,
       blowData
     );
@@ -137,23 +127,15 @@ export class ProfilesService {
     }
     return response.data.data;
   }
-
   /**
    * Actualizar datos de golpes
    */
   async updateBlowData(
     profileId: number,
     blowId: number,
-    blowData: {
-      depth?: number;
-      blows6?: number;
-      blows12?: number;
-      blows18?: number;
-      n?: number;
-      observation?: string;
-    }
-  ): Promise<Profile> {
-    const response = await api.put<ApiResponse<Profile>>(
+    blowData: UpdateBlowRequest
+  ): Promise<ProfileBlow> {
+    const response = await api.put<ApiResponse<ProfileBlow>>(
       `${this.basePath}/${profileId}/blows/${blowId}`,
       blowData
     );
@@ -164,80 +146,77 @@ export class ProfilesService {
     }
     return response.data.data;
   }
-
   /**
    * Eliminar datos de golpes
    */
-  async deleteBlowData(profileId: number, blowId: number): Promise<Profile> {
-    const response = await api.delete<ApiResponse<Profile>>(
+  async deleteBlowData(profileId: number, blowId: number): Promise<void> {
+    const response = await api.delete<ApiResponse<void>>(
       `${this.basePath}/${profileId}/blows/${blowId}`
     );
-    if (!response.data.data) {
+    if (!response.data.success) {
       throw new Error(
         response.data.error || "Error al eliminar datos de golpes"
       );
     }
-    return response.data.data;
   }
 
   /**
    * Obtener perfiles por profundidad
-   */
-  async getProfilesByDepth(
+   */ async getProfilesByDepth(
     projectId: number,
     minDepth?: number,
     maxDepth?: number
-  ): Promise<PaginatedResponse<Profile>> {
-    const filters: ProfilesFilters = {
+  ): Promise<ProfilesListResponse> {
+    const filters: ProfileFilters = {
       projectId,
-      minDepth,
-      maxDepth,
+      maxDepthMin: minDepth,
+      maxDepthMax: maxDepth,
     };
     return this.getProfiles(filters);
   }
-
   /**
    * Buscar perfiles por número
    */
   async searchProfilesByNumber(
     projectId: number,
-    profileNumber: string
-  ): Promise<PaginatedResponse<Profile>> {
-    const filters: ProfilesFilters = {
+    soundingNumber: string
+  ): Promise<ProfilesListResponse> {
+    const filters: ProfileFilters = {
       projectId,
-      profileNumber,
+      soundingNumber,
     };
     return this.getProfiles(filters);
   }
-
   /**
    * Obtener perfiles por estado
    */
   async getProfilesByStatus(
     projectId: number,
     status: "drilling" | "sampling" | "analyzing" | "completed" | "reported"
-  ): Promise<PaginatedResponse<Profile>> {
-    const filters: ProfilesFilters = {
+  ): Promise<ProfilesListResponse> {
+    const filters: ProfileFilters = {
       projectId,
-      status,
+      // Nota: status no está disponible en ProfileFilters actualmente
+      // Se podría añadir o usar search
+      search: status,
     };
     return this.getProfiles(filters);
   }
-
   /**
    * Obtener perfiles por tipo de suelo
    */
   async getProfilesBySoilType(
     projectId: number,
     soilType: string
-  ): Promise<PaginatedResponse<Profile>> {
-    const filters: ProfilesFilters = {
+  ): Promise<ProfilesListResponse> {
+    const filters: ProfileFilters = {
       projectId,
-      soilType,
+      // Nota: soilType no está disponible en ProfileFilters actualmente
+      // Se podría añadir o usar search
+      search: soilType,
     };
     return this.getProfiles(filters);
   }
-
   /**
    * Obtener perfiles por rango de fechas
    */
@@ -245,11 +224,11 @@ export class ProfilesService {
     projectId: number,
     startDate: string,
     endDate: string
-  ): Promise<PaginatedResponse<Profile>> {
-    const filters: ProfilesFilters = {
+  ): Promise<ProfilesListResponse> {
+    const filters: ProfileFilters = {
       projectId,
-      drillingDate: startDate,
-      completionDate: endDate,
+      startDate,
+      endDate,
     };
     return this.getProfiles(filters);
   }
@@ -269,7 +248,7 @@ export class ProfilesService {
    */
   async exportProfiles(
     projectId: number,
-    filters?: Omit<ProfilesFilters, "projectId">
+    filters?: Omit<ProfileFilters, "projectId">
   ): Promise<Blob> {
     const params = new URLSearchParams();
     params.append("projectId", String(projectId));

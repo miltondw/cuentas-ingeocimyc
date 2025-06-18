@@ -37,16 +37,16 @@ const ProjectsDashboard = lazy(
   () => import("@/features/lab/pages/ProjectsDashboard")
 );
 const ProjectProfiles = lazy(
-  () => import("@/features/lab/pages/ProjectProfiles")
+  () => import("@/features/lab/pages/PerfilesPage/ProjectProfiles")
 );
 const ProjectApiques = lazy(
-  () => import("@/features/lab/pages/ProjectApiques")
+  () => import("@/features/lab/pages/ApiquesPage/ProjectApiques")
 );
 const PerfilDetallesPage = lazy(
-  () => import("@/features/lab/pages/PerfilDetallesPage")
+  () => import("@/features/lab/pages/PerfilesPage/PerfilDetallesPage")
 );
 const ApiqueDetallesPage = lazy(
-  () => import("@/features/lab/pages/ApiqueDetallesPage")
+  () => import("@/features/lab/pages/ApiquesPage/ApiqueDeatil")
 );
 
 // Páginas financieras/admin
