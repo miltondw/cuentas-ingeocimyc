@@ -38,7 +38,7 @@ import BlurCircularIcon from "@mui/icons-material/BlurCircular";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
 
-import { projectsService } from "@/api/services";
+import { projectsService } from "@/api";
 import { useAuth } from "@/api/useAuth";
 import type { Project, ProjectFilters } from "@/types/api";
 import { useApiData } from "@/api/hooks/useApiData";

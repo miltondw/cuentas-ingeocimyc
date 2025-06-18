@@ -38,7 +38,7 @@ import TerrainIcon from "@mui/icons-material/Terrain";
 import LayersIcon from "@mui/icons-material/Layers";
 import ScienceIcon from "@mui/icons-material/Science";
 import FilterListIcon from "@mui/icons-material/FilterList";
-import { projectsService } from "@/api/services";
+import { projectsService } from "@/api";
 import { useAuth } from "@/api/useAuth";
 import { useApiques } from "../hooks/useApiques";
 import type { Project, ApiquesFilters, Apique } from "@/types/api";

@@ -17,7 +17,7 @@ import {
   Grid2,
   Button,
 } from "@mui/material";
-import { projectsService } from "@/api/services";
+import { projectsService } from "@/api";
 import { useNotifications } from "@/api/hooks/useNotifications";
 import { LoadingOverlay } from "@/components/common/LoadingOverlay";
 import type { Project } from "@/types/api";

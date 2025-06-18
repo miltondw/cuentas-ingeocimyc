@@ -34,7 +34,7 @@ import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import api from "@/api";
 import { useNotifications } from "@/api/hooks/useNotifications";
 import { LoadingOverlay } from "@/components/common/LoadingOverlay";
-import { ProjectFilters } from "@/types/api";
+import { Project, ProjectFilters } from "@/types/api";
 import { formatNumber, parseNumber } from "@/utils/formatNumber";
 import { useQueryClient } from "@tanstack/react-query";
 // Types
@@ -48,36 +48,6 @@ interface TableColumn {
 
 interface ProjectGastos {
   [key: string]: number;
-}
-
-interface Project {
-  id: number;
-  fecha: string;
-  solicitante: string;
-  nombreProyecto: string;
-  factura?: string;
-  valorRetencion: number;
-  valor_iva: number;
-  valor_re: number;
-  obrero: string;
-  metodoDePago: string;
-  costoServicio: number;
-  abono: number;
-  estado: string;
-  created_at: string;
-  expenses?: Array<{
-    id: number;
-    proyectoId: number;
-    camioneta: string;
-    campo: string;
-    obreros: string;
-    comidas: string;
-    otros: string;
-    peajes: string;
-    combustible: string;
-    hospedaje: string;
-    otrosCampos: Record<string, number> | null;
-  }>;
 }
 
 interface ProjectCalculations {

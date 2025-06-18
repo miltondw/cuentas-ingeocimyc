@@ -24,7 +24,7 @@ import type {
   CreateProjectDto,
   PaymentMethod,
   CreateProjectExpensesDto,
-} from "../types/projectTypes";
+} from "@/types/typesProject/projectTypes";
 
 // Interface para campos extras
 interface ExtraField {
@@ -188,7 +188,8 @@ export const ProjectFormCreate: React.FC = () => {
           const key = field.description.replace(/\s+/g, "_");
           otrosCampos[key] = field.value;
         }
-      });      const expensesData = {
+      });
+      const expensesData = {
         ...expenses,
         otrosCampos,
       };
@@ -283,7 +284,7 @@ export const ProjectFormCreate: React.FC = () => {
           otrosCampos: expensesData.otrosCampos,
         },
       ],
-    };    // Para updates, NO incluir el ID en el body
+    }; // Para updates, NO incluir el ID en el body
     console.info("Datos transformados para la API:", transformedProject);
     return transformedProject;
   };

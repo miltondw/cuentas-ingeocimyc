@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/axios/apiClient";
 import type { Project, ApiResponse } from "@/types/api";
-import type { CreateProjectDto, UpdateProjectDto } from "../types";
+import { CreateProjectDto } from "@/types/typesProject";
+import { UpdateProjectDto } from "@/types/typesProject/projectTypes";
 
 /**
  * Servicio para gestión de proyectos

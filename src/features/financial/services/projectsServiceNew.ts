@@ -9,7 +9,7 @@ import type {
   ProjectStats,
   CreateProjectExpensesDto,
   ProjectExpenses,
-} from "../types/projectTypes";
+} from "@/types/typesProject/projectTypes";
 
 const BASE_URL = "/projects";
 

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { apiquesService } from "@/api/services";
+import { apiquesService } from "@/api";
 import { useApiData } from "@/api/hooks/useApiData";
 import { useNotifications } from "@/api/hooks/useNotifications";
 import type { Apique, ApiquesFilters, PaginatedResponse } from "@/types/api";

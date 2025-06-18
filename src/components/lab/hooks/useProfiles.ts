@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { profilesService } from "@/api/services";
+import { profilesService } from "@/api";
 import { useApiData } from "@/api/hooks/useApiData";
 import { useNotifications } from "@/api/hooks/useNotifications";
 import type { Profile, ProfilesFilters, PaginatedResponse } from "@/types/api";

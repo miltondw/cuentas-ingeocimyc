@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { apiquesService } from "@/api/services";
+import { apiquesService } from "@/api";
 import { ApiqueFormData, Layer } from "./apiqueTypes";
 import type { CreateApiqueDto } from "@/types/api";
 import BasicInfoForm from "./BasicInfoForm";

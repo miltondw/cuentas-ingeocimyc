@@ -14,7 +14,7 @@ import {
   Tooltip,
 } from "@mui/material";
 import { useServiceRequest } from "../hooks/useServiceRequest";
-import { serviceRequestsService } from "@/api/services";
+import { serviceRequestsService } from "@/api";
 import { ROUTES } from "@/utils/routes";
 import { InitialInfoForm } from "./InitialInfoForm";
 import { ServiceSelection } from "./ServiceSelection";

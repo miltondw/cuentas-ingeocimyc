@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, ChangeEvent, FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { profilesService } from "@/api/services";
+import { profilesService } from "@/api";
 import { useNotifications } from "@/api/hooks/useNotifications";
 import type { CreateProfileDto } from "@/types/api";
 import { ProfileFormData, ProfileStats, BlowData } from "./profileTypes";

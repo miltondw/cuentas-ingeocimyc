@@ -34,7 +34,7 @@ import WaterDropIcon from "@mui/icons-material/WaterDrop";
 import LandscapeIcon from "@mui/icons-material/Landscape";
 import HardnessIcon from "@mui/icons-material/Terrain";
 import FilterListIcon from "@mui/icons-material/FilterList";
-import { projectsService } from "@/api/services";
+import { projectsService } from "@/api";
 import { useAuth } from "@/api/useAuth";
 import { useProfiles } from "../hooks/useProfiles";
 import type { Project, ProfilesFilters, Profile } from "@/types/api";

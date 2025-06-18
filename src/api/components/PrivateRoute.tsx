@@ -1,15 +1,19 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
 import { CircularProgress, Box, Typography } from "@mui/material";
-import { useAuth } from "./useAuth";
+import { useAuth } from "../useAuth";
 
 interface PrivateRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'admin' | 'lab' | 'client';
-  requiredRoles?: Array<'admin' | 'lab' | 'client'>;
+  requiredRole?: "admin" | "lab" | "client";
+  requiredRoles?: Array<"admin" | "lab" | "client">;
 }
 
-const PrivateRoute = ({ children, requiredRole, requiredRoles }: PrivateRouteProps) => {
+const PrivateRoute = ({
+  children,
+  requiredRole,
+  requiredRoles,
+}: PrivateRouteProps) => {
   const { isAuthenticated, user, loading, hasRole, hasAnyRole } = useAuth();
 
   // Mostrar loading mientras se verifica la autenticación
@@ -77,7 +81,7 @@ const PrivateRoute = ({ children, requiredRole, requiredRoles }: PrivateRoutePro
           No tienes permisos para acceder a esta sección.
         </Typography>
         <Typography variant="body2" color="textSecondary">
-          Roles requeridos: {requiredRoles.join(', ')}, tu rol: {user.role}
+          Roles requeridos: {requiredRoles.join(", ")}, tu rol: {user.role}
         </Typography>
       </Box>
     );

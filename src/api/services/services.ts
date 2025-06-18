@@ -11,7 +11,7 @@ export {
   ServiceRequestsService,
   submitServiceRequest,
 } from "./serviceRequestsNew";
-export {export {
+export {
   gastosMensualesService,
   GastosMensualesService,
 } from "./gastosMensualesService";
@@ -20,29 +20,21 @@ export {export {
 export { projectsService as financialProjectsService } from "@/features/financial/services/projectsService";
 
 // Contexto de autenticación
-export { AuthProvider } from "./AuthContext";
+export { AuthProvider } from "./components/AuthContext";
 export { useAuth } from "./useAuth";
 
 // Componentes de autenticación
-export { default as PrivateRoute } from "./PrivateRoute";
+export { default as PrivateRoute } from "./components/PrivateRoute";
 
 // API base
-export { default as api } from "./index";
+export { default as api } from "../index";
 
 // Re-exportar tipos importantes
 export type {
   Project,
-  CreateProjectDto,
-  ProjectFilters,
   Apique,
-  CreateApiqueDto,
-  ApiquesFilters,
   Profile,
-  CreateProfileDto,
-  ProfilesFilters,
   ServiceRequest,
-  CreateServiceRequestDto,
-  ServiceRequestFilters,
   PaginatedResponse,
   ApiResponse,
   User,

@@ -1,7 +1,8 @@
+import DesktopProfileView from "@/components/lab/components/PerfilDeSuelos/DesktopProfileView";
+import MobileProfileView from "@/components/lab/components/PerfilDeSuelos/MobileProfileView";
+import { useProfileForm } from "@/components/lab/components/PerfilDeSuelos/useProfileForm";
 import { LinearProgress, useMediaQuery } from "@mui/material";
-import { useProfileForm } from "../hooks/useProfileForm";
-import { MobileProfileView } from "./MobileProfileView";
-import { DesktopProfileView } from "./DesktopProfileView";
+
 import React, { useState } from "react";
 
 /**
@@ -13,12 +14,10 @@ export const ProfileSoilForm = () => {
     formData,
     errors,
     loading,
-    notification,
     profileStats,
     handleChange,
     handleBlowChange,
     handleSubmit,
-    handleCloseNotification,
     navigate,
     profileId,
     projectId,
@@ -55,8 +54,6 @@ export const ProfileSoilForm = () => {
           handleBlowChange={handleBlowChange}
           handleSubmit={handleSubmit}
           handleAccordionChange={handleAccordionChange}
-          notification={notification}
-          handleCloseNotification={handleCloseNotification}
           navigate={navigate}
         />
       ) : (
@@ -66,13 +63,10 @@ export const ProfileSoilForm = () => {
           projectId={projectId}
           profileStats={profileStats}
           errors={errors}
-          expandedDepth={expandedDepth}
           handleChange={handleChange}
           handleBlowChange={handleBlowChange}
           handleSubmit={handleSubmit}
           handleAccordionChange={handleAccordionChange}
-          notification={notification}
-          handleCloseNotification={handleCloseNotification}
           navigate={navigate}
         />
       )}

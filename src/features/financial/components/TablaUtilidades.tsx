@@ -21,7 +21,7 @@ import { projectsService } from "../services/projectsServiceNew";
 import { useNotifications } from "@/api/hooks/useNotifications";
 import { LoadingOverlay } from "@/components/common/LoadingOverlay";
 import { formatNumber } from "@/utils/formatNumber";
-import type { Project } from "../types/projectTypes";
+import type { Project } from "@/types/typesProject/projectTypes";
 import api from "@/api";
 
 // Tipos para el resumen financiero adaptados a la nueva estructura

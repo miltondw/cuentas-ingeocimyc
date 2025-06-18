@@ -2,7 +2,7 @@
  * Servicio para la gestión de gastos mensuales de empresa
  * NOTA: Endpoints no documentados en API.md - requiere documentación backend
  */
-import api from "./index";
+import api from "../index";
 import type {
   FinancialFilters,
   PaginatedResponse,

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CircularProgress, Box, Typography } from "@mui/material";
-import { useAuth } from "./useAuth";
+import { useAuth } from "../useAuth";
 
 const Logout = () => {
   const { logout } = useAuth();

@@ -152,18 +152,6 @@ export interface ProjectFilters extends PaginationParams {
   metodoDePago?: "efectivo" | "transferencia" | "cheque" | "credito";
 }
 
-export interface Project {
-  id: number;
-  nombre: string;
-  descripcion?: string;
-  ubicacion?: string;
-  fecha_inicio?: string;
-  fecha_fin?: string;
-  valor_contrato?: number;
-  estado?: "activo" | "completado" | "suspendido" | "cancelado";
-  cliente_id?: number;
-}
-
 // ================== LAB ENTITIES ==================
 
 export interface Apique {
@@ -341,4 +329,33 @@ export interface SecurityReport {
   blockedAccounts: number;
   suspiciousActivities: number;
   recentLogins: AuthLog[];
+}
+export interface Project {
+  id: number;
+  fecha: string;
+  solicitante: string;
+  nombreProyecto: string;
+  factura?: string;
+  valorRetencion: number;
+  valor_iva: number;
+  valor_re: number;
+  obrero: string;
+  metodoDePago: string;
+  costoServicio: number;
+  abono: number;
+  estado: string;
+  created_at: string;
+  expenses?: Array<{
+    id: number;
+    proyectoId: number;
+    camioneta: string;
+    campo: string;
+    obreros: string;
+    comidas: string;
+    otros: string;
+    peajes: string;
+    combustible: string;
+    hospedaje: string;
+    otrosCampos: Record<string, number> | null;
+  }>;
 }

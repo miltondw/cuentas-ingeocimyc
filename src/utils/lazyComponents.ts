@@ -24,11 +24,13 @@ export const createLazyComponent = <
 
 // Lazy loading para páginas principales
 export const LazyLogin = createLazyComponent(
-  () => import("../api/Login"),
+  () => import("../api/components/Login"),
   true
 );
 
-export const LazyLogout = createLazyComponent(() => import("../api/Logout"));
+export const LazyLogout = createLazyComponent(
+  () => import("../api/components/Logout")
+);
 
 // Lazy loading para componentes de cuentas
 export const LazyGastosProject = createLazyComponent(
