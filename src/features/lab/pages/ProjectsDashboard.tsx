@@ -327,12 +327,7 @@ const ProjectsDashboard = () => {
             color="primary"
             variant="outlined"
           />
-          <Chip
-            icon={<ScienceIcon />}
-            label={`${profilesData?.total || 0} Perfiles totales`}
-            color="secondary"
-            variant="outlined"
-          />
+
           <Chip
             label={`${filteredData.length} Filtrados`}
             color={hasActiveFilters ? "success" : "default"}
@@ -712,16 +707,6 @@ const ProjectsDashboard = () => {
             `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
           }
         />
-
-        {/* Información adicional para debugging */}
-        <Box sx={{ mt: 2, p: 2, bgcolor: "grey.50", borderRadius: 1 }}>
-          <Typography variant="body2" color="text.secondary">
-            ℹ️ Abre la consola del navegador (F12) para ver los detalles
-            completos de las respuestas de la API. Los filtros están
-            sincronizados con la URL para facilitar el marcado y compartido de
-            estados.
-          </Typography>
-        </Box>
       </Paper>
     </Box>
   );

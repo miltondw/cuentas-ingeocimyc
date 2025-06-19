@@ -363,4 +363,147 @@ export const labService = {
       throw error;
     }
   },
+
+  /**
+   * Obtener un perfil específico por ID
+   */
+  async getProfile(profileId: number): Promise<{
+    id: number;
+    projectId: number;
+    soundingNumber: string;
+    waterLevel: string;
+    profileDate: string;
+    samplesNumber: number;
+    location: string | null;
+    blows: Array<{
+      id: number;
+      profileId: number;
+      depth: string;
+      blows6: number;
+      blows12: number;
+      blows18: number;
+      n: number;
+      observation: string | null;
+    }>;
+  }> {
+    console.info(`🔄 Llamando a /lab/profiles/${profileId}...`);
+    try {
+      const response = await apiClient.get(`/lab/profiles/${profileId}`);
+      console.info("✅ Respuesta de getProfile:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("❌ Error en getProfile:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Crear un nuevo perfil
+   */
+  async createProfile(
+    profileData: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    console.info("🔄 Llamando a POST /lab/profiles...");
+    try {
+      const response = await apiClient.post("/lab/profiles", profileData);
+      console.info("✅ Respuesta de createProfile:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("❌ Error en createProfile:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Actualizar un perfil existente
+   */
+  async updateProfile(
+    profileId: number,
+    profileData: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    console.info(`🔄 Llamando a PATCH /lab/profiles/${profileId}...`);
+    try {
+      const response = await apiClient.patch(
+        `/lab/profiles/${profileId}`,
+        profileData
+      );
+      console.info("✅ Respuesta de updateProfile:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("❌ Error en updateProfile:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Eliminar un perfil
+   */
+  async deleteProfile(profileId: number): Promise<void> {
+    console.info(`🔄 Llamando a DELETE /lab/profiles/${profileId}...`);
+    try {
+      await apiClient.delete(`/lab/profiles/${profileId}`);
+      console.info("✅ Perfil eliminado correctamente");
+    } catch (error) {
+      console.error("❌ Error en deleteProfile:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener perfiles de un proyecto específico
+   */
+  async getProjectProfiles(
+    projectId: number,
+    filters?: {
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+      sortOrder?: "ASC" | "DESC";
+    }
+  ): Promise<{
+    data: Array<{
+      id: number;
+      projectId: number;
+      soundingNumber: string;
+      waterLevel: string;
+      profileDate: string;
+      samplesNumber: number;
+      location: string | null;
+      blows: Array<{
+        id: number;
+        profileId: number;
+        depth: string;
+        blows6: number;
+        blows12: number;
+        blows18: number;
+        n: number;
+        observation: string | null;
+      }>;
+    }>;
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    console.info(
+      `🔄 Llamando a /lab/profiles/project/${projectId} con filtros:`,
+      filters
+    );
+    try {
+      let url = `/lab/profiles/project/${projectId}`;
+
+      if (filters) {
+        const params = buildQueryParams(filters);
+        if (params.toString()) {
+          url += `?${params.toString()}`;
+        }
+      }
+
+      const response = await apiClient.get(url);
+      console.info("✅ Respuesta de getProjectProfiles:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("❌ Error en getProjectProfiles:", error);
+      throw error;
+    }
+  },
 };
