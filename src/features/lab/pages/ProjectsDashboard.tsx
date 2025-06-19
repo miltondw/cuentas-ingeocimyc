@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -43,14 +43,13 @@ import {
   type LabProject,
   type LabProjectsResponse,
 } from "@/services/api/labService";
-import { useUrlFilters } from "@/hooks/useUrlFilters";
 import {
-  DEFAULT_LAB_PROJECT_FILTERS,
   type LabProjectFilters,
 } from "@/types/labFilters";
 
 const ProjectsDashboard = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [projectsData, setProjectsData] = useState<LabProjectsResponse | null>(
@@ -58,19 +57,92 @@ const ProjectsDashboard = () => {
   );
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-  // Hook de filtros con URL params
-  const {
-    filters,
-    updateFilters,
-    updateFilter,
-    clearFilters,
-    hasActiveFilters,
-    isLoading: filtersLoading,
-  } = useUrlFilters<LabProjectFilters>({
-    defaultFilters: DEFAULT_LAB_PROJECT_FILTERS,
-    debounceMs: 300,
-    excludeFromUrl: [], // Incluir todos los filtros en la URL
-  }); // Filtrar datos localmente (la API podría no soportar todos los filtros)
+  // Estados locales para los campos de búsqueda (para mejor UX)
+  const [localSearchInputs, setLocalSearchInputs] = useState({
+    nombreProyecto: "",
+    solicitante: "",
+    obrero: "",
+  });
+
+  // Funciones auxiliares para trabajar con search params
+  const getFilterFromParams = useCallback((key: string, defaultValue?: string) => {
+    return searchParams.get(key) || defaultValue;
+  }, [searchParams]);
+
+  const getBooleanFilterFromParams = useCallback((key: string) => {
+    const value = searchParams.get(key);
+    return value === 'true' ? true : value === 'false' ? false : undefined;
+  }, [searchParams]);
+
+  const getNumberFilterFromParams = useCallback((key: string) => {
+    const value = searchParams.get(key);
+    return value ? parseInt(value) : undefined;
+  }, [searchParams]);
+
+  // Crear objeto de filtros desde los search params
+  const filtersFromParams = useMemo((): LabProjectFilters => ({
+    page: getNumberFilterFromParams('page') || 1,
+    limit: getNumberFilterFromParams('limit') || 10,
+    sortBy: getFilterFromParams('sortBy', 'fecha') as LabProjectFilters['sortBy'],
+    sortOrder: getFilterFromParams('sortOrder', 'DESC') as LabProjectFilters['sortOrder'],
+    estado: getFilterFromParams('estado', 'todos') as LabProjectFilters['estado'],
+    nombreProyecto: getFilterFromParams('nombreProyecto'),
+    solicitante: getFilterFromParams('solicitante'),
+    obrero: getFilterFromParams('obrero'),
+    hasApiques: getBooleanFilterFromParams('hasApiques'),
+    hasProfiles: getBooleanFilterFromParams('hasProfiles'),
+    startDate: getFilterFromParams('startDate'),
+    endDate: getFilterFromParams('endDate'),
+    minApiques: getNumberFilterFromParams('minApiques'),
+    maxApiques: getNumberFilterFromParams('maxApiques'),
+    minProfiles: getNumberFilterFromParams('minProfiles'),
+    maxProfiles: getNumberFilterFromParams('maxProfiles'),
+  }), [getFilterFromParams, getBooleanFilterFromParams, getNumberFilterFromParams]);
+
+  // Función para actualizar los filtros en la URL
+  const updateUrlFilters = useCallback((newFilters: Partial<LabProjectFilters>) => {
+    const newParams = new URLSearchParams(searchParams);
+    
+    Object.entries(newFilters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        // No incluir "todos" para el estado
+        if (key === 'estado' && value === 'todos') {
+          newParams.delete(key);
+        } else {
+          newParams.set(key, String(value));
+        }
+      } else {
+        newParams.delete(key);
+      }
+    });
+
+    setSearchParams(newParams);
+  }, [searchParams, setSearchParams]);  // Usar los filtros desde search params
+  const filters = filtersFromParams;
+  const filtersLoading = false; // No hay loading con search params
+  
+  // Funciones para manejar filtros
+  const updateFilters = updateUrlFilters;
+    const updateFilter = useCallback((key: keyof LabProjectFilters, value: string | number | boolean | undefined) => {
+    updateUrlFilters({ [key]: value });
+  }, [updateUrlFilters]);
+    const clearFilters = useCallback(() => {
+    setSearchParams(new URLSearchParams());
+    setLocalSearchInputs({
+      nombreProyecto: "",
+      solicitante: "",
+      obrero: "",
+    });
+    setShowAdvancedFilters(false);
+  }, [setSearchParams]);
+  
+  const hasActiveFilters = useMemo(() => {
+    const params = Object.fromEntries(searchParams.entries());
+    const activeParams = Object.keys(params).filter(key => 
+      !['page', 'limit', 'sortBy', 'sortOrder'].includes(key)
+    );
+    return activeParams.length > 0;
+  }, [searchParams]);// Filtrar datos localmente (la API podría no soportar todos los filtros)
   const filteredData = useMemo(() => {
     if (!projectsData?.data) return [];
 
@@ -217,9 +289,13 @@ const ProjectsDashboard = () => {
     },
     [filters.sortBy, filters.sortOrder, updateFilters]
   );
-
   const handleClearFilters = useCallback(() => {
     clearFilters();
+    setLocalSearchInputs({
+      nombreProyecto: "",
+      solicitante: "",
+      obrero: "",
+    });
     setShowAdvancedFilters(false);
   }, [clearFilters]);
 
@@ -253,8 +329,7 @@ const ProjectsDashboard = () => {
       navigate(`/lab/proyectos/${projectId}/perfiles`);
     },
     [navigate]
-  );
-  // Cargar datos
+  );  // Cargar datos
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -266,7 +341,14 @@ const ProjectsDashboard = () => {
           filters
         );
 
-        // Llamar al nuevo servicio
+        console.info("🔍 Propiedades completas del objeto filters:", {
+          keys: Object.keys(filters),
+          entries: Object.entries(filters),
+          hasApiques: filters.hasApiques,
+          hasProfiles: filters.hasProfiles,
+        });
+
+        // Llamar al nuevo servicio directamente con los filtros
         const result = await labService.getProjects(filters);
 
         console.info("📊 Datos de proyectos obtenidos:", result);
@@ -277,12 +359,77 @@ const ProjectsDashboard = () => {
       } finally {
         setLoading(false);
       }
-    };
-
-    if (!filtersLoading) {
+    };    if (!filtersLoading) {
       fetchData();
     }
   }, [filters, filtersLoading]);
+
+  // Sincronizar estados locales con filtros al cargar
+  useEffect(() => {
+    setLocalSearchInputs({
+      nombreProyecto: filters.nombreProyecto || "",
+      solicitante: filters.solicitante || "",
+      obrero: filters.obrero || "",
+    });
+  }, [filters.nombreProyecto, filters.solicitante, filters.obrero]);  // Función para aplicar los filtros de búsqueda
+  const applySearchFilters = useCallback(() => {
+    console.info("🔍 Aplicando filtros de búsqueda:", {
+      nombreProyecto: localSearchInputs.nombreProyecto || undefined,
+      solicitante: localSearchInputs.solicitante || undefined,
+      obrero: localSearchInputs.obrero || undefined,
+    });
+
+    updateFilters({
+      nombreProyecto: localSearchInputs.nombreProyecto || undefined,
+      solicitante: localSearchInputs.solicitante || undefined,
+      obrero: localSearchInputs.obrero || undefined,
+      page: 1, // Reset a la primera página cuando se busca
+    });
+  }, [localSearchInputs, updateFilters]);
+
+  // Debounce personalizado para campos de búsqueda
+  useEffect(() => {
+    const searchFiltersChanged =
+      localSearchInputs.nombreProyecto !== (filters.nombreProyecto || "") ||
+      localSearchInputs.solicitante !== (filters.solicitante || "") ||
+      localSearchInputs.obrero !== (filters.obrero || "");
+
+    if (searchFiltersChanged) {
+      const debounceTimer = setTimeout(() => {
+        applySearchFilters();
+      }, 1000); // 1 segundo de debounce para búsquedas
+
+      return () => clearTimeout(debounceTimer);
+    }
+  }, [
+    localSearchInputs,
+    filters.nombreProyecto,
+    filters.solicitante,
+    filters.obrero,
+    applySearchFilters,
+  ]);
+
+  // Función para manejar cambios en los inputs de búsqueda
+  const handleSearchInputChange = useCallback(
+    (field: keyof typeof localSearchInputs, value: string) => {
+      setLocalSearchInputs((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+    },
+    []
+  ); // Función para aplicar búsqueda inmediatamente (al presionar Enter)
+  const handleSearchKeyPress = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === "Enter") {
+        event.preventDefault(); // Prevenir que se recargue la página
+        event.stopPropagation(); // Prevenir propagación del evento
+        console.info("⏩ Aplicando búsqueda inmediata con Enter");
+        applySearchFilters();
+      }
+    },
+    [applySearchFilters]
+  );
 
   if (loading) {
     return (
@@ -346,37 +493,96 @@ const ProjectsDashboard = () => {
               />
             </>
           )}
+
+          {/* Indicador de búsqueda pendiente */}
+          {(localSearchInputs.nombreProyecto !==
+            (filters.nombreProyecto || "") ||
+            localSearchInputs.solicitante !== (filters.solicitante || "") ||
+            localSearchInputs.obrero !== (filters.obrero || "")) && (
+            <Chip
+              label="Búsqueda pendiente..."
+              color="warning"
+              variant="filled"
+              size="small"
+              icon={<CircularProgress size={16} sx={{ color: "inherit" }} />}
+            />
+          )}
+
+          {filtersLoading && (
+            <Chip
+              label="Cargando..."
+              color="info"
+              variant="filled"
+              size="small"
+              icon={<CircularProgress size={16} sx={{ color: "inherit" }} />}
+            />
+          )}
         </Box>
         {/* Filtros principales */}
         <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
           <Grid2 container spacing={2} alignItems="center">
+            {" "}
             <Grid2 size={{ xs: 12, md: 3 }}>
               <TextField
                 fullWidth
                 label="Buscar proyecto"
                 variant="outlined"
                 size="small"
-                value={filters.nombreProyecto || ""}
-                onChange={(e) => updateFilter("nombreProyecto", e.target.value)}
+                value={localSearchInputs.nombreProyecto}
+                onChange={(e) =>
+                  handleSearchInputChange("nombreProyecto", e.target.value)
+                }
+                onKeyDown={handleSearchKeyPress}
+                placeholder="Escriba el nombre del proyecto..."
                 InputProps={{
                   startAdornment: (
                     <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />
                   ),
+                  endAdornment:
+                    filtersLoading && localSearchInputs.nombreProyecto ? (
+                      <CircularProgress size={20} sx={{ mr: 1 }} />
+                    ) : null,
                 }}
+                helperText={
+                  localSearchInputs.nombreProyecto && filtersLoading
+                    ? "Buscando..."
+                    : localSearchInputs.nombreProyecto &&
+                      localSearchInputs.nombreProyecto !==
+                        (filters.nombreProyecto || "")
+                    ? "Escribiendo... (Enter para buscar)"
+                    : ""
+                }
               />
             </Grid2>
-
             <Grid2 size={{ xs: 12, md: 2 }}>
               <TextField
                 fullWidth
                 label="Solicitante"
                 variant="outlined"
                 size="small"
-                value={filters.solicitante || ""}
-                onChange={(e) => updateFilter("solicitante", e.target.value)}
+                value={localSearchInputs.solicitante}
+                onChange={(e) =>
+                  handleSearchInputChange("solicitante", e.target.value)
+                }
+                onKeyDown={handleSearchKeyPress}
+                placeholder="Nombre del solicitante..."
+                InputProps={{
+                  endAdornment:
+                    filtersLoading && localSearchInputs.solicitante ? (
+                      <CircularProgress size={20} sx={{ mr: 1 }} />
+                    ) : null,
+                }}
+                helperText={
+                  localSearchInputs.solicitante && filtersLoading
+                    ? "Buscando..."
+                    : localSearchInputs.solicitante &&
+                      localSearchInputs.solicitante !==
+                        (filters.solicitante || "")
+                    ? "Escribiendo... (Enter para buscar)"
+                    : ""
+                }
               />
             </Grid2>
-
             <Grid2 size={{ xs: 12, md: 2 }}>
               <FormControl size="small" fullWidth>
                 <InputLabel>Estado</InputLabel>{" "}
@@ -393,7 +599,6 @@ const ProjectsDashboard = () => {
                 </Select>
               </FormControl>
             </Grid2>
-
             <Grid2 size={{ xs: 12, md: 2 }}>
               <Button
                 fullWidth
@@ -405,10 +610,27 @@ const ProjectsDashboard = () => {
               >
                 Más Filtros
               </Button>
-            </Grid2>
-
+            </Grid2>{" "}
             <Grid2 size={{ xs: 12, md: 3 }}>
               <Stack direction="row" spacing={1}>
+                {" "}
+                {/* Botón de buscar inmediato si hay cambios pendientes */}
+                {(localSearchInputs.nombreProyecto !==
+                  (filters.nombreProyecto || "") ||
+                  localSearchInputs.solicitante !==
+                    (filters.solicitante || "") ||
+                  localSearchInputs.obrero !== (filters.obrero || "")) && (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<SearchIcon />}
+                    onClick={applySearchFilters}
+                    disabled={filtersLoading}
+                    sx={{ whiteSpace: "nowrap" }}
+                  >
+                    Buscar
+                  </Button>
+                )}
                 <Button
                   variant="outlined"
                   startIcon={<ClearIcon />}
@@ -433,14 +655,34 @@ const ProjectsDashboard = () => {
           <Collapse in={showAdvancedFilters}>
             <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: "divider" }}>
               <Grid2 container spacing={2}>
+                {" "}
                 <Grid2 size={{ xs: 12, md: 3 }}>
+                  {" "}
                   <TextField
                     fullWidth
                     label="Obrero"
                     variant="outlined"
                     size="small"
-                    value={filters.obrero || ""}
-                    onChange={(e) => updateFilter("obrero", e.target.value)}
+                    value={localSearchInputs.obrero}
+                    onChange={(e) =>
+                      handleSearchInputChange("obrero", e.target.value)
+                    }
+                    onKeyDown={handleSearchKeyPress}
+                    placeholder="Nombre del obrero..."
+                    InputProps={{
+                      endAdornment:
+                        filtersLoading && localSearchInputs.obrero ? (
+                          <CircularProgress size={20} sx={{ mr: 1 }} />
+                        ) : null,
+                    }}
+                    helperText={
+                      localSearchInputs.obrero && filtersLoading
+                        ? "Buscando..."
+                        : localSearchInputs.obrero &&
+                          localSearchInputs.obrero !== (filters.obrero || "")
+                        ? "Escribiendo... (Enter para buscar)"
+                        : ""
+                    }
                   />
                 </Grid2>
                 <Grid2 size={{ xs: 12, md: 3 }}>

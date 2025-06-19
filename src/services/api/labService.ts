@@ -120,6 +120,8 @@ const buildQueryParams = (
   const params = new URLSearchParams();
 
   Object.entries(filters).forEach(([key, value]) => {
+    // Solo excluir undefined, null, y strings vacíos
+    // Permitir false y 0 como valores válidos
     if (value !== undefined && value !== null && value !== "") {
       // No enviar el estado "todos" al backend
       if (key === "estado" && value === "todos") {
@@ -137,6 +139,10 @@ const buildQueryParams = (
     }
   });
 
+  console.info(
+    "🔧 Parámetros construidos para el backend:",
+    Object.fromEntries(params.entries())
+  );
   return params;
 };
 
@@ -568,15 +574,34 @@ export const labService = {
 
   /**
    * Obtener todos los proyectos del nuevo endpoint /lab/projects (con filtros completos)
-   */
-  async getProjects(filters?: LabProjectFilters): Promise<LabProjectsResponse> {
+   */ async getProjects(
+    filters?: LabProjectFilters
+  ): Promise<LabProjectsResponse> {
     console.info("🔄 Llamando a /lab/projects con filtros:", filters);
+    console.info(
+      "🔍 Tipos de filtros:",
+      Object.entries(filters || {}).map(([key, value]) => ({
+        key,
+        value,
+        type: typeof value,
+      }))
+    );
+
+    // Debug: Verificar si hasApiques está en la URL pero no en filters
+    const currentUrl = window.location.search;
+    console.info("🌐 URL actual completa:", currentUrl);
+
     try {
       let url = "/lab/projects";
 
       if (filters) {
         const params = buildQueryParams(filters);
         url += `?${params.toString()}`;
+        console.info("🌐 URL construida:", url);
+        console.info(
+          "📋 Parámetros de consulta:",
+          Object.fromEntries(params.entries())
+        );
       }
 
       const response = await apiClient.get<LabProjectsResponse>(url);
