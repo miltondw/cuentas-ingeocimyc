@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -16,13 +16,15 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Pagination,
+  TablePagination,
   Alert,
   TableSortLabel,
   Tooltip,
   MenuItem,
   Grid2,
   Box,
+  Stack,
+  Collapse,
 } from "@mui/material";
 import { Link } from "react-router-dom";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -31,12 +33,19 @@ import PaymentIcon from "@mui/icons-material/Payment";
 import EditIcon from "@mui/icons-material/Edit";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import ClearIcon from "@mui/icons-material/Clear";
+import SearchIcon from "@mui/icons-material/Search";
 import api from "@/api";
 import { useNotifications } from "@/api/hooks/useNotifications";
 import { LoadingOverlay } from "@/components/common/LoadingOverlay";
-import { Project, ProjectFilters } from "@/types/api";
+import {
+  Project,
+  ProjectFilters,
+  DEFAULT_PROJECT_FILTERS,
+} from "@/types/projects";
 import { formatNumber, parseNumber } from "@/utils/formatNumber";
 import { useQueryClient } from "@tanstack/react-query";
+import { useUrlFilters } from "@/hooks/useUrlFilters";
 // Types
 interface TableColumn {
   id: string;
@@ -57,22 +66,10 @@ interface ProjectCalculations {
   utilidadNeta: number;
 }
 
-// Usando ProjectFilters importado desde types/api.ts para consistencia con API.md
-type Filters = ProjectFilters;
-
-interface SortConfig {
-  field: string;
-  direction: "asc" | "desc";
-}
-
 interface AppState {
   allProjects: Project[];
-  filters: Filters;
-  sortConfig: SortConfig;
   loading: boolean;
   error: string | null;
-  currentPage: number;
-  totalPages: number;
   modals: {
     delete: boolean;
     payment: boolean;
@@ -80,6 +77,7 @@ interface AppState {
   selectedProject: Project | null;
   paymentAmount: string;
   expandedRows: Set<number>; // Para controlar qué filas están expandidas
+  showAdvancedFilters: boolean; // Para controlar filtros avanzados
 }
 
 // Constants
@@ -245,8 +243,9 @@ const calculateValues = (project: Project): ProjectCalculations => {
 
   const estadoCuenta: "Pendiente" | "Pagado" | "Abonado" =
     abono === 0 ? "Pendiente" : abono >= costo ? "Pagado" : "Abonado";
-  const re = (Number(project.valorRetencion) / 100) * project.costoServicio;
-  const utilidadNeta = costo - totalGastos - re;
+  const re =
+    (Number(project.valorRetencion) / 100) * Number(project.costoServicio);
+  const utilidadNeta = Number(costo) - totalGastos - re;
 
   return { totalGastos, saldo, estadoCuenta, utilidadNeta };
 };
@@ -267,39 +266,151 @@ const colorEstadoCuenta = (estado: string): string => {
 const TablaGastosProject: React.FC = () => {
   const { showNotification, showError } = useNotifications();
   const queryClient = useQueryClient();
+  
+  // Hook de filtros con URL params
+  const {
+    filters,
+    updateFilters,
+    updateFilter,
+    clearFilters,
+    hasActiveFilters,
+    isLoading: filtersLoading,
+  } = useUrlFilters<ProjectFilters>({
+    defaultFilters: DEFAULT_PROJECT_FILTERS,
+    debounceMs: 300,
+    excludeFromUrl: [], // Incluir todos los filtros en la URL
+  });
+
+  // Estado local para inputs de texto (sin debounce en la UI)
+  const [localInputs, setLocalInputs] = useState({
+    search: filters.search || "",
+    solicitante: filters.solicitante || "",
+    nombreProyecto: filters.nombreProyecto || "",
+    obrero: filters.obrero || "",
+  });
+
   const [state, setState] = useState<AppState>({
     allProjects: [],
-    filters: {
-      status: undefined, // Alineado con API.md
-      solicitante: "",
-      nombreProyecto: "", // Alineado con API.md
-      obrero: "", // Alineado con API.md
-      startDate: "", // Alineado con API.md
-      endDate: "", // Alineado con API.md
-      metodoDePago: undefined, // Alineado con API.md
-    },
-    sortConfig: { field: "fecha", direction: "desc" },
     loading: false,
     error: null,
-    currentPage: 1,
-    totalPages: 1,
     modals: { delete: false, payment: false },
     selectedProject: null,
     paymentAmount: "",
     expandedRows: new Set<number>(),
+    showAdvancedFilters: false,
   });
 
-  const rowsPerPage = 10;
+  // Sincronizar inputs locales con filtros cuando cambien desde URL
+  useEffect(() => {
+    setLocalInputs({
+      search: filters.search || "",
+      solicitante: filters.solicitante || "",
+      nombreProyecto: filters.nombreProyecto || "",
+      obrero: filters.obrero || "",
+    });
+  }, [filters.search, filters.solicitante, filters.nombreProyecto, filters.obrero]);
+
+  // Función para manejar cambios en inputs de texto con debounce
+  const handleTextInputChange = useCallback(
+    (field: keyof typeof localInputs, value: string) => {
+      // Actualizar estado local inmediatamente (sin debounce)
+      setLocalInputs(prev => ({ ...prev, [field]: value }));
+      
+      // Actualizar filtros con debounce
+      updateFilter(field, value);
+    },
+    [updateFilter]
+  );
+  // Filtrar datos localmente (aplicamos filtros que la API podría no soportar)
+  const filteredData = useMemo(() => {
+    let filtered = [...state.allProjects];
+
+    // Aplicar filtros de búsqueda local si es necesario
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      filtered = filtered.filter(
+        (project) =>
+          project.nombreProyecto.toLowerCase().includes(searchTerm) ||
+          project.solicitante.toLowerCase().includes(searchTerm) ||
+          project.obrero.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    return filtered;
+  }, [state.allProjects, filters]);
+
+  // Paginación local
+  const paginatedData = useMemo(() => {
+    const page = filters.page || 1;
+    const limit = filters.limit || 10;
+    const startIndex = (page - 1) * limit;
+    return filteredData.slice(startIndex, startIndex + limit);
+  }, [filteredData, filters.page, filters.limit]);
+
+  // Funciones de manejo
+  const handlePageChange = useCallback(
+    (_: unknown, newPage: number) => {
+      updateFilter("page", newPage + 1); // MUI usa 0-indexed, nosotros 1-indexed
+    },
+    [updateFilter]
+  );
+
+  const handleRowsPerPageChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      updateFilters({
+        limit: parseInt(event.target.value, 10),
+        page: 1,
+      });
+    },
+    [updateFilters]
+  );
+
+  const handleSort = useCallback(
+    (field: string) => {
+      const isCurrentField = filters.sortBy === field;
+      const newOrder =
+        isCurrentField && filters.sortOrder === "DESC" ? "ASC" : "DESC";
+      updateFilters({
+        sortBy: field as ProjectFilters["sortBy"],
+        sortOrder: newOrder,
+        page: 1,
+      });
+    },
+    [filters.sortBy, filters.sortOrder, updateFilters]
+  );
+  const handleClearFilters = useCallback(() => {
+    clearFilters();
+    setLocalInputs({
+      search: "",
+      solicitante: "",
+      nombreProyecto: "",
+      obrero: "",
+    });
+    setState((prev) => ({ ...prev, showAdvancedFilters: false }));
+    showNotification({
+      type: "info",
+      message: "Filtros limpiados correctamente",
+      duration: 2000,
+    });
+  }, [clearFilters, showNotification]);
 
   useEffect(() => {
     const buildQueryParams = () => {
       const params: Record<string, string | number> = {
-        page: state.currentPage,
-        limit: rowsPerPage,
+        page: filters.page || 1,
+        limit: filters.limit || 10,
       };
 
-      Object.entries(state.filters).forEach(([key, value]) => {
-        if (value) params[key] = value;
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+          if (typeof value === "boolean") {
+            params[key] = value ? "true" : "false";
+          } else if (Array.isArray(value)) {
+            params[key] = value.join(",");
+          } else {
+            params[key] = value;
+          }
+        }
       });
 
       return params;
@@ -309,23 +420,22 @@ const TablaGastosProject: React.FC = () => {
       setState((prev) => ({ ...prev, loading: true, error: null }));
       try {
         const params = buildQueryParams();
-        const response = await api.get("/projects", { params });
-
-        //console.info("Respuesta del backend:", response.data); // Debug
+        const response = await api.get("/projects", { params }); //console.info("Respuesta del backend:", response.data); // Debug
 
         const proyectos =
           response.data.data?.map((p: Project) => ({
             ...p,
             valor_re: p.valorRetencion
-              ? (Number(p.valorRetencion) / 100) * p.costoServicio
+              ? (Number(p.valorRetencion) / 100) * Number(p.costoServicio)
               : 0,
-            valor_iva: p.costoServicio ? 0.19 * p.costoServicio : 0,
+            valor_iva: Number(p.costoServicio)
+              ? 0.19 * Number(p.costoServicio)
+              : 0,
           })) || [];
 
         setState((prev) => ({
           ...prev,
           allProjects: proyectos,
-          totalPages: Math.ceil((response.data.total || 0) / rowsPerPage),
           loading: false,
         }));
 
@@ -350,57 +460,10 @@ const TablaGastosProject: React.FC = () => {
       }
     };
 
-    fetchProjects();
-  }, [state.filters, state.currentPage, showNotification, showError]);
-
-  const handlePageChange = (
-    _event: React.ChangeEvent<unknown>,
-    page: number
-  ) => {
-    setState((prev) => ({ ...prev, currentPage: page }));
-  };
-
-  const handleSort = (field: string) => {
-    setState((prev) => ({
-      ...prev,
-      sortConfig: {
-        field,
-        direction:
-          prev.sortConfig.field === field && prev.sortConfig.direction === "asc"
-            ? "desc"
-            : "asc",
-      },
-      currentPage: 1,
-    }));
-  };
-  const handleFilterChange = (field: string, value: string | undefined) => {
-    setState((prev) => ({
-      ...prev,
-      filters: { ...prev.filters, [field]: value },
-      currentPage: 1,
-    }));
-  };
-  const handleClearFilters = () => {
-    setState((prev) => ({
-      ...prev,
-      filters: {
-        status: undefined, // Alineado con API.md
-        solicitante: "",
-        nombreProyecto: "", // Alineado con API.md
-        obrero: "", // Alineado con API.md
-        startDate: "", // Alineado con API.md
-        endDate: "", // Alineado con API.md
-        metodoDePago: undefined, // Alineado con API.md
-      },
-      currentPage: 1,
-    }));
-    showNotification({
-      type: "info",
-      message: "Filtros limpiados correctamente",
-      duration: 2000,
-    });
-  };
-
+    if (!filtersLoading) {
+      fetchProjects();
+    }
+  }, [filters, filtersLoading, showNotification, showError]);
   const handlePayment = async () => {
     const { selectedProject, paymentAmount } = state;
     if (!selectedProject || !paymentAmount) {
@@ -429,14 +492,13 @@ const TablaGastosProject: React.FC = () => {
 
       // Invalidar las queries de proyectos para refrescar automáticamente
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
-
       setState((prev) => ({
         ...prev,
         allProjects: prev.allProjects.map((project) => {
           if (project.id === selectedProject.id) {
             return {
               ...project,
-              abono: Number(project.abono) + Number(montoNumerico),
+              abono: String(Number(project.abono) + Number(montoNumerico)),
             };
           }
           return project;
@@ -587,7 +649,6 @@ const TablaGastosProject: React.FC = () => {
             Nuevo Proyecto
           </Button>
         </Box>
-
         {state.error && (
           <Alert
             severity="error"
@@ -596,100 +657,176 @@ const TablaGastosProject: React.FC = () => {
           >
             {state.error}
           </Alert>
-        )}
-
+        )}{" "}
         {/* Filtros */}
-        <Paper sx={{ p: 2, mb: 3, backgroundColor: "#f8f9fa" }}>
-          <Typography variant="h6" gutterBottom>
-            Filtros de Búsqueda
-          </Typography>{" "}
-          <Grid2 container spacing={2}>
-            {Object.entries(state.filters).map(([key, value]) => (
-              <Grid2 key={key} size={{ xs: 12, sm: 6, md: 3 }}>
-                {key === "status" ? (
+        <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
+          <Grid2 container spacing={2} alignItems="center">            <Grid2 size={{ xs: 12, md: 3 }}>
+              <TextField
+                fullWidth
+                label="Buscar proyecto"
+                variant="outlined"
+                size="small"
+                value={localInputs.search}
+                onChange={(e) => handleTextInputChange("search", e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />
+                  ),
+                }}
+              />
+            </Grid2>
+
+            <Grid2 size={{ xs: 12, md: 2 }}>
+              <TextField
+                fullWidth
+                label="Solicitante"
+                variant="outlined"
+                size="small"
+                value={localInputs.solicitante}
+                onChange={(e) => handleTextInputChange("solicitante", e.target.value)}
+              />
+            </Grid2>
+
+            <Grid2 size={{ xs: 12, md: 2 }}>
+              <TextField
+                select
+                fullWidth
+                label="Estado"
+                variant="outlined"
+                size="small"
+                value={filters.status || ""}
+                onChange={(e) =>
+                  updateFilter("status", e.target.value || undefined)
+                }
+              >
+                <MenuItem value="">Todos</MenuItem>
+                <MenuItem value="activo">Activo</MenuItem>
+                <MenuItem value="completado">Completado</MenuItem>
+                <MenuItem value="suspendido">Suspendido</MenuItem>
+                <MenuItem value="cancelado">Cancelado</MenuItem>
+              </TextField>
+            </Grid2>
+
+            <Grid2 size={{ xs: 12, md: 2 }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={
+                  state.showAdvancedFilters ? (
+                    <ExpandLessIcon />
+                  ) : (
+                    <ExpandMoreIcon />
+                  )
+                }
+                onClick={() =>
+                  setState((prev) => ({
+                    ...prev,
+                    showAdvancedFilters: !prev.showAdvancedFilters,
+                  }))
+                }
+              >
+                Más Filtros
+              </Button>
+            </Grid2>
+
+            <Grid2 size={{ xs: 12, md: 3 }}>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="outlined"
+                  startIcon={<ClearIcon />}
+                  onClick={handleClearFilters}
+                  disabled={!hasActiveFilters}
+                  sx={{ whiteSpace: "nowrap" }}
+                >
+                  Limpiar
+                </Button>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ alignSelf: "center" }}
+                >
+                  {filteredData.length} resultado(s)
+                </Typography>
+              </Stack>
+            </Grid2>
+          </Grid2>
+
+          {/* Filtros avanzados */}
+          <Collapse in={state.showAdvancedFilters}>
+            <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: "divider" }}>
+              <Grid2 container spacing={2}>                <Grid2 size={{ xs: 12, md: 3 }}>
                   <TextField
-                    select
                     fullWidth
-                    label="Estado del Proyecto"
-                    value={value || ""}
-                    onChange={(e) =>
-                      handleFilterChange(key, e.target.value || undefined)
-                    }
+                    label="Nombre del Proyecto"
                     variant="outlined"
                     size="small"
-                    slotProps={{ inputLabel: { shrink: true } }}
-                  >
-                    <MenuItem value="">Todos</MenuItem>
-                    {["activo", "completado", "suspendido", "cancelado"].map(
-                      (option) => (
-                        <MenuItem key={option} value={option}>
-                          {option.charAt(0).toUpperCase() + option.slice(1)}
-                        </MenuItem>
-                      )
-                    )}
-                  </TextField>
-                ) : key === "metodoDePago" ? (
+                    value={localInputs.nombreProyecto}
+                    onChange={(e) =>
+                      handleTextInputChange("nombreProyecto", e.target.value)
+                    }
+                  />
+                </Grid2>
+
+                <Grid2 size={{ xs: 12, md: 3 }}>
+                  <TextField
+                    fullWidth
+                    label="Obrero"
+                    variant="outlined"
+                    size="small"
+                    value={localInputs.obrero}
+                    onChange={(e) => handleTextInputChange("obrero", e.target.value)}
+                  />
+                </Grid2>
+
+                <Grid2 size={{ xs: 12, md: 3 }}>
+                  <TextField
+                    fullWidth
+                    label="Fecha desde"
+                    type="date"
+                    variant="outlined"
+                    size="small"
+                    value={filters.startDate || ""}
+                    onChange={(e) => updateFilter("startDate", e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid2>
+
+                <Grid2 size={{ xs: 12, md: 3 }}>
+                  <TextField
+                    fullWidth
+                    label="Fecha hasta"
+                    type="date"
+                    variant="outlined"
+                    size="small"
+                    value={filters.endDate || ""}
+                    onChange={(e) => updateFilter("endDate", e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid2>
+
+                <Grid2 size={{ xs: 12, md: 3 }}>
                   <TextField
                     select
                     fullWidth
                     label="Método de Pago"
-                    value={value || ""}
-                    onChange={(e) =>
-                      handleFilterChange(key, e.target.value || undefined)
-                    }
                     variant="outlined"
                     size="small"
-                    slotProps={{ inputLabel: { shrink: true } }}
+                    value={filters.metodoDePago || ""}
+                    onChange={(e) =>
+                      updateFilter("metodoDePago", e.target.value || undefined)
+                    }
                   >
                     <MenuItem value="">Todos</MenuItem>
-                    {["efectivo", "transferencia", "cheque", "credito"].map(
-                      (option) => (
-                        <MenuItem key={option} value={option}>
-                          {option.charAt(0).toUpperCase() + option.slice(1)}
-                        </MenuItem>
-                      )
-                    )}
+                    <MenuItem value="efectivo">Efectivo</MenuItem>
+                    <MenuItem value="transferencia">Transferencia</MenuItem>
+                    <MenuItem value="cheque">Cheque</MenuItem>
+                    <MenuItem value="credito">Crédito</MenuItem>
                   </TextField>
-                ) : (
-                  <TextField
-                    fullWidth
-                    label={`Filtrar por ${
-                      key === "startDate"
-                        ? "Fecha Inicio"
-                        : key === "endDate"
-                        ? "Fecha Fin"
-                        : key === "nombreProyecto"
-                        ? "Nombre Proyecto"
-                        : key === "metodoDePago"
-                        ? "Método de Pago"
-                        : key
-                            .replace(/([A-Z])/g, " $1")
-                            .replace(/^./, (str) => str.toUpperCase())
-                    }`}
-                    value={value || ""}
-                    onChange={(e) => handleFilterChange(key, e.target.value)}
-                    variant="outlined"
-                    size="small"
-                    type={key.includes("Date") ? "date" : "text"}
-                    slotProps={{ inputLabel: { shrink: true } }}
-                  />
-                )}
+                </Grid2>
               </Grid2>
-            ))}
-            <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
-              <Button
-                onClick={handleClearFilters}
-                variant="outlined"
-                color="error"
-                fullWidth
-                sx={{ height: 40 }}
-              >
-                Limpiar Filtros
-              </Button>
-            </Grid2>
-          </Grid2>
+            </Box>
+          </Collapse>
         </Paper>
-
         {/* Tabla */}
         <TableContainer
           sx={{ maxHeight: 600, border: "1px solid #e0e0e0", borderRadius: 1 }}
@@ -711,11 +848,13 @@ const TablaGastosProject: React.FC = () => {
                   >
                     {sortable ? (
                       <TableSortLabel
-                        active={state.sortConfig.field === id}
+                        active={filters.sortBy === id}
                         direction={
-                          state.sortConfig.field === id
-                            ? state.sortConfig.direction
-                            : "asc"
+                          filters.sortBy === id
+                            ? filters.sortOrder === "ASC"
+                              ? "asc"
+                              : "desc"
+                            : "desc"
                         }
                         onClick={() => handleSort(id)}
                       >
@@ -727,9 +866,9 @@ const TablaGastosProject: React.FC = () => {
                   </TableCell>
                 ))}
               </TableRow>
-            </TableHead>
+            </TableHead>{" "}
             <TableBody>
-              {state.allProjects.map((project) => {
+              {paginatedData.map((project) => {
                 const calculations = calculateValues(project);
                 const isExpanded = state.expandedRows.has(project.id); // Verificar si la fila está expandida
                 return (
@@ -923,22 +1062,21 @@ const TablaGastosProject: React.FC = () => {
               })}
             </TableBody>
           </Table>
-        </TableContainer>
-
+        </TableContainer>{" "}
         {/* Paginación */}
-        {state.totalPages > 1 && (
-          <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
-            <Pagination
-              count={state.totalPages}
-              page={state.currentPage}
-              onChange={handlePageChange}
-              color="primary"
-              size="large"
-              showFirstButton
-              showLastButton
-            />
-          </Box>
-        )}
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          component="div"
+          count={filteredData.length}
+          rowsPerPage={filters.limit || 10}
+          page={(filters.page || 1) - 1} // Convertir de 1-indexed a 0-indexed para MUI
+          onPageChange={handlePageChange}
+          onRowsPerPageChange={handleRowsPerPageChange}
+          labelRowsPerPage="Filas por página:"
+          labelDisplayedRows={({ from, to, count }) =>
+            `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+          }
+        />
       </Paper>
 
       {/* Modal de Confirmación de Eliminación */}
@@ -980,13 +1118,12 @@ const TablaGastosProject: React.FC = () => {
             <br />
             Abonado:{" "}
             <strong>${formatNumber(state.selectedProject?.abono || 0)}</strong>
-            <br />
-            Saldo:
+            <br /> Saldo:
             <strong>
               $
               {formatNumber(
-                (state.selectedProject?.costoServicio ?? 0) -
-                  (state.selectedProject?.abono ?? 0)
+                Number(state.selectedProject?.costoServicio ?? 0) -
+                  Number(state.selectedProject?.abono ?? 0)
               )}
             </strong>
           </DialogContentText>

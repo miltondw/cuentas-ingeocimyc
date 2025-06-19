@@ -3,7 +3,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
-import type { FilterValue, UrlParamsState } from "@/types/labFilters";
+import type { FilterValue } from "@/types/labFilters";
 
 export interface UseUrlFiltersOptions<T> {
   defaultFilters: T;
@@ -37,10 +37,10 @@ export function useUrlFilters<T extends Record<string, FilterValue>>({
 }: UseUrlFiltersOptions<T>): UseUrlFiltersResult<T> {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
+  const [debounceTimer, setDebounceTimer] = useState<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(
-    null
-  );
 
   // Función para parsear valores de URL params
   const parseParamValue = useCallback(
@@ -97,7 +97,10 @@ export function useUrlFilters<T extends Record<string, FilterValue>>({
 
     searchParams.forEach((value, key) => {
       if (key in defaultFilters) {
-        (urlFilters as any)[key] = parseParamValue(value, key);
+        (urlFilters as Record<string, FilterValue>)[key] = parseParamValue(
+          value,
+          key
+        );
       }
     });
 

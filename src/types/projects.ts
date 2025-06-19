@@ -174,6 +174,9 @@ export interface ProjectFilters {
   // Paginación
   page?: number;
   limit?: number;
+
+  // Índice de cadena para compatibilidad con useUrlFilters
+  [key: string]: string | number | boolean | undefined | string[];
 }
 
 export interface ProjectExpenseFilters {
@@ -207,3 +210,27 @@ export interface ProjectExpenseFilters {
   page?: number;
   limit?: number;
 }
+
+// =============== VALORES POR DEFECTO ===============
+export const DEFAULT_PROJECT_FILTERS: ProjectFilters = {
+  status: undefined,
+  startDate: undefined,
+  endDate: undefined,
+  search: undefined,
+  solicitante: undefined,
+  nombreProyecto: undefined,
+  obrero: undefined,
+  metodoDePago: undefined,
+  minCostoServicio: undefined,
+  maxCostoServicio: undefined,
+  minAbono: undefined,
+  maxAbono: undefined,
+  hasRetencion: undefined,
+  hasIva: undefined,
+  hasFactura: undefined,
+  hasExpenses: undefined,
+  sortBy: "fecha",
+  sortOrder: "DESC",
+  page: 1,
+  limit: 10,
+};

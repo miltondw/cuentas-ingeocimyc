@@ -127,7 +127,13 @@ export interface ProfilesFilters extends BaseFilters {
 }
 
 // =============== TIPOS ÚTILES PARA URL PARAMS ===============
-export type FilterValue = string | number | boolean | undefined | null;
+export type FilterValue =
+  | string
+  | number
+  | boolean
+  | undefined
+  | null
+  | string[];
 
 export interface UrlParamsState {
   [key: string]: FilterValue;
