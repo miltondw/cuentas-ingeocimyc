@@ -10,31 +10,34 @@ export interface LabProjectFilters extends BaseFilters {
   nombreProyecto?: string;
   solicitante?: string;
   obrero?: string;
+
   // Filtros de estado
-  estado?: "activo" | "completado" | "suspendido" | "cancelado" | "todos" | "";
+  estado?: "todos" | "activo" | "completado" | "cancelado" | "pausado";
 
   // Filtros de fecha
-  startDate?: string; // ISO date (YYYY-MM-DD)
-  endDate?: string; // ISO date (YYYY-MM-DD)
-  fecha?: string; // Fecha específica
+  startDate?: string; // Formato: YYYY-MM-DD
+  endDate?: string; // Formato: YYYY-MM-DD
 
   // Filtros de conteo
-  hasApiques?: boolean; // Si tiene apiques o no
-  hasProfiles?: boolean; // Si tiene perfiles o no
-  minApiques?: number; // Número mínimo de apiques
-  maxApiques?: number; // Número máximo de apiques
+  hasApiques?: boolean; // true: con apiques, false: sin apiques
+  hasProfiles?: boolean; // true: con perfiles, false: sin perfiles
+  minApiques?: number; // Mínimo número de apiques
+  maxApiques?: number; // Máximo número de apiques
+  minProfiles?: number; // Mínimo número de perfiles
+  maxProfiles?: number; // Máximo número de perfiles
 
-  // Campos de ordenamiento disponibles
+  // Paginación y ordenamiento
+  page?: number; // Página actual (default: 1)
+  limit?: number; // Elementos por página (default: 10)
   sortBy?:
     | "proyecto_id"
     | "nombre_proyecto"
     | "solicitante"
-    | "obrero"
     | "fecha"
     | "estado"
     | "total_apiques"
-    | "created_at"
-    | "updated_at";
+    | "total_profiles";
+  sortOrder?: "ASC" | "DESC"; // Orden (default: DESC)
 
   // Hacer que sea compatible con Record<string, FilterValue>
   [key: string]: string | number | boolean | undefined | null;

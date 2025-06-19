@@ -16,6 +16,36 @@ export interface ApiqueProject {
   apiques: ApiqueData[];
 }
 
+// Nueva interface para el endpoint /api/lab/projects
+export interface LabProject {
+  proyecto_id: number;
+  nombre_proyecto: string;
+  solicitante: string;
+  obrero: string;
+  fecha: string;
+  estado: string;
+  total_apiques: number;
+  total_profiles: number;
+  created_at: string;
+}
+
+export interface LabProjectsResponse {
+  data: LabProject[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  summary: {
+    totalProjects: number;
+    activeProjects: number;
+    completedProjects: number;
+    totalApiques: number;
+    totalProfiles: number;
+    projectsWithApiques: number;
+    projectsWithProfiles: number;
+  };
+}
+
 export interface ApiqueData {
   apique_id: number;
   apique: number;
@@ -91,6 +121,11 @@ const buildQueryParams = (
 
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
+      // No enviar el estado "todos" al backend
+      if (key === "estado" && value === "todos") {
+        return;
+      }
+
       // Convertir booleanos y números a string apropiadamente
       if (typeof value === "boolean") {
         params.append(key, value.toString());
@@ -503,6 +538,52 @@ export const labService = {
       return response.data;
     } catch (error) {
       console.error("❌ Error en getProjectProfiles:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener todos los proyectos (con filtros completos) - Nuevo método
+   */
+  async getAllProjects(
+    filters?: LabProjectFilters
+  ): Promise<LabProjectsResponse> {
+    console.info("🔄 Llamando a /api/lab/projects con filtros:", filters);
+    try {
+      let url = "/api/lab/projects";
+
+      if (filters) {
+        const params = buildQueryParams(filters);
+        url += `?${params.toString()}`;
+      }
+
+      const response = await apiClient.get<LabProjectsResponse>(url);
+      console.info("✅ Respuesta de /api/lab/projects:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("❌ Error en /api/lab/projects:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener todos los proyectos del nuevo endpoint /lab/projects (con filtros completos)
+   */
+  async getProjects(filters?: LabProjectFilters): Promise<LabProjectsResponse> {
+    console.info("🔄 Llamando a /lab/projects con filtros:", filters);
+    try {
+      let url = "/lab/projects";
+
+      if (filters) {
+        const params = buildQueryParams(filters);
+        url += `?${params.toString()}`;
+      }
+
+      const response = await apiClient.get<LabProjectsResponse>(url);
+      console.info("✅ Respuesta de /lab/projects:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("❌ Error en /lab/projects:", error);
       throw error;
     }
   },

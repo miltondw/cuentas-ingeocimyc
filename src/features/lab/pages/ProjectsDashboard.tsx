@@ -40,8 +40,8 @@ import {
 
 import {
   labService,
-  type ApiqueProject,
-  type ProfilesResponse,
+  type LabProject,
+  type LabProjectsResponse,
 } from "@/services/api/labService";
 import { useUrlFilters } from "@/hooks/useUrlFilters";
 import {
@@ -53,8 +53,7 @@ const ProjectsDashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [apiquesData, setApiquesData] = useState<ApiqueProject[]>([]);
-  const [profilesData, setProfilesData] = useState<ProfilesResponse | null>(
+  const [projectsData, setProjectsData] = useState<LabProjectsResponse | null>(
     null
   );
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -71,23 +70,11 @@ const ProjectsDashboard = () => {
     defaultFilters: DEFAULT_LAB_PROJECT_FILTERS,
     debounceMs: 300,
     excludeFromUrl: [], // Incluir todos los filtros en la URL
-  });
-
-  // Crear un mapa de perfiles por proyecto para facilitar el acceso
-  const profilesByProject = useMemo(() => {
-    if (!profilesData?.data) return {};
-    return profilesData.data.reduce((acc, profile) => {
-      if (!acc[profile.projectId]) {
-        acc[profile.projectId] = [];
-      }
-      acc[profile.projectId].push(profile);
-      return acc;
-    }, {} as Record<number, typeof profilesData.data>);
-  }, [profilesData]);
-
-  // Filtrar datos localmente (la API podría no soportar todos los filtros)
+  }); // Filtrar datos localmente (la API podría no soportar todos los filtros)
   const filteredData = useMemo(() => {
-    let filtered = [...apiquesData];
+    if (!projectsData?.data) return [];
+
+    let filtered = [...projectsData.data];
 
     // Aplicar filtros de búsqueda local
     if (filters.nombreProyecto) {
@@ -131,8 +118,7 @@ const ProjectsDashboard = () => {
 
     if (filters.hasProfiles !== undefined) {
       filtered = filtered.filter((proyecto) => {
-        const profilesCount =
-          profilesByProject[proyecto.proyecto_id]?.length || 0;
+        const profilesCount = proyecto.total_profiles || 0;
         return filters.hasProfiles ? profilesCount > 0 : profilesCount === 0;
       });
     }
@@ -142,18 +128,31 @@ const ProjectsDashboard = () => {
         (proyecto) => proyecto.total_apiques >= (filters.minApiques || 0)
       );
     }
-
     if (filters.maxApiques !== undefined) {
       filtered = filtered.filter(
         (proyecto) => proyecto.total_apiques <= (filters.maxApiques || 999)
       );
     }
 
+    if (filters.minProfiles !== undefined) {
+      filtered = filtered.filter(
+        (proyecto) =>
+          (proyecto.total_profiles || 0) >= (filters.minProfiles || 0)
+      );
+    }
+
+    if (filters.maxProfiles !== undefined) {
+      filtered = filtered.filter(
+        (proyecto) =>
+          (proyecto.total_profiles || 0) <= (filters.maxProfiles || 999)
+      );
+    }
+
     // Ordenamiento
     if (filters.sortBy) {
       filtered.sort((a, b) => {
-        let aValue: unknown = a[filters.sortBy as keyof ApiqueProject];
-        let bValue: unknown = b[filters.sortBy as keyof ApiqueProject];
+        let aValue: unknown = a[filters.sortBy as keyof LabProject];
+        let bValue: unknown = b[filters.sortBy as keyof LabProject];
 
         // Manejar casos especiales
         if (filters.sortBy === "fecha") {
@@ -177,7 +176,7 @@ const ProjectsDashboard = () => {
     }
 
     return filtered;
-  }, [apiquesData, profilesByProject, filters]);
+  }, [projectsData, filters]);
 
   // Paginación local
   const paginatedData = useMemo(() => {
@@ -232,10 +231,9 @@ const ProjectsDashboard = () => {
     },
     [navigate]
   );
-
   const handleViewApiques = useCallback(
-    (projectId: number, apiques: ApiqueProject["apiques"]) => {
-      console.info(`👁️ Ver apiques del proyecto ${projectId}:`, apiques);
+    (projectId: number) => {
+      console.info(`👁️ Ver apiques del proyecto ${projectId}`);
       navigate(`/lab/proyectos/${projectId}/apiques`);
     },
     [navigate]
@@ -251,13 +249,11 @@ const ProjectsDashboard = () => {
 
   const handleViewProfiles = useCallback(
     (projectId: number) => {
-      const profiles = profilesByProject[projectId] || [];
-      console.info(`👁️ Ver perfiles del proyecto ${projectId}:`, profiles);
+      console.info(`👁️ Ver perfiles del proyecto ${projectId}`);
       navigate(`/lab/proyectos/${projectId}/perfiles`);
     },
-    [profilesByProject, navigate]
+    [navigate]
   );
-
   // Cargar datos
   useEffect(() => {
     const fetchData = async () => {
@@ -266,16 +262,15 @@ const ProjectsDashboard = () => {
         setError(null);
 
         console.info(
-          "🚀 Iniciando peticiones a los endpoints de laboratorio con filtros:",
+          "🚀 Iniciando petición al endpoint de proyectos con filtros:",
           filters
         );
 
-        // Llamar al servicio con filtros
-        const result = await labService.getLabProjects(filters);
+        // Llamar al nuevo servicio
+        const result = await labService.getProjects(filters);
 
-        console.info("📊 Datos combinados obtenidos:", result);
-        setApiquesData(result.projects);
-        setProfilesData(result.profiles);
+        console.info("📊 Datos de proyectos obtenidos:", result);
+        setProjectsData(result);
       } catch (err) {
         console.error("❌ Error general:", err);
         setError("Error al cargar los datos de laboratorio");
@@ -312,18 +307,16 @@ const ProjectsDashboard = () => {
         <Typography variant="h4" gutterBottom>
           Proyectos de Laboratorio
         </Typography>
-
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
-        )}
-
+        )}{" "}
         {/* Estadísticas rápidas */}
         <Box sx={{ mb: 3, display: "flex", gap: 2, flexWrap: "wrap" }}>
           <Chip
             icon={<TerrainIcon />}
-            label={`${apiquesData.length} Proyectos`}
+            label={`${projectsData?.total || 0} Proyectos`}
             color="primary"
             variant="outlined"
           />
@@ -333,8 +326,27 @@ const ProjectsDashboard = () => {
             color={hasActiveFilters ? "success" : "default"}
             variant={hasActiveFilters ? "filled" : "outlined"}
           />
-        </Box>
 
+          {projectsData?.summary && (
+            <>
+              <Chip
+                label={`${projectsData.summary.activeProjects} Activos`}
+                color="success"
+                variant="outlined"
+              />
+              <Chip
+                label={`${projectsData.summary.totalApiques} Apiques`}
+                color="info"
+                variant="outlined"
+              />
+              <Chip
+                label={`${projectsData.summary.totalProfiles} Perfiles`}
+                color="secondary"
+                variant="outlined"
+              />
+            </>
+          )}
+        </Box>
         {/* Filtros principales */}
         <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
           <Grid2 container spacing={2} alignItems="center">
@@ -367,7 +379,7 @@ const ProjectsDashboard = () => {
 
             <Grid2 size={{ xs: 12, md: 2 }}>
               <FormControl size="small" fullWidth>
-                <InputLabel>Estado</InputLabel>
+                <InputLabel>Estado</InputLabel>{" "}
                 <Select
                   value={filters.estado || "todos"}
                   label="Estado"
@@ -376,7 +388,7 @@ const ProjectsDashboard = () => {
                   <MenuItem value="todos">Todos</MenuItem>
                   <MenuItem value="activo">Activo</MenuItem>
                   <MenuItem value="completado">Completado</MenuItem>
-                  <MenuItem value="suspendido">Suspendido</MenuItem>
+                  <MenuItem value="pausado">Pausado</MenuItem>
                   <MenuItem value="cancelado">Cancelado</MenuItem>
                 </Select>
               </FormControl>
@@ -431,7 +443,6 @@ const ProjectsDashboard = () => {
                     onChange={(e) => updateFilter("obrero", e.target.value)}
                   />
                 </Grid2>
-
                 <Grid2 size={{ xs: 12, md: 3 }}>
                   <TextField
                     fullWidth
@@ -444,7 +455,6 @@ const ProjectsDashboard = () => {
                     InputLabelProps={{ shrink: true }}
                   />
                 </Grid2>
-
                 <Grid2 size={{ xs: 12, md: 3 }}>
                   <TextField
                     fullWidth
@@ -456,8 +466,7 @@ const ProjectsDashboard = () => {
                     onChange={(e) => updateFilter("endDate", e.target.value)}
                     InputLabelProps={{ shrink: true }}
                   />
-                </Grid2>
-
+                </Grid2>{" "}
                 <Grid2 size={{ xs: 12, md: 3 }}>
                   <FormControl size="small" fullWidth>
                     <InputLabel>Tiene Apiques</InputLabel>
@@ -483,11 +492,107 @@ const ProjectsDashboard = () => {
                     </Select>
                   </FormControl>
                 </Grid2>
+                <Grid2 size={{ xs: 12, md: 3 }}>
+                  <FormControl size="small" fullWidth>
+                    <InputLabel>Tiene Perfiles</InputLabel>
+                    <Select
+                      value={
+                        filters.hasProfiles === undefined
+                          ? ""
+                          : filters.hasProfiles.toString()
+                      }
+                      label="Tiene Perfiles"
+                      onChange={(e) =>
+                        updateFilter(
+                          "hasProfiles",
+                          e.target.value === ""
+                            ? undefined
+                            : e.target.value === "true"
+                        )
+                      }
+                    >
+                      <MenuItem value="">Todos</MenuItem>
+                      <MenuItem value="true">Con Perfiles</MenuItem>
+                      <MenuItem value="false">Sin Perfiles</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid2>
+                <Grid2 size={{ xs: 12, md: 3 }}>
+                  <TextField
+                    fullWidth
+                    label="Mín. Apiques"
+                    type="number"
+                    variant="outlined"
+                    size="small"
+                    value={filters.minApiques || ""}
+                    onChange={(e) =>
+                      updateFilter(
+                        "minApiques",
+                        e.target.value
+                          ? parseInt(e.target.value, 10)
+                          : undefined
+                      )
+                    }
+                  />
+                </Grid2>
+                <Grid2 size={{ xs: 12, md: 3 }}>
+                  <TextField
+                    fullWidth
+                    label="Máx. Apiques"
+                    type="number"
+                    variant="outlined"
+                    size="small"
+                    value={filters.maxApiques || ""}
+                    onChange={(e) =>
+                      updateFilter(
+                        "maxApiques",
+                        e.target.value
+                          ? parseInt(e.target.value, 10)
+                          : undefined
+                      )
+                    }
+                  />
+                </Grid2>
+                <Grid2 size={{ xs: 12, md: 3 }}>
+                  <TextField
+                    fullWidth
+                    label="Mín. Perfiles"
+                    type="number"
+                    variant="outlined"
+                    size="small"
+                    value={filters.minProfiles || ""}
+                    onChange={(e) =>
+                      updateFilter(
+                        "minProfiles",
+                        e.target.value
+                          ? parseInt(e.target.value, 10)
+                          : undefined
+                      )
+                    }
+                  />
+                </Grid2>
+                <Grid2 size={{ xs: 12, md: 3 }}>
+                  <TextField
+                    fullWidth
+                    label="Máx. Perfiles"
+                    type="number"
+                    variant="outlined"
+                    size="small"
+                    value={filters.maxProfiles || ""}
+                    onChange={(e) =>
+                      updateFilter(
+                        "maxProfiles",
+                        e.target.value
+                          ? parseInt(e.target.value, 10)
+                          : undefined
+                      )
+                    }
+                  />
+                </Grid2>
               </Grid2>
             </Box>
           </Collapse>
         </Paper>
-
         {/* Tabla de proyectos */}
         <TableContainer
           component={Paper}
@@ -556,16 +661,14 @@ const ProjectsDashboard = () => {
                   >
                     Fecha
                   </TableSortLabel>
-                </TableCell>
+                </TableCell>{" "}
                 <TableCell>Estado</TableCell>
                 <TableCell align="center">Apiques</TableCell>
                 <TableCell align="center">Perfiles</TableCell>
-                <TableCell align="center">Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {paginatedData.map((proyecto) => {
-                const perfiles = profilesByProject[proyecto.proyecto_id] || [];
                 return (
                   <TableRow key={proyecto.proyecto_id} hover>
                     <TableCell>{proyecto.proyecto_id}</TableCell>
@@ -621,10 +724,7 @@ const ProjectsDashboard = () => {
                                 size="small"
                                 color="info"
                                 onClick={() =>
-                                  handleViewApiques(
-                                    proyecto.proyecto_id,
-                                    proyecto.apiques
-                                  )
+                                  handleViewApiques(proyecto.proyecto_id)
                                 }
                               >
                                 <VisibilityIcon />
@@ -643,7 +743,7 @@ const ProjectsDashboard = () => {
                       >
                         <Chip
                           icon={<ScienceIcon />}
-                          label={perfiles.length}
+                          label={proyecto.total_profiles}
                           size="small"
                           variant="outlined"
                         />
@@ -659,7 +759,7 @@ const ProjectsDashboard = () => {
                               <AddIcon />
                             </IconButton>
                           </Tooltip>
-                          {perfiles.length > 0 && (
+                          {proyecto.total_profiles > 0 && (
                             <Tooltip title="Ver perfiles">
                               <IconButton
                                 size="small"
@@ -675,24 +775,12 @@ const ProjectsDashboard = () => {
                         </Stack>
                       </Stack>
                     </TableCell>
-                    <TableCell align="center">
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() =>
-                          navigate(`/lab/proyectos/${proyecto.proyecto_id}`)
-                        }
-                      >
-                        Ver Detalles
-                      </Button>
-                    </TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
         </TableContainer>
-
         {/* Paginación */}
         <TablePagination
           rowsPerPageOptions={[5, 10, 25, 50]}
