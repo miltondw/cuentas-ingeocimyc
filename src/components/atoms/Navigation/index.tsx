@@ -210,7 +210,7 @@ const ResponsiveAppBar: React.FC = () => {
           <Typography variant="body2" color="text.secondary" noWrap>
             {user.email}
           </Typography>
-          {user.rol === "admin" && (
+          {user.role === "admin" && (
             <Chip
               size="small"
               color="secondary"
@@ -232,7 +232,7 @@ const ResponsiveAppBar: React.FC = () => {
           <AccountCircleIcon fontSize="small" /> Mi Perfil
         </MenuItem>
 
-        {user.rol === "admin" && (
+        {user.role === "admin" && (
           <MenuItem
             component={Link}
             to="/configuracion"
@@ -340,7 +340,7 @@ const ResponsiveAppBar: React.FC = () => {
                   <Avatar
                     sx={{
                       bgcolor:
-                        user.rol === "admin"
+                        user.role === "admin"
                           ? "secondary.main"
                           : "primary.main",
                     }}

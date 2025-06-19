@@ -6,10 +6,10 @@ import api from "../index";
 import type {
   Apique,
   CreateApiqueDto,
-  ApiquesFilters,
   PaginatedResponse,
   ApiResponse,
 } from "@/types/api";
+import type { ApiquesFilters } from "@/types/labFilters";
 
 export class ApiquesService {
   private readonly basePath = "/lab/apiques";

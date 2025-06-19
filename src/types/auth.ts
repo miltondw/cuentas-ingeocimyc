@@ -14,11 +14,14 @@ export interface LoginRequest {
   rememberMe?: boolean;
 }
 
+// DTO para login (alias para LoginRequest)
+export type LoginDto = LoginRequest;
+
 export interface LoginResponse {
   accessToken: string;
   user: UserInfo;
   expiresIn: number;
-  sessionInfo: SessionInfo;
+  refreshToken?: string;
 }
 
 export interface UserInfo {
@@ -45,17 +48,20 @@ export interface SessionInfo {
 export interface RegisterRequest {
   email: string;
   password: string;
-  name?: string;
+  confirmPassword: string;
   firstName?: string;
   lastName?: string;
   role?: UserRole;
-  jwt2?: string; // Para crear admin
+  acceptTerms: boolean;
 }
 
+// DTO para registro (alias para RegisterRequest)
+export type RegisterDto = RegisterRequest;
+
 export interface RegisterResponse {
-  accessToken: string;
-  user: UserInfo;
-  expiresIn: number;
+  message: string;
+  user: Omit<User, "password">;
+  requiresVerification?: boolean;
 }
 
 // =============== USUARIO INTERFACES ===============
@@ -136,12 +142,24 @@ export interface LogoutResponse {
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
-  logoutOtherSessions?: boolean;
+  confirmPassword: string;
+}
+
+// DTO para cambio de contraseña
+export type ChangePasswordDto = ChangePasswordRequest;
+
+export interface ResetPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordResponse {
+  message: string;
+  resetToken?: string;
 }
 
 export interface ChangePasswordResponse {
   message: string;
-  sessionsRevoked: number;
+  user: User;
 }
 
 // =============== SEGURIDAD INTERFACES ===============

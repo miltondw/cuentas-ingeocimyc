@@ -1,7 +1,7 @@
 /**
  * Servicio para la gestión de proyectos usando la nueva API de NestJS
  */
-import { CreateProjectDto } from "@/features/financial";
+import type { CreateProjectDto } from "@/features/financial";
 import api from "../index";
 import type {
   Project,

@@ -80,14 +80,15 @@ const RegisterPage = () => {
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    try {
-      const result = await registerUser({
+    try {      const result = await registerUser({
         email: data.email,
         password: data.password,
+        confirmPassword: data.password, // Usar la misma contraseña
         firstName: data.firstName,
         lastName: data.lastName,
         role: data.role as UserRole,
-        jwt2: isAdmin ? data.jwt2 : undefined,
+        acceptTerms: true, // Por defecto aceptar términos
+        // jwt2: isAdmin ? data.jwt2 : undefined, // Campo temporal comentado
       });
 
       if (result.success) {

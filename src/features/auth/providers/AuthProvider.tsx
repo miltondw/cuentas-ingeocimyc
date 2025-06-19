@@ -1,5 +1,5 @@
 import { useState, useEffect, ReactNode } from "react";
-import { User, LoginDto, RegisterDto } from "@/types/api";
+import { User, LoginDto, RegisterDto } from "@/types/auth";
 import { authService } from "@/features/auth/services/authService";
 import { tokenStorage } from "@/services/storage/tokenStorage";
 import {

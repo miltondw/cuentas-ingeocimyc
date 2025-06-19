@@ -6,7 +6,7 @@ import type {
   User,
   SessionInfo,
   ChangePasswordDto,
-} from "@/types/api";
+} from "@/types/auth";
 
 /**
  * Servicio para manejar las operaciones de autenticación y perfil de usuario

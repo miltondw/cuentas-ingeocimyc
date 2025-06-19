@@ -1,5 +1,5 @@
 import { createContext } from "react";
-import type { User, AuthResponse, LoginDto, RegisterDto } from "@/types/api";
+import type { User, AuthResponse, LoginDto, RegisterDto } from "@/types/auth";
 
 interface AuthState {
   isAuthenticated: boolean;

@@ -1,4 +1,4 @@
-import { ProjectFormData } from "@/components/cuentas/forms/CreateProject/form-create-project.types";
+import type { ProjectFormData } from "@/features/financial/types/projectTypes";
 import { openDB, IDBPDatabase } from "idb";
 import { AxiosRequestHeaders } from "axios";
 

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { menuConfig, MenuItemConfig } from "./menuConfig";
-import { useAuth } from "@/api/useAuth";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
 export const useResponsiveAppBar = () => {
   const navigate = useNavigate();
