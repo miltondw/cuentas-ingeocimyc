@@ -68,22 +68,30 @@ export const apiClient = axios.create({
     Accept: "application/json",
   },
   withCredentials: true,
-  timeout: 15000, // Timeout de 15 segundos
+  timeout: 30000, // Aumentar timeout a 30 segundos para conexiones lentas como Render
 });
 
 // Interceptor de request para agregar token de autenticación
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // Debug logging
+    console.info(
+      `🔌 Auth Request: ${config.method?.toUpperCase()} ${config.url}`
+    );
+    
     const token = tokenStorage.getAccessToken();
+    console.info(`🔑 Auth token present: ${!!token}`);
 
     if (token) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
+      console.info(`✅ Auth header set`);
     }
 
     return config;
   },
   (error: AxiosError) => {
+    console.error('❌ Auth Request Error:', error);
     return Promise.reject(error);
   }
 );
@@ -91,12 +99,58 @@ apiClient.interceptors.request.use(
 // Interceptor para manejo de respuestas y errores
 apiClient.interceptors.response.use(
   (response) => {
+    console.info(
+      `✅ Auth Response: ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`
+    );
     return response;
   },
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & {
       _retry?: boolean;
-    }; // Manejar errores de red (guardar solicitud para sincronización)
+      _retryCount?: number;
+    };
+
+    console.error(
+      `❌ Auth Error: ${error.response?.status || 'NETWORK'} ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`,
+      { 
+        code: error.code, 
+        message: error.message,
+        status: error.response?.status 
+      }
+    );
+
+    // Manejar reintentos para errores de red/servidor antes que otros errores
+    if (!originalRequest._retry && originalRequest) {
+      const retryCount = originalRequest._retryCount || 0;
+      const shouldRetry =
+        (error.code === "ERR_NETWORK" ||
+          error.code === "ECONNREFUSED" ||
+          error.code === "NETWORK_ERROR" ||
+          error.message?.includes("timeout") ||
+          (error.response?.status && error.response.status >= 500)) &&
+        retryCount < 2;
+
+      if (shouldRetry) {
+        originalRequest._retryCount = retryCount + 1;
+        originalRequest._retry = true;
+
+        console.info(
+          `🔄 Reintentando login (${retryCount + 1}/3)...`
+        );
+
+        // Esperar antes del reintento (exponential backoff)
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 * Math.pow(2, retryCount))
+        );
+
+        // Reiniciar _retry para el siguiente intento
+        originalRequest._retry = false;
+
+        return apiClient(originalRequest);
+      }
+    }
+
+    // Manejar errores de red (guardar solicitud para sincronización)
     if (!error.response && originalRequest && !originalRequest._retry) {
       // Si no hay conexión a internet, guardar la solicitud para sincronizarla después
       if (!navigator.onLine) {
@@ -155,5 +209,38 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Función para "despertar" el servidor (pre-warm) en caso de que esté dormido
+const warmUpServer = async (): Promise<void> => {
+  try {
+    console.info('🔥 Intentando despertar servidor...');
+    const response = await fetch(`${getBaseURL()}/health`, {
+      method: 'GET',
+      mode: 'cors',
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+    console.info('🔥 Server warm-up:', response.status === 200 ? 'Success ✅' : `Failed ❌ (${response.status})`);
+  } catch (error) {
+    console.warn('⚠️ Server warm-up failed (server might be cold starting):', (error as Error).message);
+    
+    // Intentar con el endpoint base como fallback
+    try {
+      const fallbackResponse = await fetch(getBaseURL(), {
+        method: 'GET',
+        mode: 'cors'
+      });
+      console.info('🔥 Fallback warm-up:', fallbackResponse.status === 200 ? 'Success ✅' : `Status: ${fallbackResponse.status}`);
+    } catch (fallbackError) {
+      console.warn('⚠️ Fallback warm-up also failed:', (fallbackError as Error).message);
+    }
+  }
+};
+
+// Hacer warm-up automático cuando se carga el módulo
+if (typeof window !== 'undefined' && import.meta.env.DEV) {
+  warmUpServer();
+}
 
 export default apiClient;

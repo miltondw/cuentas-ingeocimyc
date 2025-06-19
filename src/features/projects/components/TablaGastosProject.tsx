@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -78,6 +78,7 @@ interface AppState {
   paymentAmount: string;
   expandedRows: Set<number>; // Para controlar qué filas están expandidas
   showAdvancedFilters: boolean; // Para controlar filtros avanzados
+  totalProjects: number; // Total de proyectos para paginación
 }
 
 // Constants
@@ -266,7 +267,7 @@ const colorEstadoCuenta = (estado: string): string => {
 const TablaGastosProject: React.FC = () => {
   const { showNotification, showError } = useNotifications();
   const queryClient = useQueryClient();
-  
+
   // Hook de filtros con URL params
   const {
     filters,
@@ -288,7 +289,6 @@ const TablaGastosProject: React.FC = () => {
     nombreProyecto: filters.nombreProyecto || "",
     obrero: filters.obrero || "",
   });
-
   const [state, setState] = useState<AppState>({
     allProjects: [],
     loading: false,
@@ -298,6 +298,7 @@ const TablaGastosProject: React.FC = () => {
     paymentAmount: "",
     expandedRows: new Set<number>(),
     showAdvancedFilters: false,
+    totalProjects: 0,
   });
 
   // Sincronizar inputs locales con filtros cuando cambien desde URL
@@ -308,46 +309,24 @@ const TablaGastosProject: React.FC = () => {
       nombreProyecto: filters.nombreProyecto || "",
       obrero: filters.obrero || "",
     });
-  }, [filters.search, filters.solicitante, filters.nombreProyecto, filters.obrero]);
+  }, [
+    filters.search,
+    filters.solicitante,
+    filters.nombreProyecto,
+    filters.obrero,
+  ]);
 
   // Función para manejar cambios en inputs de texto con debounce
   const handleTextInputChange = useCallback(
     (field: keyof typeof localInputs, value: string) => {
       // Actualizar estado local inmediatamente (sin debounce)
-      setLocalInputs(prev => ({ ...prev, [field]: value }));
-      
+      setLocalInputs((prev) => ({ ...prev, [field]: value }));
+
       // Actualizar filtros con debounce
       updateFilter(field, value);
     },
     [updateFilter]
-  );
-  // Filtrar datos localmente (aplicamos filtros que la API podría no soportar)
-  const filteredData = useMemo(() => {
-    let filtered = [...state.allProjects];
-
-    // Aplicar filtros de búsqueda local si es necesario
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      filtered = filtered.filter(
-        (project) =>
-          project.nombreProyecto.toLowerCase().includes(searchTerm) ||
-          project.solicitante.toLowerCase().includes(searchTerm) ||
-          project.obrero.toLowerCase().includes(searchTerm)
-      );
-    }
-
-    return filtered;
-  }, [state.allProjects, filters]);
-
-  // Paginación local
-  const paginatedData = useMemo(() => {
-    const page = filters.page || 1;
-    const limit = filters.limit || 10;
-    const startIndex = (page - 1) * limit;
-    return filteredData.slice(startIndex, startIndex + limit);
-  }, [filteredData, filters.page, filters.limit]);
-
-  // Funciones de manejo
+  ); // Funciones de manejo
   const handlePageChange = useCallback(
     (_: unknown, newPage: number) => {
       updateFilter("page", newPage + 1); // MUI usa 0-indexed, nosotros 1-indexed
@@ -415,12 +394,11 @@ const TablaGastosProject: React.FC = () => {
 
       return params;
     };
-
-    const fetchProjects = async () => {
+    const fetchProjects = async (retryCount = 0) => {
       setState((prev) => ({ ...prev, loading: true, error: null }));
       try {
         const params = buildQueryParams();
-        const response = await api.get("/projects", { params }); //console.info("Respuesta del backend:", response.data); // Debug
+        const response = await api.get("/projects", { params });
 
         const proyectos =
           response.data.data?.map((p: Project) => ({
@@ -436,6 +414,7 @@ const TablaGastosProject: React.FC = () => {
         setState((prev) => ({
           ...prev,
           allProjects: proyectos,
+          totalProjects: response.data.total || 0,
           loading: false,
         }));
 
@@ -448,6 +427,29 @@ const TablaGastosProject: React.FC = () => {
           });
         }
       } catch (error) {
+        // Retry automático para errores de red
+        const axiosError = error as {
+          code?: string;
+          response?: { status: number };
+          message?: string;
+        };
+        if (
+          retryCount < 2 &&
+          (axiosError?.code === "NETWORK_ERROR" ||
+            (axiosError?.response?.status &&
+              axiosError.response.status >= 500) ||
+            axiosError?.message?.includes("fetch"))
+        ) {
+          console.warn(
+            `Reintentando carga de proyectos (${retryCount + 1}/3)...`
+          );
+          setTimeout(
+            () => fetchProjects(retryCount + 1),
+            1000 * (retryCount + 1)
+          );
+          return;
+        }
+
         const errorMessage = `Error al cargar proyectos: ${
           (error as Error).message
         }`;
@@ -619,6 +621,7 @@ const TablaGastosProject: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Paper sx={{ p: 3, width: "100%", overflow: "hidden" }}>
+        {" "}
         <Box
           sx={{
             display: "flex",
@@ -627,14 +630,15 @@ const TablaGastosProject: React.FC = () => {
             mb: 3,
             flexWrap: "wrap",
             gap: "1rem",
-            placeContent: "center",
+            flexDirection: { xs: "column", sm: "row" },
+            textAlign: { xs: "center", sm: "left" },
           }}
         >
           <Typography
-            textAlign="center"
             variant="h4"
             component="h1"
             fontWeight="bold"
+            sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }}
           >
             Gestión de Proyectos
           </Typography>
@@ -644,7 +648,7 @@ const TablaGastosProject: React.FC = () => {
             variant="contained"
             color="primary"
             startIcon={<AddIcon />}
-            sx={{ borderRadius: 2 }}
+            sx={{ borderRadius: 2, minWidth: "fit-content" }}
           >
             Nuevo Proyecto
           </Button>
@@ -660,34 +664,38 @@ const TablaGastosProject: React.FC = () => {
         )}{" "}
         {/* Filtros */}
         <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
-          <Grid2 container spacing={2} alignItems="center">            <Grid2 size={{ xs: 12, md: 3 }}>
+          {" "}
+          <Grid2 container spacing={2} alignItems="center">
+            <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
                 fullWidth
                 label="Buscar proyecto"
                 variant="outlined"
                 size="small"
                 value={localInputs.search}
-                onChange={(e) => handleTextInputChange("search", e.target.value)}
+                onChange={(e) =>
+                  handleTextInputChange("search", e.target.value)
+                }
                 InputProps={{
                   startAdornment: (
                     <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />
                   ),
                 }}
               />
-            </Grid2>
-
-            <Grid2 size={{ xs: 12, md: 2 }}>
+            </Grid2>{" "}
+            <Grid2 size={{ xs: 12, sm: 6, md: 2 }}>
               <TextField
                 fullWidth
                 label="Solicitante"
                 variant="outlined"
                 size="small"
                 value={localInputs.solicitante}
-                onChange={(e) => handleTextInputChange("solicitante", e.target.value)}
+                onChange={(e) =>
+                  handleTextInputChange("solicitante", e.target.value)
+                }
               />
-            </Grid2>
-
-            <Grid2 size={{ xs: 12, md: 2 }}>
+            </Grid2>{" "}
+            <Grid2 size={{ xs: 12, sm: 6, md: 2 }}>
               <TextField
                 select
                 fullWidth
@@ -705,9 +713,8 @@ const TablaGastosProject: React.FC = () => {
                 <MenuItem value="suspendido">Suspendido</MenuItem>
                 <MenuItem value="cancelado">Cancelado</MenuItem>
               </TextField>
-            </Grid2>
-
-            <Grid2 size={{ xs: 12, md: 2 }}>
+            </Grid2>{" "}
+            <Grid2 size={{ xs: 12, sm: 6, md: 2 }}>
               <Button
                 fullWidth
                 variant="outlined"
@@ -728,33 +735,38 @@ const TablaGastosProject: React.FC = () => {
                 Más Filtros
               </Button>
             </Grid2>
-
             <Grid2 size={{ xs: 12, md: 3 }}>
-              <Stack direction="row" spacing={1}>
+              {" "}
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1}
+                alignItems="center"
+              >
                 <Button
                   variant="outlined"
                   startIcon={<ClearIcon />}
                   onClick={handleClearFilters}
                   disabled={!hasActiveFilters}
-                  sx={{ whiteSpace: "nowrap" }}
+                  sx={{ whiteSpace: "nowrap", minWidth: "fit-content" }}
                 >
                   Limpiar
                 </Button>
                 <Typography
                   variant="body2"
                   color="text.secondary"
-                  sx={{ alignSelf: "center" }}
+                  sx={{ textAlign: "center" }}
                 >
-                  {filteredData.length} resultado(s)
+                  {state.totalProjects} resultado(s)
                 </Typography>
               </Stack>
             </Grid2>
           </Grid2>
-
           {/* Filtros avanzados */}
           <Collapse in={state.showAdvancedFilters}>
             <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: "divider" }}>
-              <Grid2 container spacing={2}>                <Grid2 size={{ xs: 12, md: 3 }}>
+              {" "}
+              <Grid2 container spacing={2}>
+                <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField
                     fullWidth
                     label="Nombre del Proyecto"
@@ -765,20 +777,20 @@ const TablaGastosProject: React.FC = () => {
                       handleTextInputChange("nombreProyecto", e.target.value)
                     }
                   />
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 3 }}>
+                </Grid2>{" "}
+                <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField
                     fullWidth
                     label="Obrero"
                     variant="outlined"
                     size="small"
                     value={localInputs.obrero}
-                    onChange={(e) => handleTextInputChange("obrero", e.target.value)}
+                    onChange={(e) =>
+                      handleTextInputChange("obrero", e.target.value)
+                    }
                   />
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 3 }}>
+                </Grid2>{" "}
+                <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField
                     fullWidth
                     label="Fecha desde"
@@ -789,9 +801,8 @@ const TablaGastosProject: React.FC = () => {
                     onChange={(e) => updateFilter("startDate", e.target.value)}
                     InputLabelProps={{ shrink: true }}
                   />
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 3 }}>
+                </Grid2>{" "}
+                <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField
                     fullWidth
                     label="Fecha hasta"
@@ -802,9 +813,8 @@ const TablaGastosProject: React.FC = () => {
                     onChange={(e) => updateFilter("endDate", e.target.value)}
                     InputLabelProps={{ shrink: true }}
                   />
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 3 }}>
+                </Grid2>{" "}
+                <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField
                     select
                     fullWidth
@@ -826,12 +836,21 @@ const TablaGastosProject: React.FC = () => {
               </Grid2>
             </Box>
           </Collapse>
-        </Paper>
+        </Paper>{" "}
         {/* Tabla */}
         <TableContainer
-          sx={{ maxHeight: 600, border: "1px solid #e0e0e0", borderRadius: 1 }}
+          sx={{
+            maxHeight: 600,
+            border: "1px solid #e0e0e0",
+            borderRadius: 1,
+            // Mejorar responsive
+            overflowX: "auto",
+            "& .MuiTable-root": {
+              minWidth: { xs: 800, md: 1200 },
+            },
+          }}
         >
-          <Table stickyHeader sx={{ minWidth: 1200 }}>
+          <Table stickyHeader sx={{ minWidth: { xs: 800, md: 1200 } }}>
             <TableHead>
               <TableRow>
                 {tableRowInputs.map(({ id, label, sortable, width }) => (
@@ -864,11 +883,10 @@ const TablaGastosProject: React.FC = () => {
                       label
                     )}
                   </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>{" "}
+                ))}              </TableRow>
+            </TableHead>
             <TableBody>
-              {paginatedData.map((project) => {
+              {state.allProjects.map((project) => {
                 const calculations = calculateValues(project);
                 const isExpanded = state.expandedRows.has(project.id); // Verificar si la fila está expandida
                 return (
@@ -878,39 +896,41 @@ const TablaGastosProject: React.FC = () => {
                       sx={{
                         "&:nth-of-type(odd)": { backgroundColor: "#fafafa" },
                         "&:hover": { backgroundColor: "#f0f0f0" },
-                      }}
-                    >
-                      {/* Columna de Acciones */}{" "}
+                      }}                    >
+                      {/* Columna de Acciones */}
                       <TableCell>
-                        <Box sx={{ display: "flex", gap: 1 }}>
-                          <Tooltip title="Editar proyecto">
-                            <IconButton
-                              component={Link}
-                              to={`/crear-proyecto/${project.id}`}
-                              size="small"
-                              color="primary"
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Registrar pago">
-                            <IconButton
-                              onClick={() => openPaymentDialog(project)}
-                              size="small"
-                              color="success"
-                              disabled={calculations.estadoCuenta === "Pagado"}
-                            >
-                              <PaymentIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Eliminar proyecto">
-                            <IconButton
-                              onClick={() => openDeleteDialog(project)}
-                              size="small"
-                              color="error"
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
+                        <Box sx={{ display: "flex", gap: 1 }}>                          <Tooltip title="Editar proyecto">
+                            <span>
+                              <IconButton
+                                component={Link}
+                                to={`/crear-proyecto/${project.id}`}
+                                size="small"
+                                color="primary"
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip><Tooltip title="Registrar pago">
+                            <span>
+                              <IconButton
+                                onClick={() => openPaymentDialog(project)}
+                                size="small"
+                                color="success"
+                                disabled={calculations.estadoCuenta === "Pagado"}
+                              >
+                                <PaymentIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>                          <Tooltip title="Eliminar proyecto">
+                            <span>
+                              <IconButton
+                                onClick={() => openDeleteDialog(project)}
+                                size="small"
+                                color="error"
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </span>
                           </Tooltip>
                         </Box>
                       </TableCell>
@@ -961,25 +981,25 @@ const TablaGastosProject: React.FC = () => {
                           {calculations.estadoCuenta}
                         </Box>
                       </TableCell>
-                      <TableCell>
-                        <Tooltip
+                      <TableCell>                        <Tooltip
                           title={isExpanded ? "Ocultar gastos" : "Ver gastos"}
                         >
-                          <IconButton
-                            onClick={() => toggleRowExpansion(project.id)}
-                            size="small"
-                            color="primary"
-                          >
-                            {isExpanded ? (
-                              <ExpandLessIcon fontSize="small" />
-                            ) : (
-                              <ExpandMoreIcon fontSize="small" />
-                            )}
-                          </IconButton>
+                          <span>
+                            <IconButton
+                              onClick={() => toggleRowExpansion(project.id)}
+                              size="small"
+                              color="primary"
+                            >
+                              {isExpanded ? (
+                                <ExpandLessIcon fontSize="small" />
+                              ) : (
+                                <ExpandMoreIcon fontSize="small" />
+                              )}
+                            </IconButton>
+                          </span>
                         </Tooltip>
-                      </TableCell>
-                      {/* Columnas dinámicas para campos extra */}
-                    </TableRow>{" "}
+                      </TableCell>                      {/* Columnas dinámicas para campos extra */}
+                    </TableRow>
                     {/* Fila expandida con detalles de gastos */}
                     {isExpanded && (
                       <TableRow>
@@ -1061,13 +1081,12 @@ const TablaGastosProject: React.FC = () => {
                 );
               })}
             </TableBody>
-          </Table>
-        </TableContainer>{" "}
+          </Table>        </TableContainer>
         {/* Paginación */}
         <TablePagination
           rowsPerPageOptions={[5, 10, 25, 50]}
           component="div"
-          count={filteredData.length}
+          count={state.totalProjects}
           rowsPerPage={filters.limit || 10}
           page={(filters.page || 1) - 1} // Convertir de 1-indexed a 0-indexed para MUI
           onPageChange={handlePageChange}

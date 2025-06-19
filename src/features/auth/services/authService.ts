@@ -42,14 +42,25 @@ class AuthService {
   async refreshToken(refreshToken: string) {
     return apiClient.post<AuthResponse>("/auth/refresh", { refreshToken });
   }
-
   /**
-   * Validar el token actual
+   * Validar el token actual usando el endpoint de perfil
    */
   async validateToken() {
-    return apiClient.get<{ valid: boolean; user?: User }>(
-      "/auth/validate-token"
-    );
+    try {
+      const response = await apiClient.get<{ user: User }>("/auth/profile");
+      return {
+        data: {
+          valid: true,
+          user: response.data.user,
+        },
+      };
+    } catch (_error) {
+      return {
+        data: {
+          valid: false,
+        },
+      };
+    }
   }
 
   /**

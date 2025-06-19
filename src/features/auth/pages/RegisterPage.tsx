@@ -80,7 +80,8 @@ const RegisterPage = () => {
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    try {      const result = await registerUser({
+    try {
+      const result = await registerUser({
         email: data.email,
         password: data.password,
         confirmPassword: data.password, // Usar la misma contraseña

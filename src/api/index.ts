@@ -66,7 +66,7 @@ const api = axios.create({
     Accept: "application/json",
   },
   withCredentials: true,
-  timeout: 15000, // Timeout de 15 segundos
+  timeout: 30000, // Aumentar timeout a 30 segundos para conexiones lentas
 });
 
 // Token manager para autenticación
@@ -136,34 +136,34 @@ class TokenManager {
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     // Debug logging
-    console.log(
+    console.info(
       `🔌 API Request: ${config.method?.toUpperCase()} ${config.url}`
     );
 
     // Agregar token de autenticación
     const accessToken = TokenManager.getAccessToken();
-    console.log(`🔑 Access token present: ${!!accessToken}`);
+    console.info(`🔑 Access token present: ${!!accessToken}`);
 
     if (accessToken && !TokenManager.isTokenExpired()) {
       config.headers.set("Authorization", `Bearer ${accessToken}`);
-      console.log(`✅ Authorization header set with token`);
+      console.info(`✅ Authorization header set with token`);
     } else if (accessToken && TokenManager.isTokenExpired()) {
-      console.log(`⏰ Token expired, attempting refresh...`);
+      console.info(`⏰ Token expired, attempting refresh...`);
       // Intentar renovar el token
       const newToken = await TokenManager.refreshAccessToken();
       if (newToken) {
         config.headers.set("Authorization", `Bearer ${newToken}`);
-        console.log(`✅ Authorization header set with new token`);
+        console.info(`✅ Authorization header set with new token`);
       } else {
-        console.log(`❌ Failed to refresh token`);
+        console.info(`❌ Failed to refresh token`);
       }
     } else {
-      console.log(`ℹ️ No valid token available`);
+      console.info(`ℹ️ No valid token available`);
     }
 
     return config;
   },
-  (error) => Promise.reject(error)
+  (error: unknown) => Promise.reject(error)
 );
 
 // Extender AxiosError para incluir nuestras propiedades personalizadas
@@ -175,12 +175,13 @@ interface CustomAxiosError extends AxiosError {
 interface CustomRequestConfig extends AxiosRequestConfig {
   _retry?: boolean;
   _redirected?: boolean;
+  _retryCount?: number;
 }
 
 // Interceptor de response - manejar errores y renovación automática de tokens
 api.interceptors.response.use(
   (response) => {
-    console.log(
+    console.info(
       `✅ API Response: ${
         response.status
       } ${response.config.method?.toUpperCase()} ${response.config.url}`
@@ -189,25 +190,57 @@ api.interceptors.response.use(
   },
   async (error: AxiosError<ErrorResponseData>) => {
     const originalRequest = error.config as CustomRequestConfig;
-    console.log(
+    console.info(
       `❌ API Error: ${
         error.response?.status
       } ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`
     );
-    console.log(`Error details:`, error.response?.data);
+    console.info(`Error details:`, error.response?.data);
+
+    // Manejar reintentos para errores de red/servidor antes que otros errores
+    if (!originalRequest._retry && originalRequest) {
+      const retryCount = originalRequest._retryCount || 0;
+      const shouldRetry =
+        (error.code === "ECONNREFUSED" ||
+          error.code === "NETWORK_ERROR" ||
+          error.message?.includes("timeout") ||
+          (error.response?.status && error.response.status >= 500)) &&
+        retryCount < 2;
+
+      if (shouldRetry) {
+        originalRequest._retryCount = retryCount + 1;
+        originalRequest._retry = true;
+
+        console.info(
+          `🔄 Reintentando petición (${retryCount + 1}/3) para ${
+            originalRequest.url
+          }...`
+        );
+
+        // Esperar antes del reintento (exponential backoff)
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 * Math.pow(2, retryCount))
+        );
+
+        // Reiniciar _retry para el siguiente intento
+        originalRequest._retry = false;
+
+        return api(originalRequest);
+      }
+    }
 
     // Manejar error 401 - token expirado
     if (error.response?.status === 401 && !originalRequest._retry) {
-      console.log(`🔄 Handling 401 error - attempting token refresh`);
+      console.info(`🔄 Handling 401 error - attempting token refresh`);
       originalRequest._retry = true;
 
       const newToken = await TokenManager.refreshAccessToken();
       if (newToken && originalRequest.headers) {
-        console.log(`✅ Token refreshed successfully, retrying request`);
+        console.info(`✅ Token refreshed successfully, retrying request`);
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return api.request(originalRequest);
       } else {
-        console.log(`❌ Token refresh failed, redirecting to login`);
+        console.info(`❌ Token refresh failed, redirecting to login`);
         // Si no se puede renovar, limpiar tokens y redirigir al login
         TokenManager.clearTokens();
         if (typeof window !== "undefined") {
