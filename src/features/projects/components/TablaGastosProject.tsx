@@ -621,7 +621,6 @@ const TablaGastosProject: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Paper sx={{ p: 3, width: "100%", overflow: "hidden" }}>
-        {" "}
         <Box
           sx={{
             display: "flex",
@@ -661,10 +660,9 @@ const TablaGastosProject: React.FC = () => {
           >
             {state.error}
           </Alert>
-        )}{" "}
+        )}
         {/* Filtros */}
         <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
-          {" "}
           <Grid2 container spacing={2} alignItems="center">
             <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
@@ -682,7 +680,7 @@ const TablaGastosProject: React.FC = () => {
                   ),
                 }}
               />
-            </Grid2>{" "}
+            </Grid2>
             <Grid2 size={{ xs: 12, sm: 6, md: 2 }}>
               <TextField
                 fullWidth
@@ -694,7 +692,7 @@ const TablaGastosProject: React.FC = () => {
                   handleTextInputChange("solicitante", e.target.value)
                 }
               />
-            </Grid2>{" "}
+            </Grid2>
             <Grid2 size={{ xs: 12, sm: 6, md: 2 }}>
               <TextField
                 select
@@ -713,7 +711,7 @@ const TablaGastosProject: React.FC = () => {
                 <MenuItem value="suspendido">Suspendido</MenuItem>
                 <MenuItem value="cancelado">Cancelado</MenuItem>
               </TextField>
-            </Grid2>{" "}
+            </Grid2>
             <Grid2 size={{ xs: 12, sm: 6, md: 2 }}>
               <Button
                 fullWidth
@@ -736,7 +734,6 @@ const TablaGastosProject: React.FC = () => {
               </Button>
             </Grid2>
             <Grid2 size={{ xs: 12, md: 3 }}>
-              {" "}
               <Stack
                 direction={{ xs: "column", sm: "row" }}
                 spacing={1}
@@ -764,7 +761,6 @@ const TablaGastosProject: React.FC = () => {
           {/* Filtros avanzados */}
           <Collapse in={state.showAdvancedFilters}>
             <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: "divider" }}>
-              {" "}
               <Grid2 container spacing={2}>
                 <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField
@@ -777,7 +773,7 @@ const TablaGastosProject: React.FC = () => {
                       handleTextInputChange("nombreProyecto", e.target.value)
                     }
                   />
-                </Grid2>{" "}
+                </Grid2>
                 <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField
                     fullWidth
@@ -789,7 +785,7 @@ const TablaGastosProject: React.FC = () => {
                       handleTextInputChange("obrero", e.target.value)
                     }
                   />
-                </Grid2>{" "}
+                </Grid2>
                 <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField
                     fullWidth
@@ -801,7 +797,7 @@ const TablaGastosProject: React.FC = () => {
                     onChange={(e) => updateFilter("startDate", e.target.value)}
                     InputLabelProps={{ shrink: true }}
                   />
-                </Grid2>{" "}
+                </Grid2>
                 <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField
                     fullWidth
@@ -813,7 +809,7 @@ const TablaGastosProject: React.FC = () => {
                     onChange={(e) => updateFilter("endDate", e.target.value)}
                     InputLabelProps={{ shrink: true }}
                   />
-                </Grid2>{" "}
+                </Grid2>
                 <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField
                     select
@@ -836,7 +832,7 @@ const TablaGastosProject: React.FC = () => {
               </Grid2>
             </Box>
           </Collapse>
-        </Paper>{" "}
+        </Paper>
         {/* Tabla */}
         <TableContainer
           sx={{
@@ -883,7 +879,8 @@ const TablaGastosProject: React.FC = () => {
                       label
                     )}
                   </TableCell>
-                ))}              </TableRow>
+                ))}{" "}
+              </TableRow>
             </TableHead>
             <TableBody>
               {state.allProjects.map((project) => {
@@ -896,10 +893,13 @@ const TablaGastosProject: React.FC = () => {
                       sx={{
                         "&:nth-of-type(odd)": { backgroundColor: "#fafafa" },
                         "&:hover": { backgroundColor: "#f0f0f0" },
-                      }}                    >
+                      }}
+                    >
                       {/* Columna de Acciones */}
                       <TableCell>
-                        <Box sx={{ display: "flex", gap: 1 }}>                          <Tooltip title="Editar proyecto">
+                        <Box sx={{ display: "flex", gap: 1 }}>
+                          {" "}
+                          <Tooltip title="Editar proyecto">
                             <span>
                               <IconButton
                                 component={Link}
@@ -910,18 +910,22 @@ const TablaGastosProject: React.FC = () => {
                                 <EditIcon fontSize="small" />
                               </IconButton>
                             </span>
-                          </Tooltip><Tooltip title="Registrar pago">
+                          </Tooltip>
+                          <Tooltip title="Registrar pago">
                             <span>
                               <IconButton
                                 onClick={() => openPaymentDialog(project)}
                                 size="small"
                                 color="success"
-                                disabled={calculations.estadoCuenta === "Pagado"}
+                                disabled={
+                                  calculations.estadoCuenta === "Pagado"
+                                }
                               >
                                 <PaymentIcon fontSize="small" />
                               </IconButton>
                             </span>
-                          </Tooltip>                          <Tooltip title="Eliminar proyecto">
+                          </Tooltip>{" "}
+                          <Tooltip title="Eliminar proyecto">
                             <span>
                               <IconButton
                                 onClick={() => openDeleteDialog(project)}
@@ -981,7 +985,9 @@ const TablaGastosProject: React.FC = () => {
                           {calculations.estadoCuenta}
                         </Box>
                       </TableCell>
-                      <TableCell>                        <Tooltip
+                      <TableCell>
+                        {" "}
+                        <Tooltip
                           title={isExpanded ? "Ocultar gastos" : "Ver gastos"}
                         >
                           <span>
@@ -998,7 +1004,8 @@ const TablaGastosProject: React.FC = () => {
                             </IconButton>
                           </span>
                         </Tooltip>
-                      </TableCell>                      {/* Columnas dinámicas para campos extra */}
+                      </TableCell>{" "}
+                      {/* Columnas dinámicas para campos extra */}
                     </TableRow>
                     {/* Fila expandida con detalles de gastos */}
                     {isExpanded && (
@@ -1081,7 +1088,8 @@ const TablaGastosProject: React.FC = () => {
                 );
               })}
             </TableBody>
-          </Table>        </TableContainer>
+          </Table>{" "}
+        </TableContainer>
         {/* Paginación */}
         <TablePagination
           rowsPerPageOptions={[5, 10, 25, 50]}
@@ -1100,7 +1108,7 @@ const TablaGastosProject: React.FC = () => {
 
       {/* Modal de Confirmación de Eliminación */}
       <Dialog open={state.modals.delete} onClose={closeModals}>
-        <DialogTitle>Confirmar Eliminación</DialogTitle>{" "}
+        <DialogTitle>Confirmar Eliminación</DialogTitle>
         <DialogContent>
           <DialogContentText>
             ¿Está seguro de que desea eliminar el proyecto &quot;
@@ -1130,12 +1138,12 @@ const TablaGastosProject: React.FC = () => {
           <DialogContentText sx={{ mb: 2 }}>
             Proyecto: <strong>{state.selectedProject?.nombreProyecto}</strong>
             <br />
-            Costo Total:{" "}
+            Costo Total:
             <strong>
               ${formatNumber(state.selectedProject?.costoServicio || 0)}
             </strong>
             <br />
-            Abonado:{" "}
+            Abonado:
             <strong>${formatNumber(state.selectedProject?.abono || 0)}</strong>
             <br /> Saldo:
             <strong>

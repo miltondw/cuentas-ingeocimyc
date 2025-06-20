@@ -661,7 +661,7 @@ const PerfilDeSuelos = () => {
               disabled={loading}
               startIcon={loading ? undefined : <SaveIcon />}
             >
-              {loading ? "Guardando..." : isEditing ? "Actualizar" : "Guardar"}{" "}
+              {loading ? "Guardando..." : isEditing ? "Actualizar" : "Guardar"}
               Perfil
             </Button>
           </Box>
@@ -850,7 +850,7 @@ const PerfilDeSuelos = () => {
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Datos de Golpes
-              </Typography>{" "}
+              </Typography>
               <TableContainer
                 component={Paper}
                 variant="outlined"
@@ -985,7 +985,7 @@ const PerfilDeSuelos = () => {
                     ? "Guardando..."
                     : isEditing
                     ? "Actualizar"
-                    : "Guardar"}{" "}
+                    : "Guardar"}
                   Perfil
                 </Button>
               </Stack>

@@ -3,6 +3,13 @@
  * Exporta todos los componentes relacionados con solicitudes de servicios
  */
 
-// Por ahora comentamos los componentes que están en desarrollo
-// export { ClientServiceRequestForm } from "./ClientServiceRequestForm";
-// export { default as ClientServiceRequestFormDefault } from "./ClientServiceRequestForm";
+// Componente principal del formulario
+export { ClientServiceRequestForm } from "./ClientServiceRequestForm";
+export { default as ClientServiceRequestFormDefault } from "./ClientServiceRequestForm";
+
+// Componentes de los pasos del formulario
+export { ClientInfoForm } from "./steps/ClientInfoForm";
+export { ServiceSelectionForm } from "./steps/ServiceSelectionForm";
+export { ProjectDetailsForm } from "./steps/ProjectDetailsForm";
+export { ReviewAndConfirmForm } from "./steps/ReviewAndConfirmForm";
+export { SuccessStep } from "./steps/SuccessStep";

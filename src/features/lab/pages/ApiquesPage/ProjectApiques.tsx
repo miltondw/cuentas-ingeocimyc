@@ -214,7 +214,7 @@ const ProjectApiques = () => {
               label={`${apiques.length} Apiques`}
               color="primary"
               variant="outlined"
-            />{" "}
+            />
             <Chip
               icon={<LayersIcon />}
               label={`${apiques.reduce(
@@ -284,7 +284,7 @@ const ProjectApiques = () => {
                     >
                       <Typography variant="h6" component="h2">
                         Apique {apique.apique}
-                      </Typography>{" "}
+                      </Typography>
                       <Chip
                         icon={<LayersIcon />}
                         label={`${apique.layers.length} capas`}

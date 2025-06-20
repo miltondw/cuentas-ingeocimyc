@@ -376,7 +376,7 @@ const TablaGastosEmpresa: React.FC = () => {
           >
             {state.error}
           </Alert>
-        )}{" "}
+        )}
         {/* Filters */}
         <Paper sx={{ p: 2, mb: 3, backgroundColor: "#f8f9fa" }}>
           <Typography variant="h6" gutterBottom>
@@ -435,7 +435,7 @@ const TablaGastosEmpresa: React.FC = () => {
                 size="small"
                 type="number"
               />
-            </Grid2>{" "}
+            </Grid2>
             {/* Filtros de categoría */}
             <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
@@ -472,7 +472,7 @@ const TablaGastosEmpresa: React.FC = () => {
                 variant="outlined"
                 size="small"
               />
-            </Grid2>{" "}
+            </Grid2>
             {/* Filtros de ordenamiento */}
             <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
@@ -528,9 +528,9 @@ const TablaGastosEmpresa: React.FC = () => {
             {/* Información de resultados */}
             <Grid2 size={{ xs: 12 }}>
               <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-                {state.totalItems} resultado{state.totalItems !== 1 ? "s" : ""}{" "}
+                {state.totalItems} resultado{state.totalItems !== 1 ? "s" : ""}
                 encontrado
-                {state.totalItems !== 1 ? "s" : ""} - Página {state.currentPage}{" "}
+                {state.totalItems !== 1 ? "s" : ""} - Página {state.currentPage}
                 de {state.totalPages}
               </Typography>
             </Grid2>

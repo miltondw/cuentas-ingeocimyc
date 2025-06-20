@@ -84,7 +84,6 @@ const FormCreateMonth: React.FC<{ id?: string }> = ({ id }) => {
           mx: "auto",
         }}
       >
-        {" "}
         <Controller
           name="mes"
           control={control}

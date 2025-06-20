@@ -1,24 +1,30 @@
-// import { ClientServiceRequestForm } from "../components/ClientServiceRequestForm";
-import { Container, Typography, Paper, Box } from "@mui/material";
+import { useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { ClientServiceRequestForm } from "../components/ClientServiceRequestForm";
+import type { ServiceRequest } from "@/types/serviceRequests";
 
 /**
  * Página de formulario de solicitud para clientes
  * Usa el componente ClientServiceRequestForm migrado desde components/client
  */
 const ClientRequestFormPage = () => {
+  const navigate = useNavigate();
+
+  const handleSuccess = useCallback((serviceRequest: ServiceRequest) => {
+    // Aquí podrías redirigir a una página de detalles o dashboard
+    // navigate(`/solicitud/${serviceRequest.id}`);
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    // Redirigir al dashboard o página anterior
+    navigate(-1);
+  }, [navigate]);
+
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper elevation={2} sx={{ p: 4 }}>
-        <Box sx={{ textAlign: "center", mb: 4 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Formulario de Solicitud de Servicios
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Esta sección está en desarrollo y estará disponible próximamente.
-          </Typography>
-        </Box>
-      </Paper>
-    </Container>
+    <ClientServiceRequestForm
+      onSuccess={handleSuccess}
+      onCancel={handleCancel}
+    />
   );
 };
 

@@ -6,6 +6,10 @@
 export { projectsService, ProjectsService } from "./projectsService";
 export { apiquesService, ApiquesService } from "./apiquesService";
 export { profilesService, ProfilesService } from "./profilesService";
+export {
+  serviceRequestsService,
+  ServiceRequestsService,
+} from "./serviceRequestsService";
 
 // API base
 export { default as api } from "../index";
@@ -15,6 +19,9 @@ export type {
   Project,
   Apique,
   Profile,
+  ServiceRequest,
+  ServiceType,
+  ServiceCategory,
   PaginatedResponse,
   ApiResponse,
   User,

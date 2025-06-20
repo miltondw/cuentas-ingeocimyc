@@ -14,37 +14,99 @@ export type ServiceRequestStatus =
 // =============== SOLICITUD DE SERVICIO INTERFACES ===============
 export interface ServiceRequest {
   id: number;
-  nombre: string;
+  name: string;
+  nameProject: string;
+  location: string;
+  identification: string;
+  phone: string;
   email: string;
-  telefono: string;
-  empresa: string;
-  tipoServicio: string;
-  descripcion: string;
-  ubicacionProyecto: string;
-  fechaSolicitud: string;
+  description: string;
   status: ServiceRequestStatus;
   created_at: string;
   updated_at: string;
+  // Mantener campos antiguos por compatibilidad (deprecados)
+  /** @deprecated usar name */
+  nombre?: string;
+  /** @deprecated usar nameProject */
+  empresa?: string;
+  /** @deprecated usar phone */
+  telefono?: string;
+  /** @deprecated usar description */
+  descripcion?: string;
+  /** @deprecated usar location */
+  ubicacionProyecto?: string;
+  /** @deprecated */
+  tipoServicio?: string;
+  /** @deprecated */
+  fechaSolicitud?: string;
+}
+
+// =============== INTERFACES DE SERVICIO SELECCIONADO ===============
+export interface ServiceAdditionalFieldValue {
+  fieldId: string;
+  value: string | number | boolean;
+}
+
+export interface ServiceInstance {
+  instanceId: string; // UUID generado
+  quantity: number;
+  additionalData?: ServiceAdditionalFieldValue[];
+  notes?: string;
+}
+
+// Para la UI interna
+export interface SelectedService {
+  serviceId: string;
+  serviceName: string;
+  serviceDescription: string;
+  basePrice?: number;
+  instances: ServiceInstance[];
+  totalQuantity: number; // Suma de todas las cantidades de instancias
+}
+
+// Para enviar al backend
+export interface BackendServiceRequest {
+  serviceId: number;
+  quantity: number;
+  additionalValues?: Array<{
+    fieldName: string;
+    fieldValue: string;
+  }>;
 }
 
 export interface CreateServiceRequestRequest {
+  name: string;
+  nameProject: string;
+  location: string;
+  identification: string;
+  phone: string;
+  email: string;
+  description: string;
+  selectedServices: BackendServiceRequest[];
+}
+
+// Para la UI interna (mantenemos la estructura anterior para compatibilidad)
+export interface InternalServiceRequestData {
   nombre: string;
   email: string;
   telefono: string;
   empresa: string;
-  tipoServicio: string;
+  nameProject: string;
+  identification: string;
+  selectedServices: SelectedService[];
   descripcion: string;
   ubicacionProyecto: string;
 }
 
 export interface UpdateServiceRequestRequest {
-  nombre?: string;
+  name?: string;
+  nameProject?: string;
+  location?: string;
+  identification?: string;
+  phone?: string;
   email?: string;
-  telefono?: string;
-  empresa?: string;
-  tipoServicio?: string;
-  descripcion?: string;
-  ubicacionProyecto?: string;
+  description?: string;
+  selectedServices?: BackendServiceRequest[];
   status?: ServiceRequestStatus;
 }
 
@@ -141,13 +203,25 @@ export interface ServiceType {
   estimatedDuration?: string;
   basePrice?: number;
   isActive: boolean;
+  hasAdditionalFields?: boolean;
+  additionalFields?: ServiceAdditionalField[];
 }
 
-export interface ServiceCategory {
+export interface ServiceAdditionalField {
   id: string;
   name: string;
-  description: string;
-  services: ServiceType[];
+  label: string;
+  type: "text" | "number" | "date" | "select" | "textarea" | "boolean";
+  required: boolean;
+  options?: string[]; // Para campos tipo select
+  placeholder?: string;
+  defaultValue?: string | number | boolean;
+  validation?: {
+    min?: number;
+    max?: number;
+    pattern?: string;
+    maxLength?: number;
+  };
 }
 
 // =============== VALIDACIONES ===============
@@ -193,3 +267,68 @@ export interface ServiceRequestValidationRules {
 // =============== DTOs (Para compatibilidad) ===============
 export type CreateServiceRequestDto = CreateServiceRequestRequest;
 export type UpdateServiceRequestDto = UpdateServiceRequestRequest;
+
+// =============== NUEVA API STRUCTURE ===============
+export interface APIServiceCategory {
+  id: number;
+  code: string;
+  name: string;
+  created_at: string;
+  updatedAt: string;
+}
+
+export interface APIServiceAdditionalField {
+  id: number;
+  serviceId: number;
+  fieldName: string;
+  type: "text" | "number" | "date" | "select" | "checkbox";
+  required: boolean;
+  options?: string[] | null;
+  dependsOnField?: string | null;
+  dependsOnValue?: string | null;
+  label: string;
+  created_at: string;
+  updatedAt: string;
+}
+
+export interface APIService {
+  id: number;
+  categoryId: number;
+  code: string;
+  name: string;
+  created_at: string;
+  updatedAt: string;
+  category: APIServiceCategory;
+  additionalFields: APIServiceAdditionalField[];
+}
+
+// Helper types para el formulario
+export interface ProcessedServiceCategory {
+  id: string;
+  name: string;
+  description: string;
+  code: string;
+  services: ProcessedService[];
+}
+
+export interface ProcessedService {
+  id: string;
+  name: string;
+  description?: string;
+  code: string;
+  categoryId: string;
+  categoryName: string;
+  hasAdditionalFields: boolean;
+  additionalFields: ProcessedServiceField[];
+}
+
+export interface ProcessedServiceField {
+  id: string;
+  name: string;
+  label: string;
+  type: "text" | "number" | "date" | "select" | "checkbox";
+  required: boolean;
+  options?: string[];
+  dependsOnField?: string;
+  dependsOnValue?: string;
+}

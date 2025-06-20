@@ -43,9 +43,7 @@ import {
   type LabProject,
   type LabProjectsResponse,
 } from "@/services/api/labService";
-import {
-  type LabProjectFilters,
-} from "@/types/labFilters";
+import { type LabProjectFilters } from "@/types/labFilters";
 
 const ProjectsDashboard = () => {
   const navigate = useNavigate();
@@ -65,68 +63,98 @@ const ProjectsDashboard = () => {
   });
 
   // Funciones auxiliares para trabajar con search params
-  const getFilterFromParams = useCallback((key: string, defaultValue?: string) => {
-    return searchParams.get(key) || defaultValue;
-  }, [searchParams]);
+  const getFilterFromParams = useCallback(
+    (key: string, defaultValue?: string) => {
+      return searchParams.get(key) || defaultValue;
+    },
+    [searchParams]
+  );
 
-  const getBooleanFilterFromParams = useCallback((key: string) => {
-    const value = searchParams.get(key);
-    return value === 'true' ? true : value === 'false' ? false : undefined;
-  }, [searchParams]);
+  const getBooleanFilterFromParams = useCallback(
+    (key: string) => {
+      const value = searchParams.get(key);
+      return value === "true" ? true : value === "false" ? false : undefined;
+    },
+    [searchParams]
+  );
 
-  const getNumberFilterFromParams = useCallback((key: string) => {
-    const value = searchParams.get(key);
-    return value ? parseInt(value) : undefined;
-  }, [searchParams]);
+  const getNumberFilterFromParams = useCallback(
+    (key: string) => {
+      const value = searchParams.get(key);
+      return value ? parseInt(value) : undefined;
+    },
+    [searchParams]
+  );
 
   // Crear objeto de filtros desde los search params
-  const filtersFromParams = useMemo((): LabProjectFilters => ({
-    page: getNumberFilterFromParams('page') || 1,
-    limit: getNumberFilterFromParams('limit') || 10,
-    sortBy: getFilterFromParams('sortBy', 'fecha') as LabProjectFilters['sortBy'],
-    sortOrder: getFilterFromParams('sortOrder', 'DESC') as LabProjectFilters['sortOrder'],
-    estado: getFilterFromParams('estado', 'todos') as LabProjectFilters['estado'],
-    nombreProyecto: getFilterFromParams('nombreProyecto'),
-    solicitante: getFilterFromParams('solicitante'),
-    obrero: getFilterFromParams('obrero'),
-    hasApiques: getBooleanFilterFromParams('hasApiques'),
-    hasProfiles: getBooleanFilterFromParams('hasProfiles'),
-    startDate: getFilterFromParams('startDate'),
-    endDate: getFilterFromParams('endDate'),
-    minApiques: getNumberFilterFromParams('minApiques'),
-    maxApiques: getNumberFilterFromParams('maxApiques'),
-    minProfiles: getNumberFilterFromParams('minProfiles'),
-    maxProfiles: getNumberFilterFromParams('maxProfiles'),
-  }), [getFilterFromParams, getBooleanFilterFromParams, getNumberFilterFromParams]);
+  const filtersFromParams = useMemo(
+    (): LabProjectFilters => ({
+      page: getNumberFilterFromParams("page") || 1,
+      limit: getNumberFilterFromParams("limit") || 10,
+      sortBy: getFilterFromParams(
+        "sortBy",
+        "fecha"
+      ) as LabProjectFilters["sortBy"],
+      sortOrder: getFilterFromParams(
+        "sortOrder",
+        "DESC"
+      ) as LabProjectFilters["sortOrder"],
+      estado: getFilterFromParams(
+        "estado",
+        "todos"
+      ) as LabProjectFilters["estado"],
+      nombreProyecto: getFilterFromParams("nombreProyecto"),
+      solicitante: getFilterFromParams("solicitante"),
+      obrero: getFilterFromParams("obrero"),
+      hasApiques: getBooleanFilterFromParams("hasApiques"),
+      hasProfiles: getBooleanFilterFromParams("hasProfiles"),
+      startDate: getFilterFromParams("startDate"),
+      endDate: getFilterFromParams("endDate"),
+      minApiques: getNumberFilterFromParams("minApiques"),
+      maxApiques: getNumberFilterFromParams("maxApiques"),
+      minProfiles: getNumberFilterFromParams("minProfiles"),
+      maxProfiles: getNumberFilterFromParams("maxProfiles"),
+    }),
+    [getFilterFromParams, getBooleanFilterFromParams, getNumberFilterFromParams]
+  );
 
   // Función para actualizar los filtros en la URL
-  const updateUrlFilters = useCallback((newFilters: Partial<LabProjectFilters>) => {
-    const newParams = new URLSearchParams(searchParams);
-    
-    Object.entries(newFilters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        // No incluir "todos" para el estado
-        if (key === 'estado' && value === 'todos') {
-          newParams.delete(key);
-        } else {
-          newParams.set(key, String(value));
-        }
-      } else {
-        newParams.delete(key);
-      }
-    });
+  const updateUrlFilters = useCallback(
+    (newFilters: Partial<LabProjectFilters>) => {
+      const newParams = new URLSearchParams(searchParams);
 
-    setSearchParams(newParams);
-  }, [searchParams, setSearchParams]);  // Usar los filtros desde search params
+      Object.entries(newFilters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+          // No incluir "todos" para el estado
+          if (key === "estado" && value === "todos") {
+            newParams.delete(key);
+          } else {
+            newParams.set(key, String(value));
+          }
+        } else {
+          newParams.delete(key);
+        }
+      });
+
+      setSearchParams(newParams);
+    },
+    [searchParams, setSearchParams]
+  ); // Usar los filtros desde search params
   const filters = filtersFromParams;
   const filtersLoading = false; // No hay loading con search params
-  
+
   // Funciones para manejar filtros
   const updateFilters = updateUrlFilters;
-    const updateFilter = useCallback((key: keyof LabProjectFilters, value: string | number | boolean | undefined) => {
-    updateUrlFilters({ [key]: value });
-  }, [updateUrlFilters]);
-    const clearFilters = useCallback(() => {
+  const updateFilter = useCallback(
+    (
+      key: keyof LabProjectFilters,
+      value: string | number | boolean | undefined
+    ) => {
+      updateUrlFilters({ [key]: value });
+    },
+    [updateUrlFilters]
+  );
+  const clearFilters = useCallback(() => {
     setSearchParams(new URLSearchParams());
     setLocalSearchInputs({
       nombreProyecto: "",
@@ -135,14 +163,14 @@ const ProjectsDashboard = () => {
     });
     setShowAdvancedFilters(false);
   }, [setSearchParams]);
-  
+
   const hasActiveFilters = useMemo(() => {
     const params = Object.fromEntries(searchParams.entries());
-    const activeParams = Object.keys(params).filter(key => 
-      !['page', 'limit', 'sortBy', 'sortOrder'].includes(key)
+    const activeParams = Object.keys(params).filter(
+      (key) => !["page", "limit", "sortBy", "sortOrder"].includes(key)
     );
     return activeParams.length > 0;
-  }, [searchParams]);// Filtrar datos localmente (la API podría no soportar todos los filtros)
+  }, [searchParams]); // Filtrar datos localmente (la API podría no soportar todos los filtros)
   const filteredData = useMemo(() => {
     if (!projectsData?.data) return [];
 
@@ -329,7 +357,7 @@ const ProjectsDashboard = () => {
       navigate(`/lab/proyectos/${projectId}/perfiles`);
     },
     [navigate]
-  );  // Cargar datos
+  ); // Cargar datos
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -359,7 +387,8 @@ const ProjectsDashboard = () => {
       } finally {
         setLoading(false);
       }
-    };    if (!filtersLoading) {
+    };
+    if (!filtersLoading) {
       fetchData();
     }
   }, [filters, filtersLoading]);
@@ -371,7 +400,7 @@ const ProjectsDashboard = () => {
       solicitante: filters.solicitante || "",
       obrero: filters.obrero || "",
     });
-  }, [filters.nombreProyecto, filters.solicitante, filters.obrero]);  // Función para aplicar los filtros de búsqueda
+  }, [filters.nombreProyecto, filters.solicitante, filters.obrero]); // Función para aplicar los filtros de búsqueda
   const applySearchFilters = useCallback(() => {
     console.info("🔍 Aplicando filtros de búsqueda:", {
       nombreProyecto: localSearchInputs.nombreProyecto || undefined,
@@ -458,7 +487,7 @@ const ProjectsDashboard = () => {
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
-        )}{" "}
+        )}
         {/* Estadísticas rápidas */}
         <Box sx={{ mb: 3, display: "flex", gap: 2, flexWrap: "wrap" }}>
           <Chip
@@ -521,7 +550,6 @@ const ProjectsDashboard = () => {
         {/* Filtros principales */}
         <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
           <Grid2 container spacing={2} alignItems="center">
-            {" "}
             <Grid2 size={{ xs: 12, md: 3 }}>
               <TextField
                 fullWidth
@@ -585,7 +613,7 @@ const ProjectsDashboard = () => {
             </Grid2>
             <Grid2 size={{ xs: 12, md: 2 }}>
               <FormControl size="small" fullWidth>
-                <InputLabel>Estado</InputLabel>{" "}
+                <InputLabel>Estado</InputLabel>
                 <Select
                   value={filters.estado || "todos"}
                   label="Estado"
@@ -610,10 +638,9 @@ const ProjectsDashboard = () => {
               >
                 Más Filtros
               </Button>
-            </Grid2>{" "}
+            </Grid2>
             <Grid2 size={{ xs: 12, md: 3 }}>
               <Stack direction="row" spacing={1}>
-                {" "}
                 {/* Botón de buscar inmediato si hay cambios pendientes */}
                 {(localSearchInputs.nombreProyecto !==
                   (filters.nombreProyecto || "") ||
@@ -655,9 +682,7 @@ const ProjectsDashboard = () => {
           <Collapse in={showAdvancedFilters}>
             <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: "divider" }}>
               <Grid2 container spacing={2}>
-                {" "}
                 <Grid2 size={{ xs: 12, md: 3 }}>
-                  {" "}
                   <TextField
                     fullWidth
                     label="Obrero"
@@ -708,7 +733,7 @@ const ProjectsDashboard = () => {
                     onChange={(e) => updateFilter("endDate", e.target.value)}
                     InputLabelProps={{ shrink: true }}
                   />
-                </Grid2>{" "}
+                </Grid2>
                 <Grid2 size={{ xs: 12, md: 3 }}>
                   <FormControl size="small" fullWidth>
                     <InputLabel>Tiene Apiques</InputLabel>
@@ -903,7 +928,7 @@ const ProjectsDashboard = () => {
                   >
                     Fecha
                   </TableSortLabel>
-                </TableCell>{" "}
+                </TableCell>
                 <TableCell>Estado</TableCell>
                 <TableCell align="center">Apiques</TableCell>
                 <TableCell align="center">Perfiles</TableCell>

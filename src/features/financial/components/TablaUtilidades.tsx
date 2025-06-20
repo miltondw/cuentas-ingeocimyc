@@ -289,7 +289,6 @@ const TablaUtilidades: React.FC = () => {
   if (error) {
     return (
       <Box sx={{ maxWidth: "90vw", mx: "auto", my: 3 }}>
-        {" "}
         <Alert
           severity="error"
           action={

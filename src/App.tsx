@@ -102,7 +102,6 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <Router>
-            {" "}
             {/* Botón de instalación de PWA */}
             {installPrompt && (
               <Container maxWidth="sm" sx={{ mt: 2, textAlign: "center" }}>

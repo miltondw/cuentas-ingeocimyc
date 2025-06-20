@@ -176,7 +176,7 @@ const AppRoutes = () => {
               path={ROUTES.ADMIN.UTILITIES}
               element={<TablaUtilidadesPage />}
             />
-          </Route>{" "}
+          </Route>
         </Route>
 
         {/* Rutas protegidas - Laboratorio */}
