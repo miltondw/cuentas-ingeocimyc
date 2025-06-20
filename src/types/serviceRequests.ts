@@ -332,3 +332,6 @@ export interface ProcessedServiceField {
   dependsOnField?: string;
   dependsOnValue?: string;
 }
+
+// Alias para compatibilidad con código anterior
+export type ServiceCategory = APIServiceCategory;

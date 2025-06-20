@@ -10,6 +10,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import type {
   CreateServiceRequestRequest,
   ServiceRequestFilters,
+  InternalServiceRequestData,
 } from "@/types/serviceRequests";
 
 // Interfaz para errores de API
@@ -235,8 +236,8 @@ export const usePreviewServiceRequestPDF = () => {
  * Hook para validaciones del formulario
  */
 export const useServiceRequestValidation = () => {
-  const validateForm = useCallback((data: CreateServiceRequestRequest) => {
-    const errors: Partial<Record<keyof CreateServiceRequestRequest, string>> =
+  const validateForm = useCallback((data: InternalServiceRequestData) => {
+    const errors: Partial<Record<keyof InternalServiceRequestData, string>> =
       {};
 
     // Validar nombre
@@ -252,7 +253,9 @@ export const useServiceRequestValidation = () => {
       errors.email = "El email es requerido";
     } else if (!emailRegex.test(data.email)) {
       errors.email = "Formato de email inválido";
-    } // Validar teléfono
+    }
+
+    // Validar teléfono
     const phoneRegex = /^[\d\s+\-()]+$/;
     if (!data.telefono?.trim()) {
       errors.telefono = "El teléfono es requerido";
@@ -263,7 +266,9 @@ export const useServiceRequestValidation = () => {
     // Validar empresa
     if (!data.empresa?.trim()) {
       errors.empresa = "El nombre de la empresa es requerido";
-    } // Validar servicios seleccionados
+    }
+
+    // Validar servicios seleccionados
     if (!data.selectedServices || data.selectedServices.length === 0) {
       errors.selectedServices = "Debe seleccionar al menos un servicio";
     }

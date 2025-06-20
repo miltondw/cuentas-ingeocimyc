@@ -412,9 +412,8 @@ export const ClientServiceRequestForm: React.FC<
 
   /**
    * Renderizar el contenido del paso actual
-   */
-  const renderStepContent = () => {
-    if (isSubmitted) {
+   */ const renderStepContent = () => {
+    if (isSubmitted && submittedRequest) {
       return (
         <SuccessStep
           serviceRequest={submittedRequest}
