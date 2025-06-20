@@ -280,13 +280,14 @@ export interface APIServiceCategory {
 export interface APIServiceAdditionalField {
   id: number;
   serviceId: number;
-  fieldName: string;
+  name: string; // Cambiado de fieldName a name para coincidir con la API real
   type: "text" | "number" | "date" | "select" | "checkbox";
   required: boolean;
   options?: string[] | null;
   dependsOnField?: string | null;
   dependsOnValue?: string | null;
   label: string;
+  displayOrder?: number;
   created_at: string;
   updatedAt: string;
 }

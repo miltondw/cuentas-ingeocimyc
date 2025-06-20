@@ -64,8 +64,8 @@ export interface ServiceSelectionFormProps {
   onChange: (updates: Partial<InternalServiceRequestData>) => void;
 }
 
-// Interfaces locales para el formulario
-interface ServiceField {
+// Interfaces locales para el formulario (para referencia futura)
+interface _ServiceField {
   id: string;
   label: string;
   type: "text" | "textarea" | "number" | "select" | "checkbox" | "date";
@@ -79,6 +79,7 @@ interface ServiceField {
   options?: string[];
   dependsOnField?: string;
   dependsOnValue?: string;
+  displayOrder?: number;
 }
 
 // Iconos por categoría (fallback si no viene de la API)
@@ -99,13 +100,16 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
 }) => {
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("md"));
+  const isExtraSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
 
   const { data: servicesData, isLoading, error } = useServices();
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
 
+  // Solo para servicios sin información adicional
   const [quantityInputs, setQuantityInputs] = useState<Record<string, number>>(
     {}
   );
+
   // Estados para el modal de configuración
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [configService, setConfigService] = useState<{
@@ -142,29 +146,34 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
           categoryId: service.categoryId.toString(),
           categoryName: service.category.name,
           hasAdditionalFields: service.additionalFields.length > 0,
-          additionalFields: service.additionalFields.map((field) => ({
-            id: field.id.toString(),
-            name: field.fieldName,
-            label: field.label,
-            type: field.type,
-            required: field.required,
-            options: field.options || undefined,
-            dependsOnField: field.dependsOnField || undefined,
-            dependsOnValue: field.dependsOnValue || undefined,
-          })),
+          additionalFields: service.additionalFields
+            .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+            .map((field) => ({
+              id: field.id.toString(),
+              name: field.name,
+              label: field.label,
+              type: field.type,
+              required: field.required,
+              options: field.options || undefined,
+              dependsOnField: field.dependsOnField || undefined,
+              dependsOnValue: field.dependsOnValue || undefined,
+              displayOrder: field.displayOrder || 0,
+            })),
         });
       }
     });
 
     return Array.from(categoriesMap.values());
-  }, [servicesData]); // Función para agregar un servicio con cantidad (sin campos adicionales)
+  }, [servicesData]);
+
+  // Función para agregar un servicio SIN información adicional (con cantidad)
   const addServiceWithQuantity = useCallback(
     (serviceId: string, quantity: number = 1) => {
       const service = categories
         ?.flatMap((cat) => cat.services)
         ?.find((s) => s.id === serviceId);
 
-      if (!service) return;
+      if (!service || service.hasAdditionalFields) return;
 
       const newSelectedService: SelectedService = {
         serviceId: service.id,
@@ -198,7 +207,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
     [categories, data.selectedServices, onChange]
   );
 
-  // Función para manejar cambio de cantidad antes de agregar
+  // Función para manejar cambio de cantidad antes de agregar (solo servicios sin info adicional)
   const handleQuantityChange = useCallback(
     (serviceId: string, quantity: number) => {
       setQuantityInputs((prev) => ({
@@ -219,7 +228,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
     [data.selectedServices, onChange]
   );
 
-  // Función para agregar una nueva instancia (capa)
+  // Función para agregar una nueva instancia (muestra) para servicios con información adicional
   const addInstance = useCallback(
     (serviceId: string) => {
       const service = categories
@@ -233,7 +242,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
           if (selectedService.serviceId === serviceId) {
             const newInstance: ServiceInstance = {
               instanceId: uuidv4(),
-              quantity: 1,
+              quantity: 1, // Para servicios con info adicional, cada instancia = 1 muestra
               additionalData: [],
               notes: "",
             };
@@ -242,10 +251,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
             return {
               ...selectedService,
               instances: newInstances,
-              totalQuantity: newInstances.reduce(
-                (sum, inst) => sum + inst.quantity,
-                0
-              ),
+              totalQuantity: newInstances.length, // Total = número de muestras/instancias
             };
           }
           return selectedService;
@@ -275,10 +281,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
               return {
                 ...selectedService,
                 instances: newInstances,
-                totalQuantity: newInstances.reduce(
-                  (sum, inst) => sum + inst.quantity,
-                  0
-                ),
+                totalQuantity: newInstances.length, // Para servicios con info adicional
               };
             }
             return selectedService;
@@ -290,9 +293,16 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
     [data.selectedServices, onChange]
   );
 
-  // Función para actualizar cantidad de una instancia
+  // Función para actualizar cantidad de una instancia (solo para servicios SIN info adicional)
   const updateInstanceQuantity = useCallback(
     (serviceId: string, instanceId: string, quantity: number) => {
+      const service = categories
+        ?.flatMap((cat) => cat.services)
+        ?.find((s) => s.id === serviceId);
+
+      // Si tiene información adicional, no permitir cambiar cantidad (siempre es 1 por muestra)
+      if (service?.hasAdditionalFields) return;
+
       const updatedServices =
         data.selectedServices?.map((selectedService) => {
           if (selectedService.serviceId === serviceId) {
@@ -317,11 +327,10 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
 
       onChange({ selectedServices: updatedServices });
     },
-    [data.selectedServices, onChange]
+    [categories, data.selectedServices, onChange]
   );
-
-  // Función para actualizar datos adicionales
-  const updateAdditionalData = useCallback(
+  // Función para actualizar datos adicionales (reservada para uso futuro)
+  const _updateAdditionalData = useCallback(
     (
       serviceId: string,
       instanceId: string,
@@ -361,7 +370,9 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
         ? prev.filter((id) => id !== categoryId)
         : [...prev, categoryId]
     );
-  }, []); // Verificar si un servicio está seleccionado
+  }, []);
+
+  // Verificar si un servicio está seleccionado
   const isServiceSelected = useCallback(
     (serviceId: string) => {
       return (
@@ -370,174 +381,47 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
     },
     [data.selectedServices]
   );
-  // Renderizar campo adicional
-  const renderAdditionalField = useCallback(
-    (
-      field: ServiceField,
-      serviceId: string,
-      instanceId: string,
-      currentValue?: string | number | boolean
-    ) => {
-      const value = currentValue ?? field.defaultValue ?? "";
-
-      switch (field.type) {
-        case "text":
-        case "textarea":
-          return (
-            <TextField
-              key={field.id}
-              fullWidth
-              label={field.label}
-              placeholder={field.placeholder}
-              multiline={field.type === "textarea"}
-              rows={field.type === "textarea" ? 3 : 1}
-              value={value}
-              required={field.required}
-              onChange={(e) =>
-                updateAdditionalData(
-                  serviceId,
-                  instanceId,
-                  field.id,
-                  e.target.value
-                )
-              }
-              variant="outlined"
-              size="small"
-            />
-          );
-
-        case "number":
-          return (
-            <TextField
-              key={field.id}
-              fullWidth
-              type="number"
-              label={field.label}
-              placeholder={field.placeholder}
-              value={value}
-              required={field.required}
-              inputProps={{
-                min: field.validation?.min,
-                max: field.validation?.max,
-              }}
-              onChange={(e) =>
-                updateAdditionalData(
-                  serviceId,
-                  instanceId,
-                  field.id,
-                  Number(e.target.value)
-                )
-              }
-              variant="outlined"
-              size="small"
-            />
-          );
-
-        case "select":
-          return (
-            <FormControl key={field.id} fullWidth size="small">
-              <InputLabel>{field.label}</InputLabel>
-              <Select
-                value={value}
-                label={field.label}
-                required={field.required}
-                onChange={(e) =>
-                  updateAdditionalData(
-                    serviceId,
-                    instanceId,
-                    field.id,
-                    e.target.value
-                  )
-                }
-              >
-                {field.options?.map((option: string) => (
-                  <MenuItem key={option} value={option}>
-                    {option}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          );
-        case "checkbox":
-          return (
-            <FormControlLabel
-              key={field.id}
-              control={
-                <Checkbox
-                  checked={Boolean(value)}
-                  onChange={(e) =>
-                    updateAdditionalData(
-                      serviceId,
-                      instanceId,
-                      field.id,
-                      e.target.checked
-                    )
-                  }
-                />
-              }
-              label={field.label}
-            />
-          );
-
-        case "date":
-          return (
-            <TextField
-              key={field.id}
-              fullWidth
-              type="date"
-              label={field.label}
-              value={value}
-              required={field.required}
-              onChange={(e) =>
-                updateAdditionalData(
-                  serviceId,
-                  instanceId,
-                  field.id,
-                  e.target.value
-                )
-              }
-              variant="outlined"
-              size="small"
-              InputLabelProps={{ shrink: true }}
-            />
-          );
-
-        default:
-          return null;
-      }
-    },
-    [updateAdditionalData]
-  );
   // Funciones del modal de configuración
   const openConfigModal = useCallback(
     (service: APIService, quantity: number = 1, instanceIndex?: number) => {
+      // Encontrar el servicio original de la API para tener acceso a la estructura completa
+      const originalService = servicesData?.find(
+        (s) => s.id.toString() === service.id.toString()
+      );
+      if (!originalService) {
+        console.error("No se encontró el servicio original:", service.id);
+        return;
+      }
+
       // Si es para editar una instancia existente
       if (instanceIndex !== undefined) {
         const selectedService = data.selectedServices?.find(
-          (s) => s.serviceId === service.id.toString()
+          (s) => s.serviceId === originalService.id.toString()
         );
         if (selectedService && selectedService.instances[instanceIndex]) {
           const instance = selectedService.instances[instanceIndex];
           setConfigInstances([{ ...instance }]);
         }
       } else {
-        // Nueva configuración
+        // Nueva configuración - para servicios con info adicional, cada instancia = 1 muestra
         const newInstance: ServiceInstance = {
           instanceId: uuidv4(),
-          quantity: quantity,
-          additionalData: (service.additionalFields || []).map((field) => ({
-            fieldId: field.id.toString(),
-            value: "",
-          })),
+          quantity: 1, // Siempre 1 para servicios con información adicional
+          additionalData: (originalService.additionalFields || []).map(
+            (field) => ({
+              fieldId: field.id.toString(),
+              value: "",
+            })
+          ),
           notes: "",
         };
         setConfigInstances([newInstance]);
       }
 
-      setConfigService({ service, quantity, instanceIndex });
+      setConfigService({ service: originalService, quantity, instanceIndex });
       setConfigModalOpen(true);
     },
-    [data.selectedServices]
+    [data.selectedServices, servicesData]
   );
 
   const closeConfigModal = useCallback(() => {
@@ -545,12 +429,13 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
     setConfigService(null);
     setConfigInstances([]);
   }, []);
+
   const addInstanceInModal = useCallback(() => {
     if (!configService) return;
 
     const newInstance: ServiceInstance = {
       instanceId: uuidv4(),
-      quantity: 1,
+      quantity: 1, // Siempre 1 para servicios con información adicional
       additionalData: (configService.service.additionalFields || []).map(
         (field) => ({
           fieldId: field.id.toString(),
@@ -579,6 +464,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
     },
     []
   );
+
   const updateInstanceFieldInModal = useCallback(
     (instanceId: string, fieldId: string, value: string | number | boolean) => {
       setConfigInstances((prev) =>
@@ -596,6 +482,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
     },
     []
   );
+
   const saveConfiguredService = useCallback(() => {
     if (!configService || configInstances.length === 0) return;
 
@@ -612,10 +499,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
             return {
               ...selectedService,
               instances: updatedInstances,
-              totalQuantity: updatedInstances.reduce(
-                (sum, inst) => sum + inst.quantity,
-                0
-              ),
+              totalQuantity: updatedInstances.length, // Para servicios con info adicional
             };
           }
           return selectedService;
@@ -629,10 +513,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
         serviceName: service.name,
         serviceDescription: `${service.code} - ${service.name}`,
         instances: configInstances,
-        totalQuantity: configInstances.reduce(
-          (sum, inst) => sum + inst.quantity,
-          0
-        ),
+        totalQuantity: configInstances.length, // Para servicios con info adicional = número de muestras
       };
 
       const updatedServices = [
@@ -642,7 +523,6 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
 
       onChange({ selectedServices: updatedServices });
     }
-
     closeConfigModal();
   }, [
     configService,
@@ -650,7 +530,60 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
     data.selectedServices,
     onChange,
     closeConfigModal,
-  ]); // Renderizar campo en el modal
+  ]);
+  // Función para verificar si un campo debe ser visible basado en dependencias
+  const shouldShowField = useCallback(
+    (
+      field: { dependsOnField?: string | null; dependsOnValue?: string | null },
+      instanceId: string
+    ): boolean => {
+      if (!field.dependsOnField || !field.dependsOnValue) {
+        return true; // Mostrar si no tiene dependencias
+      }
+
+      // Buscar la instancia actual en configInstances
+      const currentInstance = configInstances.find(
+        (inst) => inst.instanceId === instanceId
+      );
+
+      if (!currentInstance) {
+        return true;
+      }
+
+      // Buscar el campo padre por name
+      const parentField = configService?.service.additionalFields?.find(
+        (f) => f.name === field.dependsOnField
+      );
+
+      if (!parentField) {
+        return true; // Si no se encuentra el campo padre, mostrar el campo
+      }
+
+      // Buscar el valor del campo padre
+      const parentFieldValue = currentInstance.additionalData?.find(
+        (data) => data.fieldId === parentField.id.toString()
+      )?.value;
+
+      // Si no hay valor en el campo padre, no mostrar
+      if (
+        parentFieldValue === undefined ||
+        parentFieldValue === null ||
+        parentFieldValue === ""
+      ) {
+        return false;
+      }
+
+      // Normalizar valores para comparación (convertir a string y trim)
+      const normalizedParentValue = String(parentFieldValue).trim();
+      const normalizedDependsValue = String(field.dependsOnValue).trim();
+
+      // Mostrar el campo solo si el valor del campo padre coincide
+      return normalizedParentValue === normalizedDependsValue;
+    },
+    [configInstances, configService]
+  );
+
+  // Renderizar campo en el modal
   const renderModalField = useCallback(
     (
       field: {
@@ -662,6 +595,8 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
         defaultValue?: string | number | boolean;
         validation?: { min?: number; max?: number };
         options?: string[] | null;
+        dependsOnField?: string | null;
+        dependsOnValue?: string | null;
       },
       instanceId: string,
       currentValue?: string | number | boolean
@@ -790,9 +725,18 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
 
   if (isLoading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          py: 8,
+          flexDirection: isExtraSmallScreen ? "column" : "row",
+          gap: 2,
+        }}
+      >
         <CircularProgress />
-        <Typography variant="body2" sx={{ ml: 2 }}>
+        <Typography variant="body2" textAlign="center">
           Cargando servicios disponibles...
         </Typography>
       </Box>
@@ -809,272 +753,247 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
   }
 
   return (
-    <Box>
-      <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
+    <Box sx={{ width: "100%" }}>
+      <Typography
+        variant={isExtraSmallScreen ? "h6" : "h5"}
+        gutterBottom
+        sx={{ mb: { xs: 2, md: 3 } }}
+      >
         Selección de Servicios
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{ mb: { xs: 3, md: 4 } }}
+      >
         Seleccione los servicios que necesita. Para servicios con información
-        adicional, puede agregar múltiples capas con diferentes configuraciones.
+        adicional, cada instancia representa una muestra con configuraciones
+        específicas.
       </Typography>
+
       {/* Mostrar errores */}
       {errors.selectedServices && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {errors.selectedServices}
         </Alert>
       )}
+
       {/* Servicios seleccionados */}
       {data.selectedServices && data.selectedServices.length > 0 && (
-        <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
+        <Paper elevation={2} sx={{ p: { xs: 2, md: 3 }, mb: { xs: 3, md: 4 } }}>
           <Typography
-            variant="h6"
+            variant={isExtraSmallScreen ? "subtitle1" : "h6"}
             gutterBottom
-            sx={{ display: "flex", alignItems: "center", gap: 1 }}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              flexWrap: "wrap",
+            }}
           >
             <LayersOutlined color="primary" />
-            Servicios Seleccionados ({data.selectedServices.length})
+            <Box component="span">
+              Servicios Seleccionados ({data.selectedServices.length})
+            </Box>
           </Typography>
 
-          {data.selectedServices.map((selectedService) => {
-            const service = categories
-              ?.flatMap((cat) => cat.services)
-              ?.find((s) => s.id === selectedService.serviceId);
+          <Stack spacing={2}>
+            {data.selectedServices.map((selectedService) => {
+              const service = categories
+                ?.flatMap((cat) => cat.services)
+                ?.find((s) => s.id === selectedService.serviceId);
 
-            return (
-              <Accordion key={selectedService.serviceId} sx={{ mb: 2 }}>
-                <AccordionSummary
-                  expandIcon={<ExpandMoreOutlined />}
-                  sx={{ pr: 1 }}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      width: "100%",
-                      mr: 1,
-                    }}
+              return (
+                <Accordion key={selectedService.serviceId}>
+                  <AccordionSummary
+                    expandIcon={<ExpandMoreOutlined />}
+                    sx={{ pr: 1 }}
                   >
-                    <Box>
-                      <Typography variant="subtitle1">
-                        {selectedService.serviceName}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Total: {selectedService.totalQuantity} unidades •
-                        {selectedService.instances.length} instancia(s)
-                      </Typography>
-                    </Box>
                     <Box
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeService(selectedService.serviceId);
-                      }}
                       sx={{
                         display: "flex",
                         alignItems: "center",
-                        cursor: "pointer",
-                        color: "error.main",
-                        "&:hover": {
-                          bgcolor: "error.light",
-                          borderRadius: 1,
-                        },
-                        p: 0.5,
+                        justifyContent: "space-between",
+                        width: "100%",
+                        mr: 1,
+                        flexWrap: "wrap",
+                        gap: 1,
                       }}
                     >
-                      <DeleteOutlined fontSize="small" />
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography
+                          variant="subtitle1"
+                          sx={{
+                            wordBreak: "break-word",
+                            fontSize: { xs: "0.9rem", md: "1rem" },
+                          }}
+                        >
+                          {selectedService.serviceName}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ fontSize: { xs: "0.7rem", md: "0.75rem" } }}
+                        >
+                          {service?.hasAdditionalFields
+                            ? `${selectedService.totalQuantity} muestra(s) • ${selectedService.instances.length} instancia(s)`
+                            : `Total: ${selectedService.totalQuantity} unidades • ${selectedService.instances.length} instancia(s)`}
+                        </Typography>
+                      </Box>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeService(selectedService.serviceId);
+                        }}
+                        sx={{
+                          "&:hover": {
+                            bgcolor: "error.light",
+                          },
+                        }}
+                      >
+                        <DeleteOutlined fontSize="small" />
+                      </IconButton>
                     </Box>
-                  </Box>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Grid2 container spacing={2}>
-                    {selectedService.instances.map((instance, index) => (
-                      <Grid2 size={{ xs: 12 }} key={instance.instanceId}>
-                        <Paper variant="outlined" sx={{ p: 2 }}>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              mb: 2,
-                            }}
-                          >
-                            <Typography variant="subtitle2">
-                              Instancia {index + 1}
-                              {service?.hasAdditionalFields && (
-                                <Chip
-                                  label="Con campos adicionales"
-                                  size="small"
-                                  sx={{ ml: 1 }}
-                                />
-                              )}
-                            </Typography>
-                            <Box sx={{ display: "flex", gap: 1 }}>
-                              {/* Botón para editar en modal */}
-                              {service?.hasAdditionalFields && (
-                                <Tooltip title="Editar información adicional">
-                                  <IconButton
-                                    onClick={() => {
-                                      const apiService = servicesData?.find(
-                                        (s) =>
-                                          s.id.toString() ===
-                                          selectedService.serviceId
-                                      );
-                                      if (apiService) {
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Grid2 container spacing={2}>
+                      {selectedService.instances.map((instance, index) => (
+                        <Grid2 size={{ xs: 12 }} key={instance.instanceId}>
+                          <Paper variant="outlined" sx={{ p: 2 }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                mb: 2,
+                                flexWrap: "wrap",
+                                gap: 1,
+                              }}
+                            >
+                              <Typography variant="subtitle2">
+                                {service?.hasAdditionalFields
+                                  ? `Muestra ${index + 1}`
+                                  : `Instancia ${index + 1}`}
+                              </Typography>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  gap: 1,
+                                  alignItems: "center",
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                {/* Solo mostrar cantidad si NO tiene información adicional */}
+                                {!service?.hasAdditionalFields && (
+                                  <TextField
+                                    type="number"
+                                    label="Cantidad"
+                                    value={instance.quantity}
+                                    onChange={(e) =>
+                                      updateInstanceQuantity(
+                                        selectedService.serviceId,
+                                        instance.instanceId,
+                                        Number(e.target.value)
+                                      )
+                                    }
+                                    size="small"
+                                    sx={{ width: { xs: 80, md: 100 } }}
+                                    inputProps={{ min: 1 }}
+                                  />
+                                )}
+
+                                {service?.hasAdditionalFields && (
+                                  <Tooltip title="Editar información de la muestra">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() =>
                                         openConfigModal(
-                                          apiService,
+                                          service as unknown as APIService,
                                           instance.quantity,
                                           index
-                                        );
+                                        )
                                       }
-                                    }}
-                                    color="primary"
+                                    >
+                                      <InfoOutlined />
+                                    </IconButton>
+                                  </Tooltip>
+                                )}
+
+                                <Tooltip
+                                  title={
+                                    service?.hasAdditionalFields
+                                      ? "Remover muestra"
+                                      : "Remover instancia"
+                                  }
+                                >
+                                  <IconButton
                                     size="small"
+                                    color="error"
+                                    onClick={() =>
+                                      removeInstance(
+                                        selectedService.serviceId,
+                                        instance.instanceId
+                                      )
+                                    }
                                   >
-                                    <InfoOutlined />
+                                    <DeleteOutlined />
                                   </IconButton>
                                 </Tooltip>
-                              )}
-
-                              {selectedService.instances.length > 1 && (
-                                <IconButton
-                                  onClick={() =>
-                                    removeInstance(
-                                      selectedService.serviceId,
-                                      instance.instanceId
-                                    )
-                                  }
-                                  color="error"
-                                  size="small"
-                                >
-                                  <DeleteOutlined />
-                                </IconButton>
-                              )}
+                              </Box>
                             </Box>
-                          </Box>
-                          <Grid2 container spacing={2}>
-                            {/* Cantidad */}
-                            <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
-                              <TextField
-                                fullWidth
-                                type="number"
-                                label="Cantidad"
-                                value={instance.quantity}
-                                inputProps={{ min: 1 }}
-                                onChange={(e) =>
-                                  updateInstanceQuantity(
-                                    selectedService.serviceId,
-                                    instance.instanceId,
-                                    Number(e.target.value)
-                                  )
-                                }
-                                variant="outlined"
-                                size="small"
-                              />
-                            </Grid2>
 
-                            {/* Campos adicionales */}
-                            {service?.hasAdditionalFields &&
-                              service.additionalFields && (
-                                <>
-                                  {service.additionalFields.map(
-                                    (field: ServiceField) => {
-                                      const currentValue =
-                                        instance.additionalData?.find(
-                                          (d) => d.fieldId === field.id
-                                        )?.value;
-
-                                      return (
-                                        <Grid2
-                                          size={{ xs: 12, sm: 6, md: 4 }}
-                                          key={field.id}
-                                        >
-                                          {renderAdditionalField(
-                                            field,
-                                            selectedService.serviceId,
-                                            instance.instanceId,
-                                            currentValue
-                                          )}
-                                        </Grid2>
-                                      );
-                                    }
-                                  )}
-                                </>
-                              )}
-
-                            {/* Notas */}
-                            <Grid2 size={{ xs: 12 }}>
-                              <TextField
-                                fullWidth
-                                label="Notas adicionales (opcional)"
-                                multiline
-                                rows={2}
-                                value={instance.notes || ""}
-                                onChange={(e) => {
-                                  const updatedServices =
-                                    data.selectedServices?.map((s) => {
-                                      if (
-                                        s.serviceId ===
-                                        selectedService.serviceId
-                                      ) {
-                                        const newInstances = s.instances.map(
-                                          (inst) => {
-                                            if (
-                                              inst.instanceId ===
-                                              instance.instanceId
-                                            ) {
-                                              return {
-                                                ...inst,
-                                                notes: e.target.value,
-                                              };
-                                            }
-                                            return inst;
-                                          }
-                                        );
-                                        return {
-                                          ...s,
-                                          instances: newInstances,
-                                        };
-                                      }
-                                      return s;
-                                    }) || [];
-                                  onChange({
-                                    selectedServices: updatedServices,
-                                  });
+                            {instance.notes && (
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{
+                                  display: "block",
+                                  fontSize: { xs: "0.7rem", md: "0.75rem" },
                                 }}
-                                variant="outlined"
-                                size="small"
-                              />
-                            </Grid2>
-                          </Grid2>
-                        </Paper>
-                      </Grid2>
-                    ))}
+                              >
+                                Notas: {instance.notes}
+                              </Typography>
+                            )}
+                          </Paper>
+                        </Grid2>
+                      ))}
 
-                    {/* Botón para agregar nueva instancia */}
-                    {service?.hasAdditionalFields && (
-                      <Grid2 size={{ xs: 12 }}>
-                        <Button
-                          startIcon={<AddOutlined />}
-                          onClick={() => addInstance(selectedService.serviceId)}
-                          variant="outlined"
-                          size="small"
-                        >
-                          Agregar Nueva Capa
-                        </Button>
-                      </Grid2>
-                    )}
-                  </Grid2>
-                </AccordionDetails>
-              </Accordion>
-            );
-          })}
+                      {service?.hasAdditionalFields && (
+                        <Grid2 size={{ xs: 12 }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<AddOutlined />}
+                            onClick={() =>
+                              addInstance(selectedService.serviceId)
+                            }
+                            fullWidth
+                          >
+                            Agregar nueva muestra
+                          </Button>
+                        </Grid2>
+                      )}
+                    </Grid2>
+                  </AccordionDetails>
+                </Accordion>
+              );
+            })}
+          </Stack>
         </Paper>
       )}
+
       {/* Catálogo de servicios */}
-      <Typography variant="h6" gutterBottom>
+      <Typography
+        variant={isExtraSmallScreen ? "subtitle1" : "h6"}
+        gutterBottom
+        sx={{ mb: { xs: 2, md: 3 } }}
+      >
         Catálogo de Servicios Disponibles
       </Typography>
-      <Grid2 container spacing={3}>
+
+      <Grid2 container spacing={{ xs: 2, md: 3 }}>
         {categories?.map((category) => {
           const CategoryIcon =
             CATEGORY_ICONS[category.id] || AssessmentOutlined;
@@ -1083,210 +1002,203 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
           return (
             <Grid2 size={{ xs: 12 }} key={category.id}>
               <Card elevation={2}>
-                <CardContent>
+                <CardContent sx={{ p: { xs: 2, md: 3 } }}>
                   <Box
                     sx={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
+                      mb: 2,
+                      cursor: "pointer",
+                      flexWrap: "wrap",
+                      gap: 2,
                     }}
+                    onClick={() => toggleCategory(category.id)}
                   >
                     <Box
                       sx={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 2,
-                        cursor: "pointer",
+                        gap: { xs: 1, md: 2 },
+                        minWidth: 0,
                         flex: 1,
-                        py: 1,
                       }}
-                      onClick={() => toggleCategory(category.id)}
                     >
                       <CategoryIcon color="primary" />
-                      <Box>
-                        <Typography variant="h6">{category.name}</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {category.description}
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography
+                          variant={isExtraSmallScreen ? "subtitle1" : "h6"}
+                          sx={{ wordBreak: "break-word" }}
+                        >
+                          {category.name}
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ fontSize: { xs: "0.8rem", md: "0.875rem" } }}
+                        >
+                          {category.services.length} servicios disponibles
                         </Typography>
                       </Box>
                     </Box>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Chip
-                        label={`${category.services.length} servicios`}
-                        size="small"
-                        variant="outlined"
-                      />
-                      <IconButton onClick={() => toggleCategory(category.id)}>
-                        <ExpandMoreOutlined
-                          sx={{
-                            transform: isExpanded
-                              ? "rotate(180deg)"
-                              : "rotate(0deg)",
-                            transition: "transform 0.3s",
-                          }}
-                        />
-                      </IconButton>
-                    </Box>
+                    <ExpandMoreOutlined
+                      sx={{
+                        transform: isExpanded
+                          ? "rotate(180deg)"
+                          : "rotate(0deg)",
+                        transition: "transform 0.3s",
+                      }}
+                    />
                   </Box>
+
                   {isExpanded && (
                     <>
-                      <Divider sx={{ my: 2 }} />
-                      <Grid2 container spacing={2}>
-                        {category.services.map((service) => {
-                          const isSelected = isServiceSelected(service.id);
-
-                          return (
-                            <Grid2
-                              size={{ xs: 12, sm: 6, md: 4 }}
-                              key={service.id}
+                      <Divider sx={{ mb: 2 }} />
+                      <Grid2 container spacing={{ xs: 1, md: 2 }}>
+                        {category.services.map((service) => (
+                          <Grid2
+                            size={{ xs: 12, sm: 6, lg: 4 }}
+                            key={service.id}
+                          >
+                            <Paper
+                              variant="outlined"
+                              sx={{
+                                p: { xs: 1.5, md: 2 },
+                                border: isServiceSelected(service.id)
+                                  ? "2px solid"
+                                  : "1px solid",
+                                borderColor: isServiceSelected(service.id)
+                                  ? "primary.main"
+                                  : "divider",
+                                bgcolor: isServiceSelected(service.id)
+                                  ? "primary.light"
+                                  : "background.paper",
+                                height: "100%",
+                                display: "flex",
+                                flexDirection: "column",
+                              }}
                             >
-                              <Paper
-                                variant="outlined"
+                              <Typography
+                                variant="subtitle1"
+                                gutterBottom
                                 sx={{
-                                  p: 2,
-                                  border: isSelected ? 2 : 1,
-                                  borderColor: isSelected
-                                    ? "primary.main"
-                                    : "divider",
-                                  bgcolor: isSelected
-                                    ? "primary.light"
-                                    : "background.paper",
-                                  "&:hover": {
-                                    borderColor: "primary.main",
-                                    bgcolor: isSelected
-                                      ? "primary.light"
-                                      : "action.hover",
-                                  },
+                                  fontSize: { xs: "0.9rem", md: "1rem" },
+                                  wordBreak: "break-word",
                                 }}
                               >
-                                <Box sx={{ mb: 2 }}>
-                                  <Typography variant="subtitle1" gutterBottom>
-                                    {service.name}
-                                  </Typography>
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                    paragraph
-                                  >
-                                    {service.description}
-                                  </Typography>
+                                {service.name}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{
+                                  mb: 2,
+                                  display: "block",
+                                  fontSize: { xs: "0.7rem", md: "0.75rem" },
+                                }}
+                              >
+                                {service.code}
+                              </Typography>
 
+                              {service.hasAdditionalFields && (
+                                <Chip
+                                  label="Requiere información adicional"
+                                  size="small"
+                                  color="info"
+                                  sx={{
+                                    mb: 2,
+                                    fontSize: { xs: "0.7rem", md: "0.75rem" },
+                                    height: { xs: 24, md: 32 },
+                                  }}
+                                />
+                              )}
+
+                              <Box sx={{ mt: "auto", pt: 1 }}>
+                                {!isServiceSelected(service.id) && (
                                   <Box
                                     sx={{
                                       display: "flex",
-                                      flexWrap: "wrap",
+                                      alignItems: "center",
                                       gap: 1,
-                                      mb: 1,
+                                      flexDirection: service.hasAdditionalFields
+                                        ? "column"
+                                        : { xs: "column", sm: "row" },
                                     }}
                                   >
-                                    <Chip
-                                      label={service.code}
-                                      size="small"
-                                      color="primary"
-                                      variant="outlined"
-                                    />
-                                    {service.hasAdditionalFields && (
-                                      <Tooltip title="Este servicio tiene campos adicionales configurables">
-                                        <Chip
-                                          label="Configurable"
+                                    {!service.hasAdditionalFields ? (
+                                      // Servicios SIN información adicional: mostrar cantidad
+                                      <>
+                                        <TextField
+                                          type="number"
+                                          label="Cantidad"
+                                          value={
+                                            quantityInputs[service.id] || 1
+                                          }
+                                          onChange={(e) =>
+                                            handleQuantityChange(
+                                              service.id,
+                                              Number(e.target.value)
+                                            )
+                                          }
                                           size="small"
-                                          color="secondary"
-                                          icon={<InfoOutlined />}
-                                        />
-                                      </Tooltip>
-                                    )}
-                                  </Box>
-                                </Box>
-
-                                {!isSelected ? (
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      flexDirection: "column",
-                                      gap: 2,
-                                    }}
-                                  >
-                                    {/* Cantidad */}
-                                    <Box
-                                      sx={{
-                                        display: "flex",
-                                        gap: 1,
-                                        alignItems: "center",
-                                      }}
-                                    >
-                                      <TextField
-                                        type="number"
-                                        label="Cantidad"
-                                        size="small"
-                                        value={quantityInputs[service.id] || 1}
-                                        onChange={(e) =>
-                                          handleQuantityChange(
-                                            service.id,
-                                            Number(e.target.value)
-                                          )
-                                        }
-                                        inputProps={{ min: 1, max: 999 }}
-                                        sx={{ width: 100 }}
-                                      />
-                                      {/* Botón para configurar en modal */}
-                                      {service.hasAdditionalFields && (
-                                        <Button
-                                          variant="outlined"
-                                          size="small"
-                                          onClick={() => {
-                                            const apiService =
-                                              servicesData?.find(
-                                                (s) =>
-                                                  s.id.toString() === service.id
-                                              );
-                                            if (apiService) {
-                                              const quantity =
-                                                quantityInputs[service.id] || 1;
-                                              openConfigModal(
-                                                apiService,
-                                                quantity
-                                              );
-                                            }
+                                          sx={{
+                                            width: { xs: "100%", sm: 100 },
+                                            flexShrink: 0,
                                           }}
-                                          startIcon={<InfoOutlined />}
-                                          sx={{ flexShrink: 0 }}
+                                          inputProps={{ min: 1 }}
+                                        />
+                                        <Button
+                                          variant="contained"
+                                          size="small"
+                                          onClick={() =>
+                                            addServiceWithQuantity(
+                                              service.id,
+                                              quantityInputs[service.id] || 1
+                                            )
+                                          }
+                                          sx={{
+                                            width: { xs: "100%", sm: "auto" },
+                                            minWidth: { sm: 80 },
+                                          }}
                                         >
-                                          Agregar información
+                                          Agregar
                                         </Button>
-                                      )}
-
+                                      </>
+                                    ) : (
+                                      // Servicios CON información adicional: botón directo
                                       <Button
                                         variant="contained"
                                         size="small"
-                                        onClick={() => {
-                                          const quantity =
-                                            quantityInputs[service.id] || 1;
-                                          addServiceWithQuantity(
-                                            service.id,
-                                            quantity
-                                          );
-                                        }}
-                                        sx={{ flexShrink: 0 }}
+                                        startIcon={<AddOutlined />}
+                                        onClick={() =>
+                                          openConfigModal(
+                                            service as unknown as APIService,
+                                            1
+                                          )
+                                        }
+                                        fullWidth
                                       >
-                                        Agregar
+                                        Agregar muestra
                                       </Button>
-                                    </Box>
+                                    )}
                                   </Box>
-                                ) : (
-                                  <Button
-                                    fullWidth
-                                    variant="contained"
-                                    size="small"
-                                    color="success"
-                                    onClick={() => removeService(service.id)}
-                                  >
-                                    ✓ Seleccionado - Clic para quitar
-                                  </Button>
                                 )}
-                              </Paper>
-                            </Grid2>
-                          );
-                        })}
+
+                                {isServiceSelected(service.id) && (
+                                  <Chip
+                                    label="✓ Seleccionado"
+                                    color="success"
+                                    size="small"
+                                    sx={{
+                                      fontSize: { xs: "0.7rem", md: "0.75rem" },
+                                      height: { xs: 24, md: 32 },
+                                    }}
+                                  />
+                                )}
+                              </Box>
+                            </Paper>
+                          </Grid2>
+                        ))}
                       </Grid2>
                     </>
                   )}
@@ -1296,27 +1208,35 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
           );
         })}
       </Grid2>
+
       {/* Información adicional */}
-      <Paper variant="outlined" sx={{ p: 2, mt: 3, bgcolor: "info.light" }}>
-        <Typography variant="body2" color="info.contrastText">
+      <Paper
+        variant="outlined"
+        sx={{
+          p: { xs: 2, md: 2 },
+          mt: { xs: 3, md: 3 },
+          bgcolor: "info.light",
+        }}
+      >
+        <Typography
+          variant="body2"
+          color="info.contrastText"
+          sx={{ fontSize: { xs: "0.8rem", md: "0.875rem" } }}
+        >
           💡 <strong>Consejos:</strong>
           <br />
-          • Puede seleccionar múltiples servicios según sus necesidades
+          • Los servicios simples manejan cantidad directamente
           <br />
-          • Los servicios con información adicional se configuran usando
-          &quot;Agregar información&quot;
+          • Los servicios con información adicional manejan muestras
+          individuales
           <br />
-          • Use el modal para agregar múltiples instancias con configuraciones
-          diferentes
+          • Cada muestra puede tener configuraciones específicas
           <br />
-          • Puede editar la información adicional de instancias existentes
-          usando el ícono de información
-          <br />
-          • Use las notas para agregar detalles específicos de cada instancia
-          <br />• Los precios mostrados son base y pueden variar según la
-          configuración final
+          • Use las notas para agregar detalles específicos
+          <br />• Puede editar la información de muestras existentes
         </Typography>
       </Paper>
+
       {/* Modal de configuración de servicios */}
       <Dialog
         open={configModalOpen}
@@ -1327,44 +1247,61 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
         PaperProps={{
           sx: {
             ...(isSmallScreen ? {} : { minHeight: "50vh" }),
+            m: isExtraSmallScreen ? 0 : 2,
           },
         }}
       >
-        <DialogTitle sx={{ pb: 1 }}>
+        <DialogTitle sx={{ pb: 1, px: { xs: 2, md: 3 } }}>
           <Box>
-            <Typography variant="h6">
+            <Typography
+              variant={isExtraSmallScreen ? "subtitle1" : "h6"}
+              sx={{ wordBreak: "break-word" }}
+            >
               {configService?.instanceIndex !== undefined
-                ? "Editar configuración del servicio"
-                : "Configurar servicio"}
+                ? "Editar información de la muestra"
+                : "Configurar información de la muestra"}
             </Typography>
             {configService && (
-              <Typography variant="body2" color="text.secondary">
-                {configService.service.name} - {configService.service.code}
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  fontSize: { xs: "0.8rem", md: "0.875rem" },
+                  wordBreak: "break-word",
+                }}
+              >
+                {configService.service.name} ({configService.service.code})
               </Typography>
             )}
           </Box>
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ px: { xs: 2, md: 3 } }}>
           {configService && (
-            <Stack spacing={3}>
+            <Stack spacing={{ xs: 2, md: 3 }}>
               {configInstances.map((instance, index) => (
                 <Paper
                   key={instance.instanceId}
                   variant="outlined"
-                  sx={{ p: 2 }}
+                  sx={{ p: { xs: 1.5, md: 2 } }}
                 >
                   <Box
                     sx={{
                       display: "flex",
-                      justifyContent: "space-between",
                       alignItems: "center",
+                      justifyContent: "space-between",
                       mb: 2,
+                      flexWrap: "wrap",
+                      gap: 1,
                     }}
                   >
-                    <Typography variant="subtitle1" color="primary">
+                    <Typography
+                      variant="subtitle1"
+                      sx={{ fontSize: { xs: "0.9rem", md: "1rem" } }}
+                    >
+                      Muestra {index + 1}
                       {configInstances.length > 1
-                        ? `Instancia ${index + 1}`
-                        : "Información del servicio"}
+                        ? ` de ${configInstances.length}`
+                        : ""}
                     </Typography>
                     {configInstances.length > 1 && (
                       <IconButton
@@ -1379,36 +1316,24 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                     )}
                   </Box>
 
-                  <Grid2 container spacing={2}>
-                    {/* Campo de cantidad */}
-                    <Grid2 size={{ xs: 12, sm: 6 }}>
-                      <TextField
-                        fullWidth
-                        type="number"
-                        label="Cantidad"
-                        value={instance.quantity}
-                        onChange={(e) =>
-                          updateInstanceInModal(instance.instanceId, {
-                            quantity: Math.max(
-                              1,
-                              parseInt(e.target.value) || 1
-                            ),
-                          })
-                        }
-                        inputProps={{ min: 1, max: 999 }}
-                        variant="outlined"
-                        size="small"
-                      />
-                    </Grid2>
-                    {/* Campos adicionales del servicio */}
-                    {(configService.service.additionalFields || []).map(
-                      (field) => {
+                  <Grid2 container spacing={{ xs: 1, md: 2 }}>
+                    {/* No mostrar cantidad para servicios con información adicional */}
+
+                    {(configService.service.additionalFields || [])
+                      .sort(
+                        (a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)
+                      )
+                      .map((field) => {
                         const currentValue = instance.additionalData?.find(
                           (data) => data.fieldId === field.id.toString()
                         )?.value;
 
+                        if (!shouldShowField(field, instance.instanceId)) {
+                          return null;
+                        }
+
                         return (
-                          <Grid2 key={field.id} size={{ xs: 12, sm: 6 }}>
+                          <Grid2 size={{ xs: 12, sm: 6 }} key={field.id}>
                             {renderModalField(
                               field,
                               instance.instanceId,
@@ -1416,54 +1341,55 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                             )}
                           </Grid2>
                         );
-                      }
-                    )}
-                    {/* Campo de notas */}
+                      })}
+
                     <Grid2 size={{ xs: 12 }}>
                       <TextField
                         fullWidth
                         multiline
                         rows={2}
                         label="Notas adicionales (opcional)"
-                        value={instance.notes}
+                        value={instance.notes || ""}
                         onChange={(e) =>
                           updateInstanceInModal(instance.instanceId, {
                             notes: e.target.value,
                           })
                         }
-                        variant="outlined"
-                        size="small"
                         placeholder="Agregue cualquier información adicional relevante..."
+                        size="small"
                       />
                     </Grid2>
                   </Grid2>
                 </Paper>
               ))}
 
-              {/* Botón para agregar más instancias */}
               {configService.instanceIndex === undefined && (
-                <Box sx={{ display: "flex", justifyContent: "center" }}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<AddOutlined />}
-                    onClick={addInstanceInModal}
-                    sx={{ mt: 1 }}
-                  >
-                    Agregar otra instancia
-                  </Button>
-                </Box>
+                <Button
+                  variant="outlined"
+                  startIcon={<AddOutlined />}
+                  onClick={addInstanceInModal}
+                  fullWidth
+                  size={isExtraSmallScreen ? "medium" : "large"}
+                >
+                  Agregar nueva muestra
+                </Button>
               )}
             </Stack>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 2, gap: 1 }}>
-          <Button onClick={closeConfigModal} color="inherit">
+        <DialogActions sx={{ p: { xs: 2, md: 2 }, gap: 1 }}>
+          <Button
+            onClick={closeConfigModal}
+            color="inherit"
+            size={isExtraSmallScreen ? "medium" : "large"}
+          >
             Cancelar
           </Button>
           <Button
             onClick={saveConfiguredService}
             variant="contained"
             disabled={configInstances.length === 0}
+            size={isExtraSmallScreen ? "medium" : "large"}
           >
             {configService?.instanceIndex !== undefined
               ? "Guardar cambios"

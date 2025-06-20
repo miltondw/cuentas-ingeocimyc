@@ -141,7 +141,7 @@ export const ClientServiceRequestForm: React.FC<
         hasAdditionalFields: service.additionalFields.length > 0,
         additionalFields: service.additionalFields.map((field) => ({
           id: field.id.toString(),
-          name: field.fieldName,
+          name: field.name,
           label: field.label,
           type: field.type,
           required: field.required,
@@ -198,26 +198,29 @@ export const ClientServiceRequestForm: React.FC<
             fieldName: string;
             fieldValue: string;
           }> = [];
-
           service.instances.forEach((instance, instanceIndex) => {
             if (instance.additionalData && instance.additionalData.length > 0) {
               instance.additionalData.forEach((data) => {
-                // Agregar prefijo de instancia para distinguir valores entre instancias
-                const fieldName = `instance_${instanceIndex + 1}_field_${
-                  data.fieldId
-                }`;
-                allAdditionalValues.push({
-                  fieldName: fieldName,
-                  fieldValue: String(data.value),
-                });
+                // Solo agregar si el valor no está vacío
+                const fieldValue = String(data.value).trim();
+                if (fieldValue !== "") {
+                  // Agregar prefijo de instancia para distinguir valores entre instancias
+                  const fieldName = `instance_${instanceIndex + 1}_field_${
+                    data.fieldId
+                  }`;
+                  allAdditionalValues.push({
+                    fieldName: fieldName,
+                    fieldValue: fieldValue,
+                  });
+                }
               });
             }
 
-            // Agregar notas si existen
-            if (instance.notes) {
+            // Agregar notas si existen y no están vacías
+            if (instance.notes && instance.notes.trim() !== "") {
               allAdditionalValues.push({
                 fieldName: `instance_${instanceIndex + 1}_notes`,
-                fieldValue: instance.notes,
+                fieldValue: instance.notes.trim(),
               });
             }
           });

@@ -9,7 +9,7 @@ import {
   Typography,
   Paper,
   Button,
-  Grid,
+  Grid2,
   Card,
   CardContent,
   Divider,
@@ -63,11 +63,11 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
     }
   };
 
-  const handlePreviewPDF = () => {
+  /*  const handlePreviewPDF = () => {
     if (serviceRequest?.id) {
       previewPDF(serviceRequest.id);
     }
-  };
+  }; */
 
   return (
     <Box sx={{ textAlign: "center" }}>
@@ -89,8 +89,8 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
       </Box>
 
       {/* Información de la solicitud */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={6}>
+      <Grid2 container spacing={3} sx={{ mb: 4 }}>
+        <Grid2 size={{ xs: 12, sm: 6 }}>
           <Card elevation={2}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -181,9 +181,9 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Grid2>
 
-        <Grid item xs={12} md={6}>
+        <Grid2 size={{ xs: 12, sm: 6 }}>
           <Card elevation={2}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -224,8 +224,8 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
               </List>
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Grid2>
+      </Grid2>
 
       {/* Información importante */}
       <Alert severity="info" sx={{ mb: 4, textAlign: "left" }}>
@@ -250,19 +250,19 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
           Acciones Disponibles
         </Typography>
 
-        <Grid container spacing={2} justifyContent="center">
-          <Grid item>
-            <Button
+        <Grid2 container spacing={2} justifyContent="center">
+          <Grid2>
+            {/*  <Button
               variant="outlined"
               startIcon={<VisibilityOutlined />}
               onClick={handlePreviewPDF}
               disabled={isPreviewLoading}
             >
               {isPreviewLoading ? "Cargando..." : "Previsualizar PDF"}
-            </Button>
-          </Grid>
+            </Button> */}
+          </Grid2>
 
-          <Grid item>
+          <Grid2>
             <Button
               variant="outlined"
               startIcon={<DownloadOutlined />}
@@ -271,9 +271,9 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
             >
               {isDownloading ? "Descargando..." : "Descargar PDF"}
             </Button>
-          </Grid>
+          </Grid2>
 
-          <Grid item>
+          {/*  <Grid2>
             <Button
               variant="outlined"
               startIcon={<VisibilityOutlined />}
@@ -281,9 +281,9 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
             >
               Ver Detalles
             </Button>
-          </Grid>
-
-          <Grid item>
+          </Grid2>
+ */}
+          <Grid2>
             <Button
               variant="contained"
               startIcon={<RefreshOutlined />}
@@ -292,8 +292,8 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
             >
               Nueva Solicitud
             </Button>
-          </Grid>
-        </Grid>
+          </Grid2>
+        </Grid2>
       </Paper>
 
       {/* Información de contacto */}
