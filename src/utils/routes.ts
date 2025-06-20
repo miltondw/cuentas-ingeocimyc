@@ -28,6 +28,7 @@ export const ROUTES = {
   PROFILE: "/profile",
   CLIENT: "/cliente",
   ADMIN: {
+    // Rutas existentes
     PROJECTS: "/proyectos",
     EXPENSES: "/gastos",
     CREATE_PROJECT: "/crear-proyecto",
@@ -35,6 +36,13 @@ export const ROUTES = {
     CREATE_MONTH_EXPENSE: "/crear-gasto-mes",
     CREATE_MONTH_EXPENSE_EDIT: "/crear-gasto-mes/:id",
     UTILITIES: "/utilidades",
+    // Nuevas rutas del panel de administración
+    DASHBOARD: "/admin",
+    CATEGORIES: "/admin/categories",
+    SERVICES: "/admin/services",
+    SERVICE_NEW: "/admin/services/new",
+    SERVICE_DETAIL: "/admin/services/:id",
+    SERVICE_EDIT: "/admin/services/:id/edit",
   },
   LAB: {
     PROJECTS: "/lab/proyectos",

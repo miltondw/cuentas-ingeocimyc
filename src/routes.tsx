@@ -32,6 +32,20 @@ const ClientRequestFormPage = lazy(
   () => import("@/features/client/pages/ClientRequestFormPage")
 );
 
+// Páginas de administración
+const AdminDashboardPage = lazy(
+  () => import("@/features/admin/pages/AdminDashboardPage")
+);
+const CategoriesManagementPage = lazy(
+  () => import("@/features/admin/pages/CategoriesManagementPage")
+);
+const ServicesManagementPage = lazy(
+  () => import("@/features/admin/pages/ServicesManagementPage")
+);
+const ServiceFormPage = lazy(
+  () => import("@/features/admin/pages/ServiceFormPage")
+);
+
 // Páginas de laboratorio
 const ProjectsDashboard = lazy(
   () => import("@/features/lab/pages/ProjectsDashboard")
@@ -144,7 +158,7 @@ const AppRoutes = () => {
           <Route element={<MainLayout />}>
             <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
           </Route>
-        </Route>
+        </Route>{" "}
         {/* Rutas protegidas - Admin */}
         <Route element={<PrivateRoute requiredRoles={["admin"]} />}>
           <Route element={<MainLayout />}>
@@ -176,9 +190,29 @@ const AppRoutes = () => {
               path={ROUTES.ADMIN.UTILITIES}
               element={<TablaUtilidadesPage />}
             />
+            {/* Nuevas rutas del panel de administración */}
+            <Route
+              path={ROUTES.ADMIN.DASHBOARD}
+              element={<AdminDashboardPage />}
+            />
+            <Route
+              path={ROUTES.ADMIN.CATEGORIES}
+              element={<CategoriesManagementPage />}
+            />
+            <Route
+              path={ROUTES.ADMIN.SERVICES}
+              element={<ServicesManagementPage />}
+            />
+            <Route
+              path={ROUTES.ADMIN.SERVICE_NEW}
+              element={<ServiceFormPage />}
+            />
+            <Route
+              path={ROUTES.ADMIN.SERVICE_EDIT}
+              element={<ServiceFormPage />}
+            />
           </Route>
         </Route>
-
         {/* Rutas protegidas - Laboratorio */}
         <Route element={<PrivateRoute requiredRoles={["admin", "lab"]} />}>
           <Route element={<MainLayout />}>

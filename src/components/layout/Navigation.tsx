@@ -25,6 +25,7 @@ import ScienceIcon from "@mui/icons-material/Science";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SettingsIcon from "@mui/icons-material/Settings";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import React from "react"; // Necesario para React.FC y React.ReactNode
 
@@ -45,6 +46,11 @@ interface IUser {
 
 // --- DATOS TIPADOS ---
 const adminPages: NavItem[] = [
+  {
+    name: "Panel de Administración",
+    path: "/admin",
+    icon: <AdminPanelSettingsIcon />,
+  },
   { name: "Proyectos", path: "/proyectos", icon: <GroupIcon /> },
   { name: "Gastos", path: "/gastos", icon: <BarChartIcon /> },
   { name: "Utilidades", path: "/utilidades", icon: <BarChartIcon /> },
