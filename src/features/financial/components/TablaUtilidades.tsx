@@ -6,8 +6,15 @@ import {
   Card,
   CardContent,
   Grid2,
-  Button,
+  Paper,
+  Chip,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import TrendingDownIcon from "@mui/icons-material/TrendingDown";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import { projectsService } from "../services/projectsService";
 import { useNotifications } from "@/hooks/useNotifications";
 import { LoadingOverlay } from "@/components/common/LoadingOverlay";
@@ -205,83 +212,216 @@ const TablaUtilidades: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
-  // Configuración de columnas para DataTable
+  // Configuración de columnas para DataTable mejorada con responsive
   const columns: ColumnConfig[] = [
     {
       key: "mes",
-      label: "Mes",
+      label: "📅 Período",
       sortable: true,
       render: (value) => (
-        <Typography variant="body2" fontWeight="medium">
-          {String(value)}
-        </Typography>
+        <Box
+          sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 130 }}
+        >
+          <Box
+            sx={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #3498db 0%, #2980b9 100%)",
+              flexShrink: 0,
+            }}
+          />
+          <Typography
+            variant="body2"
+            fontWeight="600"
+            sx={{
+              color: "#2c3e50",
+              textTransform: "capitalize",
+              fontSize: { xs: "0.8rem", sm: "0.875rem" },
+              lineHeight: 1.2,
+            }}
+          >
+            {String(value)}
+          </Typography>
+        </Box>
       ),
     },
     {
       key: "GastosProyectos",
-      label: "Gastos Proyectos",
-      sortable: true,
-      align: "right",
-      render: (value) => `$${formatNumber(value as number)}`,
-    },
-    {
-      key: "GastosEmpresa",
-      label: "Gastos Empresa",
-      sortable: true,
-      align: "right",
-      render: (value) => `$${formatNumber(value as number)}`,
-    },
-    {
-      key: "TotalGastos",
-      label: "Total Gastos",
+      label: "🏗️ Gastos Proyectos",
       sortable: true,
       align: "right",
       render: (value) => (
-        <Typography variant="body2" fontWeight="medium">
-          ${formatNumber(value as number)}
-        </Typography>
+        <Box sx={{ textAlign: "right", minWidth: 110 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 600,
+              fontFamily: "monospace",
+              color: "#e67e22",
+              fontSize: { xs: "0.75rem", sm: "0.9rem" },
+              lineHeight: 1.2,
+            }}
+          >
+            ${formatNumber(value as number)}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      key: "GastosEmpresa",
+      label: "🏢 Gastos Empresa",
+      sortable: true,
+      align: "right",
+      render: (value) => (
+        <Box sx={{ textAlign: "right", minWidth: 110 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 600,
+              fontFamily: "monospace",
+              color: "#d35400",
+              fontSize: { xs: "0.75rem", sm: "0.9rem" },
+              lineHeight: 1.2,
+            }}
+          >
+            ${formatNumber(value as number)}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      key: "TotalGastos",
+      label: "💸 Total Gastos",
+      sortable: true,
+      align: "right",
+      render: (value) => (
+        <Box sx={{ textAlign: "right", minWidth: 120 }}>
+          <Typography
+            variant="body2"
+            fontWeight="700"
+            sx={{
+              fontFamily: "monospace",
+              color: "#c0392b",
+              fontSize: { xs: "0.75rem", sm: "0.85rem" },
+              background: "rgba(192, 57, 43, 0.1)",
+              px: { xs: 0.5, sm: 1 },
+              py: 0.5,
+              borderRadius: 1,
+              display: "inline-block",
+              lineHeight: 1.2,
+            }}
+          >
+            ${formatNumber(value as number)}
+          </Typography>
+        </Box>
       ),
     },
     {
       key: "TotalRetencion",
-      label: "Total Retención",
-      sortable: true,
-      align: "right",
-      render: (value) => `$${formatNumber(value as number)}`,
-    },
-    {
-      key: "TotalIva",
-      label: "Total IVA",
-      sortable: true,
-      align: "right",
-      render: (value) => `$${formatNumber(value as number)}`,
-    },
-    {
-      key: "Ingresos",
-      label: "Total Ingresos",
+      label: "📊 Retención",
       sortable: true,
       align: "right",
       render: (value) => (
-        <Typography variant="body2" color="success.main" fontWeight="medium">
-          ${formatNumber(value as number)}
-        </Typography>
+        <Box sx={{ textAlign: "right", minWidth: 100 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 500,
+              fontFamily: "monospace",
+              color: "#8e44ad",
+              fontSize: { xs: "0.7rem", sm: "0.8rem" },
+              lineHeight: 1.2,
+            }}
+          >
+            ${formatNumber(value as number)}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      key: "TotalIva",
+      label: "🧾 IVA",
+      sortable: true,
+      align: "right",
+      render: (value) => (
+        <Box sx={{ textAlign: "right", minWidth: 90 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 500,
+              fontFamily: "monospace",
+              color: "#7f8c8d",
+              fontSize: { xs: "0.7rem", sm: "0.8rem" },
+              lineHeight: 1.2,
+            }}
+          >
+            ${formatNumber(value as number)}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      key: "Ingresos",
+      label: "💰 Ingresos",
+      sortable: true,
+      align: "right",
+      render: (value) => (
+        <Box sx={{ textAlign: "right", minWidth: 120 }}>
+          <Typography
+            variant="body2"
+            fontWeight="700"
+            sx={{
+              fontFamily: "monospace",
+              color: "#27ae60",
+              fontSize: { xs: "0.75rem", sm: "0.85rem" },
+              background: "rgba(39, 174, 96, 0.1)",
+              px: { xs: 0.5, sm: 1 },
+              py: 0.5,
+              borderRadius: 1,
+              display: "inline-block",
+              lineHeight: 1.2,
+            }}
+          >
+            ${formatNumber(value as number)}
+          </Typography>
+        </Box>
       ),
     },
     {
       key: "UtilidadNeta",
-      label: "Utilidad Neta",
+      label: "📈 Utilidad Neta",
       sortable: true,
       align: "right",
       render: (value) => {
         const utilidad = value as number;
+        const isPositive = utilidad >= 0;
         return (
-          <Typography
-            variant="body2"
-            color={utilidad >= 0 ? "success.main" : "error.main"}
-            fontWeight="bold"
-          >
-            ${formatNumber(utilidad)}
-          </Typography>
+          <Box sx={{ textAlign: "right", minWidth: 130 }}>
+            <Chip
+              icon={isPositive ? <TrendingUpIcon /> : <TrendingDownIcon />}
+              label={`$${formatNumber(utilidad)}`}
+              size="small"
+              sx={{
+                fontWeight: 700,
+                fontFamily: "monospace",
+                fontSize: { xs: "0.7rem", sm: "0.8rem" },
+                height: { xs: 24, sm: 32 },
+                background: isPositive
+                  ? "linear-gradient(135deg, #27ae60 0%, #229954 100%)"
+                  : "linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)",
+                color: "white",
+                border: `1px solid ${isPositive ? "#27ae60" : "#e74c3c"}`,
+                "& .MuiChip-icon": {
+                  color: "white",
+                  fontSize: { xs: "0.9rem", sm: "1rem" },
+                },
+                "& .MuiChip-label": {
+                  px: { xs: 0.5, sm: 1 },
+                },
+              }}
+            />
+          </Box>
         );
       },
     },
@@ -301,93 +441,422 @@ const TablaUtilidades: React.FC = () => {
 
   if (error) {
     return (
-      <Box sx={{ maxWidth: "90vw", mx: "auto", my: 3 }}>
-        <Alert
-          severity="error"
-          action={
-            <Button
-              onClick={fetchData}
-              variant="text"
-              color="inherit"
-              size="small"
-            >
-              Reintentar
-            </Button>
-          }
+      <Box
+        sx={{
+          p: { xs: 2, sm: 3 },
+          minHeight: "100vh",
+          background: "linear-gradient(135deg, #2c3e50 0%, #34495e 100%)",
+        }}
+      >
+        <Paper
+          elevation={8}
+          sx={{
+            p: { xs: 2, sm: 3 },
+            maxWidth: "90vw",
+            mx: "auto",
+            borderRadius: 3,
+            background: "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(10px)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+          }}
         >
-          {error}
-        </Alert>
+          <Alert
+            severity="error"
+            sx={{
+              borderRadius: 2,
+              "& .MuiAlert-icon": {
+                fontSize: "1.5rem",
+              },
+            }}
+            variant="filled"
+            action={
+              <Tooltip title="Recargar datos financieros" arrow>
+                <IconButton
+                  onClick={fetchData}
+                  color="inherit"
+                  size="small"
+                  sx={{
+                    color: "white",
+                    "&:hover": {
+                      background: "rgba(255, 255, 255, 0.1)",
+                    },
+                  }}
+                >
+                  <RefreshIcon />
+                </IconButton>
+              </Tooltip>
+            }
+          >
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+              ⚠️ Error en el Sistema Financiero
+            </Typography>
+            <Typography variant="body2">{error}</Typography>
+          </Alert>
+        </Paper>
       </Box>
     );
   }
 
   return (
     <LoadingOverlay loading={loading} message="Cargando resumen financiero...">
-      <Box sx={{ maxWidth: "95vw", mx: "auto", my: 3 }}>
-        {/* Header con resumen ejecutivo */}
-        <Box sx={{ mb: 4 }}>
-          <Typography
-            variant="h4"
-            gutterBottom
-            sx={{ fontWeight: 600, color: "primary.main", mb: 3 }}
+      <Box
+        sx={{
+          p: { xs: 2, sm: 3 },
+          minHeight: "100vh",
+          background: "linear-gradient(135deg, #2c3e50 0%, #34495e 100%)",
+        }}
+      >
+        <Paper
+          elevation={8}
+          sx={{
+            p: { xs: 2, sm: 3 },
+            width: "100%",
+            overflow: "hidden",
+            borderRadius: 3,
+            background: "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(10px)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+          }}
+        >
+          {/* Header con diseño profesional */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 2,
+              flexDirection: { xs: "column", sm: "row" },
+              textAlign: { xs: "center", sm: "left" },
+              background: "linear-gradient(135deg, #34495e 0%, #2c3e50 100%)",
+              color: "white",
+              p: 3,
+              borderRadius: 2,
+              mx: -3,
+              mt: -3,
+              mb: 4,
+            }}
           >
-            Resumen Financiero
-          </Typography>
-          <Grid2 container spacing={2} sx={{ mb: 3 }}>
-            <Grid2 size={{ xs: 12, md: 4 }}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" color="primary">
-                    Total Ingresos
-                  </Typography>
-                  <Typography variant="h4" color="success.main">
-                    ${formatNumber(summaryTotals.totalIngresos)}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid2>
-            <Grid2 size={{ xs: 12, md: 4 }}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" color="primary">
-                    Total Gastos
-                  </Typography>
-                  <Typography variant="h4" color="warning.main">
-                    ${formatNumber(summaryTotals.totalGastos)}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid2>
-            <Grid2 size={{ xs: 12, md: 4 }}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" color="primary">
-                    Utilidad Neta
-                  </Typography>
+            <Box>
+              <Typography
+                variant="h4"
+                component="h1"
+                fontWeight="700"
+                sx={{
+                  fontSize: { xs: "1.3rem", sm: "1.8rem", md: "2rem" },
+                  textShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  color: "white",
+                  justifyContent: { xs: "center", sm: "flex-start" },
+                }}
+              >
+                <AccountBalanceIcon sx={{ fontSize: "inherit" }} />
+                📊 Resumen Financiero
+              </Typography>
+            </Box>
+            <Tooltip title="Actualizar datos financieros" arrow>
+              <IconButton
+                onClick={fetchData}
+                sx={{
+                  background: "rgba(255, 255, 255, 0.15)",
+                  backdropFilter: "blur(10px)",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                  color: "white",
+                  "&:hover": {
+                    background: "rgba(255, 255, 255, 0.25)",
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 8px 25px rgba(0,0,0,0.2)",
+                  },
+                  transition: "all 0.3s ease",
+                }}
+              >
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          {/* Tarjetas de resumen financiero mejoradas con mejor responsive */}
+          <Grid2 container spacing={{ xs: 2, sm: 3 }} sx={{ mb: 4 }}>
+            <Grid2 size={{ xs: 12, sm: 6, lg: 4 }}>
+              <Card
+                elevation={6}
+                sx={{
+                  borderRadius: 3,
+                  border: "1px solid rgba(52, 152, 219, 0.3)",
+                  background:
+                    "linear-gradient(135deg, #3498db 0%, #2980b9 100%)",
+                  color: "white",
+                  transition: "all 0.3s ease",
+                  "&:hover": {
+                    transform: "translateY(-4px)",
+                    boxShadow: "0 12px 40px rgba(52, 152, 219, 0.3)",
+                  },
+                }}
+              >
+                <CardContent sx={{ p: 3 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      mb: 2,
+                    }}
+                  >
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 600,
+                        textShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                      }}
+                    >
+                      💰 Total Ingresos
+                    </Typography>
+                    <Chip
+                      icon={<TrendingUpIcon />}
+                      label="Ingresos"
+                      size="small"
+                      sx={{
+                        background: "rgba(255, 255, 255, 0.2)",
+                        color: "white",
+                        fontWeight: 500,
+                        backdropFilter: "blur(10px)",
+                        border: "1px solid rgba(255, 255, 255, 0.3)",
+                      }}
+                    />
+                  </Box>
                   <Typography
                     variant="h4"
-                    color={
+                    sx={{
+                      fontWeight: 700,
+                      fontFamily: "monospace",
+                      textShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                      fontSize: { xs: "1.8rem", sm: "2.5rem" },
+                    }}
+                  >
+                    ${formatNumber(summaryTotals.totalIngresos)}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      opacity: 0.9,
+                      mt: 1,
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    Ingresos totales del período
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid2>
+            <Grid2 size={{ xs: 12, sm: 6, lg: 4 }}>
+              <Card
+                elevation={6}
+                sx={{
+                  borderRadius: 3,
+                  border: "1px solid rgba(230, 126, 34, 0.3)",
+                  background:
+                    "linear-gradient(135deg, #e67e22 0%, #d35400 100%)",
+                  color: "white",
+                  transition: "all 0.3s ease",
+                  "&:hover": {
+                    transform: "translateY(-4px)",
+                    boxShadow: "0 12px 40px rgba(230, 126, 34, 0.3)",
+                  },
+                }}
+              >
+                <CardContent sx={{ p: 3 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      mb: 2,
+                    }}
+                  >
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 600,
+                        textShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                      }}
+                    >
+                      💸 Total Gastos
+                    </Typography>
+                    <Chip
+                      icon={<TrendingDownIcon />}
+                      label="Gastos"
+                      size="small"
+                      sx={{
+                        background: "rgba(255, 255, 255, 0.2)",
+                        color: "white",
+                        fontWeight: 500,
+                        backdropFilter: "blur(10px)",
+                        border: "1px solid rgba(255, 255, 255, 0.3)",
+                      }}
+                    />
+                  </Box>
+                  <Typography
+                    variant="h4"
+                    sx={{
+                      fontWeight: 700,
+                      fontFamily: "monospace",
+                      textShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                      fontSize: { xs: "1.8rem", sm: "2.5rem" },
+                    }}
+                  >
+                    ${formatNumber(summaryTotals.totalGastos)}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      opacity: 0.9,
+                      mt: 1,
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    Gastos totales del período
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid2>
+            <Grid2 size={{ xs: 12, sm: 12, lg: 4 }}>
+              <Card
+                elevation={6}
+                sx={{
+                  borderRadius: 3,
+                  border: `1px solid rgba(${
+                    summaryTotals.totalUtilidad >= 0
+                      ? "39, 174, 96"
+                      : "231, 76, 60"
+                  }, 0.3)`,
+                  background:
+                    summaryTotals.totalUtilidad >= 0
+                      ? "linear-gradient(135deg, #27ae60 0%, #229954 100%)"
+                      : "linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)",
+                  color: "white",
+                  transition: "all 0.3s ease",
+                  "&:hover": {
+                    transform: "translateY(-4px)",
+                    boxShadow: `0 12px 40px rgba(${
                       summaryTotals.totalUtilidad >= 0
-                        ? "success.main"
-                        : "error.main"
-                    }
+                        ? "39, 174, 96"
+                        : "231, 76, 60"
+                    }, 0.3)`,
+                  },
+                }}
+              >
+                <CardContent sx={{ p: 3 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      mb: 2,
+                    }}
+                  >
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 600,
+                        textShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                      }}
+                    >
+                      {summaryTotals.totalUtilidad >= 0 ? "📈" : "📉"} Utilidad
+                      Neta
+                    </Typography>
+                    <Chip
+                      icon={
+                        summaryTotals.totalUtilidad >= 0 ? (
+                          <TrendingUpIcon />
+                        ) : (
+                          <TrendingDownIcon />
+                        )
+                      }
+                      label={
+                        summaryTotals.totalUtilidad >= 0
+                          ? "Ganancia"
+                          : "Pérdida"
+                      }
+                      size="small"
+                      sx={{
+                        background: "rgba(255, 255, 255, 0.2)",
+                        color: "white",
+                        fontWeight: 500,
+                        backdropFilter: "blur(10px)",
+                        border: "1px solid rgba(255, 255, 255, 0.3)",
+                      }}
+                    />
+                  </Box>
+                  <Typography
+                    variant="h4"
+                    sx={{
+                      fontWeight: 700,
+                      fontFamily: "monospace",
+                      textShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                      fontSize: { xs: "1.8rem", sm: "2.5rem" },
+                    }}
                   >
                     ${formatNumber(summaryTotals.totalUtilidad)}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      opacity: 0.9,
+                      mt: 1,
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    Resultado neto del período
                   </Typography>
                 </CardContent>
               </Card>
             </Grid2>
           </Grid2>
-        </Box>
-        {/* Tabla de utilidades */}{" "}
-        <DataTable
-          data={resumen}
-          columns={columns}
-          keyField="mes"
-          loading={loading}
-          title="Resumen Financiero Mensual"
-          emptyMessage="No hay datos financieros disponibles"
-        />
+          {/* Tabla de utilidades con contenedor mejorado y responsive */}
+          <Paper
+            elevation={4}
+            sx={{
+              borderRadius: 3,
+              overflow: "hidden",
+              background: "rgba(255, 255, 255, 0.8)",
+              border: "1px solid rgba(52, 73, 94, 0.2)",
+            }}
+          >
+            {/* Contenedor con scroll horizontal para móviles */}
+            <Box
+              sx={{
+                width: "100%",
+                overflowX: "auto",
+                "&::-webkit-scrollbar": {
+                  height: 8,
+                },
+                "&::-webkit-scrollbar-track": {
+                  background: "rgba(52, 73, 94, 0.1)",
+                  borderRadius: 4,
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  background:
+                    "linear-gradient(135deg, #34495e 0%, #2c3e50 100%)",
+                  borderRadius: 4,
+                  "&:hover": {
+                    background:
+                      "linear-gradient(135deg, #2c3e50 0%, #34495e 100%)",
+                  },
+                },
+              }}
+            >
+              <DataTable
+                data={resumen}
+                columns={columns}
+                keyField="mes"
+                loading={loading}
+                title="📊 Resumen Financiero Mensual Detallado"
+                emptyMessage="📋 No hay datos financieros disponibles para mostrar"
+              />
+            </Box>
+          </Paper>
+        </Paper>
       </Box>
     </LoadingOverlay>
   );

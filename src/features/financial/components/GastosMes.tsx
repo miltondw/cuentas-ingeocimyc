@@ -21,6 +21,9 @@ import {
   Alert,
   Grid2,
   MenuItem,
+  Skeleton,
+  Chip,
+  Tooltip,
 } from "@mui/material";
 import { Link } from "react-router-dom";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -28,7 +31,6 @@ import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import api from "@/api";
 import { useNotifications } from "@/hooks/useNotifications";
-import { LoadingOverlay } from "@/components/common/LoadingOverlay";
 import { formatNumber } from "@/utils/formatNumber";
 
 // Types actualizados para la nueva estructura de la API
@@ -331,71 +333,232 @@ const TablaGastosEmpresa: React.FC = () => {
 
   if (state.loading) {
     return (
-      <LoadingOverlay loading={true}>
-        Cargando gastos mensuales...
-      </LoadingOverlay>
+      <Box
+        sx={{
+          p: { xs: 2, sm: 3 },
+          minHeight: "100vh",
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        }}
+      >
+        <Paper
+          elevation={8}
+          sx={{
+            p: { xs: 2, sm: 3 },
+            width: "100%",
+            overflow: "hidden",
+            borderRadius: 3,
+            background: "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(10px)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+          }}
+        >
+          {/* Loading Header */}
+          <Box sx={{ mb: 3 }}>
+            <Skeleton
+              variant="rectangular"
+              height={80}
+              sx={{
+                borderRadius: 2,
+                background:
+                  "linear-gradient(90deg, #f0f0f0 25%, transparent 37%, #f0f0f0 63%)",
+              }}
+            />
+          </Box>
+
+          {/* Loading Filters */}
+          <Box sx={{ mb: 3 }}>
+            <Skeleton
+              variant="rectangular"
+              height={120}
+              sx={{
+                borderRadius: 2,
+                background:
+                  "linear-gradient(90deg, #f8f8f8 25%, transparent 37%, #f8f8f8 63%)",
+              }}
+            />
+          </Box>
+
+          {/* Loading Cards */}
+          {[1, 2, 3].map((item) => (
+            <Box key={item} sx={{ mb: 3 }}>
+              <Skeleton
+                variant="rectangular"
+                height={200}
+                sx={{
+                  borderRadius: 2,
+                  background:
+                    "linear-gradient(90deg, #f5f5f5 25%, transparent 37%, #f5f5f5 63%)",
+                }}
+              />
+            </Box>
+          ))}
+
+          <Box sx={{ textAlign: "center", mt: 4 }}>
+            <Typography variant="h6" color="primary" sx={{ fontWeight: 600 }}>
+              🔄 Cargando gastos mensuales...
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Por favor espera mientras obtenemos la información
+            </Typography>
+          </Box>
+        </Paper>
+      </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Paper sx={{ p: 3, width: "100%", overflow: "hidden" }}>
-        {/* Header */}
+    <Box
+      sx={{
+        p: { xs: 2, sm: 3 },
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #2c3e50 0%, #34495e 100%)",
+      }}
+    >
+      <Paper
+        elevation={8}
+        sx={{
+          p: { xs: 2, sm: 3 },
+          width: "100%",
+          overflow: "hidden",
+          borderRadius: 3,
+          background: "rgba(255, 255, 255, 0.95)",
+          backdropFilter: "blur(10px)",
+          border: "1px solid rgba(255, 255, 255, 0.2)",
+        }}
+      >
+        {/* Header mejorado */}
         <Box
           sx={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            mb: 3,
             flexWrap: "wrap",
             gap: 2,
+            flexDirection: { xs: "column", sm: "row" },
+            textAlign: { xs: "center", sm: "left" },
+            background: "linear-gradient(135deg, #34495e 0%, #2c3e50 100%)",
+            color: "white",
+            p: 3,
+            borderRadius: 2,
+            mx: -3,
+            mt: -3,
+            mb: 3,
           }}
         >
-          <Typography variant="h4" component="h1" fontWeight="bold">
-            Gastos de la Empresa por Mes
-          </Typography>
+          <Box>
+            <Typography
+              variant="h4"
+              component="h1"
+              fontWeight="700"
+              sx={{
+                fontSize: { xs: "1.5rem", sm: "2rem" },
+                textShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                color: "white",
+              }}
+            >
+              🏢 Gastos de la Empresa por Mes
+            </Typography>
+          </Box>
           <Button
             component={Link}
             to="/crear-gasto-mes"
             variant="contained"
-            color="primary"
             startIcon={<AddIcon />}
-            sx={{ borderRadius: 2 }}
+            sx={{
+              borderRadius: 3,
+              minWidth: "fit-content",
+              background: "rgba(255, 255, 255, 0.15)",
+              backdropFilter: "blur(10px)",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+              color: "white",
+              fontWeight: 600,
+              px: 3,
+              py: 1.5,
+              fontSize: "0.95rem",
+              textTransform: "none",
+              "&:hover": {
+                background: "rgba(255, 255, 255, 0.25)",
+                transform: "translateY(-2px)",
+                boxShadow: "0 8px 25px rgba(0,0,0,0.2)",
+              },
+              transition: "all 0.3s ease",
+            }}
           >
             Nuevo Gasto Mensual
           </Button>
         </Box>
-        {/* Error Alert */}
+        {/* Error Alert mejorado */}
         {state.error && (
           <Alert
             severity="error"
-            sx={{ mb: 3 }}
+            sx={{
+              mb: 3,
+              borderRadius: 2,
+              "& .MuiAlert-icon": {
+                fontSize: "1.5rem",
+              },
+            }}
+            variant="filled"
             onClose={() => setState((prev) => ({ ...prev, error: null }))}
           >
             {state.error}
           </Alert>
         )}
-        {/* Filters */}
-        <Paper sx={{ p: 2, mb: 3, backgroundColor: "#f8f9fa" }}>
-          <Typography variant="h6" gutterBottom>
-            Filtros de Búsqueda
+
+        {/* Filtros mejorados */}
+        <Paper
+          sx={{
+            p: 3,
+            mb: 3,
+            borderRadius: 3,
+            background: "linear-gradient(135deg, #718096 0%, #4a5568 100%)",
+            border: "1px solid #a0aec0",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+          }}
+        >
+          <Typography
+            variant="h6"
+            sx={{
+              mb: 2,
+              color: "white",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              textShadow: "0 1px 2px rgba(0,0,0,0.2)",
+            }}
+          >
+            🔍 Filtros de Búsqueda
           </Typography>
           <Grid2 container spacing={2}>
             {/* Filtros de fecha */}
             <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
-                label="Año"
+                label="🗓️ Año"
                 value={state.filters.year}
                 onChange={(e) => handleFilterChange("year", e.target.value)}
                 placeholder="2025"
                 fullWidth
                 variant="outlined"
                 size="small"
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    background: "rgba(255, 255, 255, 0.9)",
+                    "&:hover": {
+                      background: "rgba(255, 255, 255, 1)",
+                    },
+                    "&.Mui-focused": {
+                      background: "rgba(255, 255, 255, 1)",
+                      boxShadow: "0 0 0 3px rgba(52, 73, 94, 0.2)",
+                    },
+                  },
+                }}
               />
             </Grid2>
             <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
-                label="Mes"
+                label="📅 Mes"
                 value={state.filters.month}
                 onChange={(e) => handleFilterChange("month", e.target.value)}
                 placeholder="01-12"
@@ -403,12 +566,25 @@ const TablaGastosEmpresa: React.FC = () => {
                 variant="outlined"
                 size="small"
                 inputProps={{ min: "01", max: "12", pattern: "[0-9]{2}" }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    background: "rgba(255, 255, 255, 0.9)",
+                    "&:hover": {
+                      background: "rgba(255, 255, 255, 1)",
+                    },
+                    "&.Mui-focused": {
+                      background: "rgba(255, 255, 255, 1)",
+                      boxShadow: "0 0 0 3px rgba(52, 73, 94, 0.2)",
+                    },
+                  },
+                }}
               />
             </Grid2>
             {/* Filtros de montos */}
             <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
-                label="Monto Mínimo"
+                label="💰 Monto Mínimo"
                 value={state.filters.minAmount}
                 onChange={(e) =>
                   handleFilterChange("minAmount", e.target.value)
@@ -418,11 +594,24 @@ const TablaGastosEmpresa: React.FC = () => {
                 variant="outlined"
                 size="small"
                 type="number"
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    background: "rgba(255, 255, 255, 0.9)",
+                    "&:hover": {
+                      background: "rgba(255, 255, 255, 1)",
+                    },
+                    "&.Mui-focused": {
+                      background: "rgba(255, 255, 255, 1)",
+                      boxShadow: "0 0 0 3px rgba(245, 101, 101, 0.1)",
+                    },
+                  },
+                }}
               />
             </Grid2>
             <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
-                label="Monto Máximo"
+                label="💸 Monto Máximo"
                 value={state.filters.maxAmount}
                 onChange={(e) =>
                   handleFilterChange("maxAmount", e.target.value)
@@ -432,13 +621,26 @@ const TablaGastosEmpresa: React.FC = () => {
                 variant="outlined"
                 size="small"
                 type="number"
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    background: "rgba(255, 255, 255, 0.9)",
+                    "&:hover": {
+                      background: "rgba(255, 255, 255, 1)",
+                    },
+                    "&.Mui-focused": {
+                      background: "rgba(255, 255, 255, 1)",
+                      boxShadow: "0 0 0 3px rgba(245, 101, 101, 0.1)",
+                    },
+                  },
+                }}
               />
             </Grid2>
             {/* Filtros de categoría */}
             <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
                 select
-                label="Tiene Categorías Extras"
+                label="📂 Categorías Extras"
                 value={
                   state.filters.hasCategory === null
                     ? ""
@@ -452,6 +654,19 @@ const TablaGastosEmpresa: React.FC = () => {
                 fullWidth
                 variant="outlined"
                 size="small"
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    background: "rgba(255, 255, 255, 0.9)",
+                    "&:hover": {
+                      background: "rgba(255, 255, 255, 1)",
+                    },
+                    "&.Mui-focused": {
+                      background: "rgba(255, 255, 255, 1)",
+                      boxShadow: "0 0 0 3px rgba(245, 101, 101, 0.1)",
+                    },
+                  },
+                }}
               >
                 <MenuItem value="">Todos</MenuItem>
                 <MenuItem value="true">Con categorías extras</MenuItem>
@@ -460,7 +675,7 @@ const TablaGastosEmpresa: React.FC = () => {
             </Grid2>
             <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
-                label="Nombre de Categoría"
+                label="🏷️ Nombre de Categoría"
                 value={state.filters.categoryName}
                 onChange={(e) =>
                   handleFilterChange("categoryName", e.target.value)
@@ -469,18 +684,44 @@ const TablaGastosEmpresa: React.FC = () => {
                 fullWidth
                 variant="outlined"
                 size="small"
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    background: "rgba(255, 255, 255, 0.9)",
+                    "&:hover": {
+                      background: "rgba(255, 255, 255, 1)",
+                    },
+                    "&.Mui-focused": {
+                      background: "rgba(255, 255, 255, 1)",
+                      boxShadow: "0 0 0 3px rgba(245, 101, 101, 0.1)",
+                    },
+                  },
+                }}
               />
             </Grid2>
             {/* Filtros de ordenamiento */}
             <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
                 select
-                label="Ordenar por"
+                label="📊 Ordenar por"
                 value={state.filters.sortBy}
                 onChange={(e) => handleFilterChange("sortBy", e.target.value)}
                 fullWidth
                 variant="outlined"
                 size="small"
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    background: "rgba(255, 255, 255, 0.9)",
+                    "&:hover": {
+                      background: "rgba(255, 255, 255, 1)",
+                    },
+                    "&.Mui-focused": {
+                      background: "rgba(255, 255, 255, 1)",
+                      boxShadow: "0 0 0 3px rgba(245, 101, 101, 0.1)",
+                    },
+                  },
+                }}
               >
                 <MenuItem value="mes">Mes</MenuItem>
                 <MenuItem value="total">Total</MenuItem>
@@ -495,7 +736,7 @@ const TablaGastosEmpresa: React.FC = () => {
             <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
                 select
-                label="Orden"
+                label="🔄 Orden"
                 value={state.filters.sortOrder}
                 onChange={(e) =>
                   handleFilterChange(
@@ -506,6 +747,19 @@ const TablaGastosEmpresa: React.FC = () => {
                 fullWidth
                 variant="outlined"
                 size="small"
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    background: "rgba(255, 255, 255, 0.9)",
+                    "&:hover": {
+                      background: "rgba(255, 255, 255, 1)",
+                    },
+                    "&.Mui-focused": {
+                      background: "rgba(255, 255, 255, 1)",
+                      boxShadow: "0 0 0 3px rgba(245, 101, 101, 0.1)",
+                    },
+                  },
+                }}
               >
                 <MenuItem value="DESC">Descendente</MenuItem>
                 <MenuItem value="ASC">Ascendente</MenuItem>
@@ -516,98 +770,339 @@ const TablaGastosEmpresa: React.FC = () => {
               <Button
                 onClick={clearAllFilters}
                 variant="outlined"
-                color="error"
                 fullWidth
-                sx={{ height: 40 }}
+                sx={{
+                  height: 40,
+                  borderRadius: 2,
+                  textTransform: "none",
+                  fontWeight: 500,
+                  borderColor: "#718096",
+                  color: "white",
+                  "&:hover": {
+                    borderColor: "#2d3748",
+                    background: "rgba(113, 128, 150, 0.1)",
+                    transform: "translateY(-1px)",
+                  },
+                  transition: "all 0.3s ease",
+                }}
               >
-                Limpiar Filtros
+                🧹 Limpiar Filtros
               </Button>
             </Grid2>
             {/* Información de resultados */}
             <Grid2 size={{ xs: 12 }}>
-              <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-                {state.totalItems} resultado{state.totalItems !== 1 ? "s" : ""}
-                encontrado
-                {state.totalItems !== 1 ? "s" : ""} - Página {state.currentPage}
+              <Box
+                sx={{
+                  background:
+                    "linear-gradient(135deg, #2d3748 0%, #4a5568 100%)",
+                  color: "white",
+                  px: 3,
+                  py: 2,
+                  borderRadius: 2,
+                  mt: 2,
+                  textAlign: "center",
+                  fontWeight: 500,
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                }}
+              >
+                📊 {state.totalItems} resultado
+                {state.totalItems !== 1 ? "s" : ""} encontrado
+                {state.totalItems !== 1 ? "s" : ""} - Página {state.currentPage}{" "}
                 de {state.totalPages}
-              </Typography>
+              </Box>
             </Grid2>
           </Grid2>
         </Paper>
-        {/* Gastos Tables */}
+
+        {/* Resumen estadístico */}
+        {gastosPorMes.length > 0 && (
+          <Paper
+            sx={{
+              p: 3,
+              mb: 3,
+              borderRadius: 3,
+              background: "linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%)",
+              color: "white",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{
+                mb: 2,
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+              }}
+            >
+              📊 Análisis Financiero
+            </Typography>
+            <Grid2 container spacing={2}>
+              <Grid2 size={{ xs: 12, sm: 4 }}>
+                <Box sx={{ textAlign: "center" }}>
+                  <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                    {gastosPorMes.length}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Registros Mensuales
+                  </Typography>
+                </Box>
+              </Grid2>
+              <Grid2 size={{ xs: 12, sm: 4 }}>
+                <Box sx={{ textAlign: "center" }}>
+                  <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                    ${" "}
+                    {formatNumber(
+                      gastosPorMes.reduce(
+                        (total, mes) => total + mes.totalGastos,
+                        0
+                      )
+                    )}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Total Acumulado
+                  </Typography>
+                </Box>
+              </Grid2>
+              <Grid2 size={{ xs: 12, sm: 4 }}>
+                <Box sx={{ textAlign: "center" }}>
+                  <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                    ${" "}
+                    {formatNumber(
+                      gastosPorMes.length > 0
+                        ? gastosPorMes.reduce(
+                            (total, mes) => total + mes.totalGastos,
+                            0
+                          ) / gastosPorMes.length
+                        : 0
+                    )}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Promedio Mensual
+                  </Typography>
+                </Box>
+              </Grid2>
+            </Grid2>
+          </Paper>
+        )}
+
+        {/* Gastos Tables mejorados */}
+        {/* Estado vacío mejorado */}
         {gastosPorMes.length === 0 ? (
-          <Paper sx={{ p: 4, textAlign: "center" }}>
-            <Typography variant="h6" color="textSecondary">
+          <Paper
+            sx={{
+              p: 6,
+              textAlign: "center",
+              borderRadius: 3,
+              background: "linear-gradient(135deg, #4a5568 0%, #2d3748 100%)",
+              color: "white",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+            }}
+          >
+            <Typography
+              variant="h4"
+              sx={{
+                mb: 2,
+                fontSize: "3rem",
+              }}
+            >
+              📊
+            </Typography>
+            <Typography
+              variant="h6"
+              sx={{
+                mb: 2,
+                fontWeight: 600,
+              }}
+            >
               No se encontraron gastos mensuales
             </Typography>
-            <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+            <Typography
+              variant="body1"
+              sx={{
+                mb: 3,
+                opacity: 0.9,
+                fontSize: "1.1rem",
+              }}
+            >
               {state.filters.year || state.filters.month
-                ? "Intenta cambiar el filtro de fecha o crear un nuevo registro"
-                : "Crea tu primer registro de gastos mensuales"}
+                ? "🔍 Intenta cambiar el filtro de fecha o crear un nuevo registro"
+                : "🚀 Crea tu primer registro de gastos mensuales"}
             </Typography>
+            <Button
+              component={Link}
+              to="/crear-gasto-mes"
+              variant="contained"
+              startIcon={<AddIcon />}
+              sx={{
+                background: "rgba(255, 255, 255, 0.2)",
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                color: "white",
+                fontWeight: 600,
+                px: 4,
+                py: 1.5,
+                borderRadius: 3,
+                textTransform: "none",
+                "&:hover": {
+                  background: "rgba(255, 255, 255, 0.3)",
+                  transform: "translateY(-2px)",
+                  boxShadow: "0 8px 25px rgba(0,0,0,0.2)",
+                },
+              }}
+            >
+              Crear Primer Gasto
+            </Button>
           </Paper>
         ) : (
           gastosPorMes.map((mesData) => (
-            <Box
+            <Paper
               key={mesData.id}
+              elevation={6}
               sx={{
                 mb: 4,
-                boxShadow: 3,
                 p: 3,
-                borderRadius: 2,
-                border: "1px solid #e0e0e0",
+                borderRadius: 3,
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                background:
+                  "linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%)",
+                backdropFilter: "blur(10px)",
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  transform: "translateY(-4px)",
+                  boxShadow: "0 12px 40px rgba(0,0,0,0.15)",
+                },
               }}
             >
-              {/* Month Header */}
+              {/* Month Header mejorado */}
               <Box
                 sx={{
                   display: "flex",
                   justifyContent: "space-between",
-                  mb: 2,
                   flexWrap: "wrap",
-                  gap: 1,
+                  gap: 2,
+                  background:
+                    "linear-gradient(135deg, #4a5568 0%, #2d3748 100%)",
+                  color: "white",
+                  p: 2,
+                  borderRadius: 2,
+                  mx: -3,
+                  mt: -3,
+                  mb: 3,
                 }}
               >
-                <Typography variant="h5" component="div" fontWeight="bold">
-                  {mesData.mesDeGasto}
+                <Typography
+                  variant="h5"
+                  component="div"
+                  sx={{
+                    fontWeight: 700,
+                    textShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                    display: "flex",
+                    color: "white",
+                    alignItems: "center",
+                    gap: 1,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  📊 {mesData.mesDeGasto}
+                  <Chip
+                    label={`${mesData.expenses.length} categorías`}
+                    size="small"
+                    sx={{
+                      background: "rgba(255, 255, 255, 0.2)",
+                      color: "white",
+                      fontWeight: 500,
+                      backdropFilter: "blur(10px)",
+                      border: "1px solid rgba(255, 255, 255, 0.3)",
+                    }}
+                  />
                 </Typography>
                 <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                  <Button
-                    component={Link}
-                    to={`/crear-gasto-mes/${mesData.id}`}
-                    variant="outlined"
-                    color="primary"
-                    startIcon={<EditIcon />}
-                    size="small"
-                  >
-                    Editar
-                  </Button>
-                  <IconButton
-                    onClick={() => openDeleteDialog(mesData.id)}
-                    color="error"
-                    aria-label="eliminar gasto mensual"
-                    sx={{ ml: 1 }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                  <Tooltip title="Editar gastos del mes" arrow>
+                    <Button
+                      component={Link}
+                      to={`/crear-gasto-mes/${mesData.id}`}
+                      variant="contained"
+                      startIcon={<EditIcon />}
+                      size="small"
+                      sx={{
+                        background: "rgba(255, 255, 255, 0.2)",
+                        backdropFilter: "blur(10px)",
+                        border: "1px solid rgba(255, 255, 255, 0.3)",
+                        color: "white",
+                        fontWeight: 500,
+                        textTransform: "none",
+                        "&:hover": {
+                          background: "rgba(255, 255, 255, 0.3)",
+                          transform: "translateY(-1px)",
+                        },
+                      }}
+                    >
+                      Editar
+                    </Button>
+                  </Tooltip>
+                  <Tooltip title="Eliminar registro completo" arrow>
+                    <IconButton
+                      onClick={() => openDeleteDialog(mesData.id)}
+                      sx={{
+                        background: "rgba(255, 255, 255, 0.2)",
+                        backdropFilter: "blur(10px)",
+                        border: "1px solid rgba(255, 255, 255, 0.3)",
+                        color: "white",
+                        "&:hover": {
+                          background: "rgba(245, 101, 101, 0.8)",
+                          transform: "translateY(-1px)",
+                        },
+                      }}
+                      aria-label="eliminar gasto mensual"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
                 </Box>
               </Box>
-
-              {/* Gastos Table */}
+              {/* Gastos Table mejorada */}{" "}
               <TableContainer
-                sx={{ border: "1px solid #e0e0e0", borderRadius: 1 }}
+                sx={{
+                  border: "2px solid rgba(74, 85, 104, 0.3)",
+                  borderRadius: 2,
+                  background: "rgba(255, 255, 255, 0.8)",
+                  overflow: "hidden",
+                }}
+                role="region"
+                aria-label={`Tabla de gastos para ${mesData.mesDeGasto}`}
               >
                 <Table>
                   <TableHead>
-                    <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
-                      <TableCell sx={{ fontWeight: "bold", width: "70%" }}>
-                        Concepto
+                    <TableRow
+                      sx={{
+                        background:
+                          "linear-gradient(135deg, #4a5568 0%, #2d3748 100%)",
+                      }}
+                    >
+                      <TableCell
+                        sx={{
+                          fontWeight: "bold",
+                          width: "70%",
+                          color: "white",
+                          fontSize: "1rem",
+                          py: 2,
+                        }}
+                      >
+                        💰 Concepto
                       </TableCell>
                       <TableCell
-                        sx={{ fontWeight: "bold", width: "30%" }}
+                        sx={{
+                          fontWeight: "bold",
+                          width: "30%",
+                          color: "white",
+                          fontSize: "1rem",
+                          py: 2,
+                        }}
                         align="right"
                       >
-                        Valor Mensual
+                        💵 Valor Mensual
                       </TableCell>
                     </TableRow>
                   </TableHead>
@@ -615,48 +1110,122 @@ const TablaGastosEmpresa: React.FC = () => {
                     {mesData.expenses.map((gasto, idx) => (
                       <TableRow
                         key={`${mesData.id}-${idx}`}
-                        hover
                         sx={{
-                          "&:nth-of-type(odd)": { backgroundColor: "#fafafa" },
-                          "&:hover": { backgroundColor: "#f0f0f0" },
+                          "&:nth-of-type(odd)": {
+                            backgroundColor: "rgba(74, 85, 104, 0.05)",
+                          },
+                          "&:hover": {
+                            backgroundColor: "rgba(74, 85, 104, 0.15)",
+                            transform: "scale(1.01)",
+                            transition: "all 0.2s ease",
+                          },
+                          transition: "all 0.2s ease",
                         }}
                       >
-                        <TableCell>
-                          <Typography variant="body2" fontWeight="medium">
-                            {gasto.name}
-                          </Typography>
+                        <TableCell sx={{ py: 2 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: "50%",
+                                background:
+                                  "linear-gradient(135deg, #38a169 0%, #2f855a 100%)",
+                              }}
+                            />
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: 500,
+                                color: "#2d3748",
+                              }}
+                            >
+                              {gasto.name}
+                            </Typography>
+                          </Box>
                         </TableCell>
                         <TableCell
                           align="right"
-                          sx={{ fontFamily: "monospace" }}
+                          sx={{
+                            fontFamily: "monospace",
+                            py: 2,
+                          }}
                         >
-                          <Typography variant="body2" fontWeight="medium">
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: 600,
+                              fontSize: "1rem",
+                              color: "#2d3748",
+                              background:
+                                "linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%)",
+                              WebkitBackgroundClip: "text",
+                              WebkitTextFillColor: "transparent",
+                            }}
+                          >
                             $ {formatNumber(gasto.value)}
                           </Typography>
                         </TableCell>
                       </TableRow>
                     ))}
-                    <TableRow sx={{ backgroundColor: "#e3f2fd" }}>
-                      <TableCell
-                        sx={{ fontWeight: "bold", fontSize: "1.1rem" }}
-                      >
-                        <Typography variant="subtitle1" fontWeight="bold">
-                          Total Gastos del Mes
-                        </Typography>
-                      </TableCell>
+                    <TableRow
+                      sx={{
+                        background:
+                          "linear-gradient(135deg, #ed8936 0%, #dd6b20 100%)",
+                      }}
+                    >
                       <TableCell
                         sx={{
                           fontWeight: "bold",
                           fontSize: "1.1rem",
+                          color: "white",
+                          py: 2.5,
+                        }}
+                      >
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
+                          <Box
+                            sx={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: "50%",
+                              background: "rgba(255, 255, 255, 0.8)",
+                            }}
+                          />
+                          <Typography
+                            variant="subtitle1"
+                            sx={{
+                              fontWeight: 700,
+                              textShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                            }}
+                          >
+                            🏆 Total Gastos del Mes
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontWeight: "bold",
+                          fontSize: "1.2rem",
                           fontFamily: "monospace",
-                          color: "primary.main",
+                          color: "white",
+                          py: 2.5,
                         }}
                         align="right"
                       >
                         <Typography
-                          variant="subtitle1"
-                          fontWeight="bold"
-                          color="primary"
+                          variant="h6"
+                          sx={{
+                            fontWeight: 700,
+                            textShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                          }}
                         >
                           $ {formatNumber(mesData.totalGastos)}
                         </Typography>
@@ -665,12 +1234,22 @@ const TablaGastosEmpresa: React.FC = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-            </Box>
+            </Paper>
           ))
         )}
-        {/* Pagination */}
+        {/* Paginación mejorada */}
         {state.totalPages > 1 && (
-          <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              mt: 4,
+              p: 2,
+              background: "rgba(255, 255, 255, 0.8)",
+              borderRadius: 2,
+              border: "1px solid rgba(74, 85, 104, 0.3)",
+            }}
+          >
             <Pagination
               count={state.totalPages}
               page={state.currentPage}
@@ -680,45 +1259,131 @@ const TablaGastosEmpresa: React.FC = () => {
               showLastButton
               siblingCount={1}
               boundaryCount={1}
+              sx={{
+                "& .MuiPaginationItem-root": {
+                  borderRadius: 2,
+                  fontWeight: 500,
+                  "&:hover": {
+                    background:
+                      "linear-gradient(135deg, #4a5568 0%, #2d3748 100%)",
+                    color: "white",
+                    transform: "translateY(-1px)",
+                  },
+                  "&.Mui-selected": {
+                    background:
+                      "linear-gradient(135deg, #ed8936 0%, #dd6b20 100%)",
+                    color: "white",
+                    fontWeight: 600,
+                    "&:hover": {
+                      background:
+                        "linear-gradient(135deg, #dd6b20 0%, #c05621 100%)",
+                    },
+                  },
+                },
+              }}
             />
           </Box>
         )}
       </Paper>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Modal de Confirmación de Eliminación mejorado */}
       <Dialog
         open={state.deleteDialog.open}
         onClose={closeDeleteDialog}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            background: "linear-gradient(135deg, #fff 0%, #f8f9ff 100%)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.1)",
+          },
+        }}
       >
-        <DialogTitle sx={{ pb: 1 }}>
-          <Typography variant="h6" fontWeight="bold">
-            Confirmar Eliminación
+        <DialogTitle
+          sx={{
+            background: "linear-gradient(135deg, #e53e3e 0%, #c53030 100%)",
+            color: "white",
+            textAlign: "center",
+            fontWeight: 600,
+            fontSize: "1.2rem",
+            pb: 1,
+          }}
+        >
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 1,
+            }}
+          >
+            ⚠️ Confirmar Eliminación
           </Typography>
         </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
+        <DialogContent sx={{ p: 3, textAlign: "center" }}>
+          <Typography
+            variant="h4"
+            sx={{
+              mb: 2,
+              fontSize: "3rem",
+            }}
+          >
+            🗑️
+          </Typography>
+          <DialogContentText sx={{ fontSize: "1rem", color: "#4a5568", mb: 2 }}>
             ¿Estás seguro de que deseas eliminar este registro de gastos
             mensuales? Esta acción no se puede deshacer y se perderán todos los
             datos asociados.
           </DialogContentText>
+          <Box
+            sx={{
+              background: "rgba(229, 62, 62, 0.1)",
+              borderRadius: 2,
+              p: 2,
+              border: "1px solid rgba(229, 62, 62, 0.2)",
+            }}
+          >
+            <Typography variant="body2" color="error.main" fontWeight={500}>
+              💡 Esta acción es irreversible
+            </Typography>
+          </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
+        <DialogActions sx={{ px: 3, pb: 3, justifyContent: "center", gap: 2 }}>
           <Button
             onClick={closeDeleteDialog}
-            color="inherit"
             variant="outlined"
+            sx={{
+              borderRadius: 2,
+              px: 3,
+              textTransform: "none",
+              fontWeight: 500,
+            }}
           >
             Cancelar
           </Button>
           <Button
             onClick={handleDelete}
-            color="error"
             variant="contained"
+            color="error"
             autoFocus
+            sx={{
+              borderRadius: 2,
+              px: 3,
+              textTransform: "none",
+              fontWeight: 600,
+              background: "linear-gradient(135deg, #e53e3e 0%, #c53030 100%)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #c53030 0%, #9c2a2a 100%)",
+                transform: "translateY(-1px)",
+                boxShadow: "0 8px 25px rgba(197, 48, 48, 0.3)",
+              },
+            }}
           >
-            Eliminar
+            🗑️ Eliminar
           </Button>
         </DialogActions>
       </Dialog>

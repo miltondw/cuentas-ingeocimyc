@@ -244,7 +244,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
         direction="row"
         spacing={2}
         alignItems="center"
-        sx={{ mb: expanded ? 2 : 0 }}
+        sx={{ mb: (expanded || !collapsible) && filters.length > 0 ? 2 : 0 }}
       >
         {/* Search Field */}
         <TextField
@@ -301,27 +301,35 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
       {/* Filters Panel */}
       {filters.length > 0 && (
         <Collapse in={!collapsible || expanded}>
-          <Grid container spacing={2}>
-            {filters.map((filter) => (
-              <Grid item xs={12} sm={isMobile ? 12 : 6} md={4} key={filter.key}>
-                {renderFilterField(filter)}
-              </Grid>
-            ))}
-          </Grid>
+          <Box sx={{ mt: 1 }}>
+            <Grid container spacing={2}>
+              {filters.map((filter) => (
+                <Grid
+                  item
+                  xs={12}
+                  sm={isMobile ? 12 : 6}
+                  md={4}
+                  key={filter.key}
+                >
+                  {renderFilterField(filter)}
+                </Grid>
+              ))}
+            </Grid>
 
-          {/* Apply Filters Button */}
-          {onApplyFilters && (
-            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={onApplyFilters}
-                disabled={!hasActiveFilters}
-              >
-                Aplicar Filtros
-              </Button>
-            </Box>
-          )}
+            {/* Apply Filters Button */}
+            {onApplyFilters && (
+              <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={onApplyFilters}
+                  disabled={!hasActiveFilters}
+                >
+                  Aplicar Filtros
+                </Button>
+              </Box>
+            )}
+          </Box>
         </Collapse>
       )}
 

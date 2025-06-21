@@ -173,19 +173,6 @@ const calculateValues = (project: Project): ProjectCalculations => {
   return { totalGastos, saldo, estadoCuenta, utilidadNeta };
 };
 
-const colorEstadoCuenta = (estado: string): string => {
-  switch (estado) {
-    case "Pendiente":
-      return "#f44336";
-    case "Pagado":
-      return "#4caf50";
-    case "Abonado":
-      return "#ff9800";
-    default:
-      return "transparent";
-  }
-};
-
 // Función auxiliar para formatear valores monetarios
 const formatCurrency = (value: string | number): string => {
   const numValue = typeof value === "string" ? parseFloat(value) || 0 : value;
@@ -194,8 +181,7 @@ const formatCurrency = (value: string | number): string => {
 
 // Configuración de columnas para DataTable
 const createTableColumns = (
-  calculations: Record<string, ProjectCalculations>,
-  colorEstadoCuenta: (estado: string) => string
+  calculations: Record<string, ProjectCalculations>
 ): ColumnConfig<Project>[] => [
   {
     key: "fecha",
@@ -267,9 +253,22 @@ const createTableColumns = (
     sortable: true,
     width: 150,
     render: (value) => (
-      <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-        {formatCurrency(value as string)}
-      </Typography>
+      <Box sx={{ textAlign: "center" }}>
+        <Typography
+          variant="body2"
+          sx={{
+            fontWeight: "bold",
+            color: "#2d3748",
+            background: "linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%)",
+            px: 2,
+            py: 1,
+            borderRadius: 2,
+            border: "1px solid #81e6d9",
+          }}
+        >
+          {formatCurrency(value as string)}
+        </Typography>
+      </Box>
     ),
   },
   {
@@ -286,7 +285,27 @@ const createTableColumns = (
     width: 150,
     render: (_, row) => {
       const calc = calculations[row.id];
-      return formatCurrency(calc?.totalGastos || 0);
+      return (
+        <Box sx={{ textAlign: "center" }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: "600",
+              color: "#2d3748",
+              background: "linear-gradient(135deg, #fef5e7 0%, #fed7aa 100%)",
+              px: 2,
+              py: 1,
+              borderRadius: 2,
+              border: "1px solid #f6ad55",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 0.5,
+            }}
+          >
+            💰 {formatCurrency(calc?.totalGastos || 0)}
+          </Typography>
+        </Box>
+      );
     },
   },
   {
@@ -297,16 +316,32 @@ const createTableColumns = (
     render: (_, row) => {
       const calc = calculations[row.id];
       const utilidad = calc?.utilidadNeta || 0;
+      const isPositive = utilidad >= 0;
+
       return (
-        <Typography
-          variant="body2"
-          sx={{
-            fontWeight: "bold",
-            color: utilidad >= 0 ? "green" : "red",
-          }}
-        >
-          {formatCurrency(utilidad)}
-        </Typography>
+        <Box sx={{ textAlign: "center" }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: "bold",
+              color: "white",
+              background: isPositive
+                ? "linear-gradient(135deg, #48bb78 0%, #38a169 100%)"
+                : "linear-gradient(135deg, #f56565 0%, #e53e3e 100%)",
+              px: 2,
+              py: 1,
+              borderRadius: 2,
+              border: `1px solid ${isPositive ? "#68d391" : "#fc8181"}`,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 0.5,
+            }}
+          >
+            <span>{isPositive ? "📈" : "📉"}</span>
+            {formatCurrency(utilidad)}
+          </Typography>
+        </Box>
       );
     },
   },
@@ -317,7 +352,33 @@ const createTableColumns = (
     width: 120,
     render: (_, row) => {
       const calc = calculations[row.id];
-      return formatCurrency(calc?.saldo || 0);
+      const saldo = calc?.saldo || 0;
+
+      return (
+        <Box sx={{ textAlign: "center" }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: "600",
+              color: saldo > 0 ? "#c53030" : "#38a169",
+              background:
+                saldo > 0
+                  ? "linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%)"
+                  : "linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)",
+              px: 2,
+              py: 1,
+              borderRadius: 2,
+              border: saldo > 0 ? "1px solid #fc8181" : "1px solid #68d391",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 0.5,
+            }}
+          >
+            <span>{saldo > 0 ? "⏰" : "✅"}</span>
+            {formatCurrency(saldo)}
+          </Typography>
+        </Box>
+      );
     },
   },
   {
@@ -328,19 +389,50 @@ const createTableColumns = (
     render: (_, row) => {
       const calc = calculations[row.id];
       const estado = calc?.estadoCuenta || "Pendiente";
+
+      const getEstadoConfig = (estado: string) => {
+        switch (estado) {
+          case "Pagado":
+            return {
+              bg: "linear-gradient(135deg, #48bb78 0%, #38a169 100%)",
+              icon: "✅",
+            };
+          case "Abonado":
+            return {
+              bg: "linear-gradient(135deg, #ed8936 0%, #dd6b20 100%)",
+              icon: "⏳",
+            };
+          case "Pendiente":
+          default:
+            return {
+              bg: "linear-gradient(135deg, #f56565 0%, #e53e3e 100%)",
+              icon: "❌",
+            };
+        }
+      };
+
+      const config = getEstadoConfig(estado);
+
       return (
         <Box
           sx={{
-            backgroundColor: colorEstadoCuenta(estado),
+            background: config.bg,
             color: "white",
-            px: 1,
-            py: 0.5,
-            borderRadius: 1,
+            px: 2,
+            py: 1,
+            borderRadius: 2,
             textAlign: "center",
             fontSize: "0.875rem",
-            fontWeight: "medium",
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 0.5,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
           }}
         >
+          <span>{config.icon}</span>
           {estado}
         </Box>
       );
@@ -666,11 +758,62 @@ const TablaGastosProject: React.FC = () => {
     const cleaned = value.replace(/[^\d,]/g, "");
     // Guardar el valor sin comas para los cálculos
     const numericValue = parseNumber(cleaned);
-    setState((prev) => ({ ...prev, paymentAmount: String(numericValue) }));
+
+    // Validar que no exceda el saldo pendiente
+    const maxPayment =
+      Number(state.selectedProject?.costoServicio ?? 0) -
+      Number(state.selectedProject?.abono ?? 0);
+
+    if (numericValue > maxPayment) {
+      showNotification({
+        severity: "warning",
+        message: `El monto no puede exceder el saldo pendiente de $${formatNumber(
+          maxPayment
+        )}`,
+        duration: 3000,
+      });
+      setState((prev) => ({ ...prev, paymentAmount: String(maxPayment) }));
+    } else {
+      setState((prev) => ({ ...prev, paymentAmount: String(numericValue) }));
+    }
+  };
+
+  const handleFullPayment = () => {
+    const saldoPendiente =
+      Number(state.selectedProject?.costoServicio ?? 0) -
+      Number(state.selectedProject?.abono ?? 0);
+    setState((prev) => ({ ...prev, paymentAmount: String(saldoPendiente) }));
   };
   if (isLoading) {
     return (
-      <LoadingOverlay loading={true}>Cargando proyectos...</LoadingOverlay>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          p: 3,
+        }}
+      >
+        <Paper
+          elevation={8}
+          sx={{
+            p: 4,
+            borderRadius: 3,
+            background: "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(10px)",
+            textAlign: "center",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+          }}
+        >
+          <LoadingOverlay loading={true}>
+            <Typography variant="h6" sx={{ color: "#4c51bf", fontWeight: 600 }}>
+              🔄 Cargando proyectos...
+            </Typography>
+          </LoadingOverlay>
+        </Paper>
+      </Box>
     );
   }
   // Calcular todos los valores para cada proyecto
@@ -680,10 +823,7 @@ const TablaGastosProject: React.FC = () => {
   }, {} as Record<string, ProjectCalculations>);
 
   // Configurar columnas y acciones para DataTable
-  const tableColumns = createTableColumns(
-    projectCalculations,
-    colorEstadoCuenta
-  );
+  const tableColumns = createTableColumns(projectCalculations);
   const rowActions = createRowActions(
     navigate,
     openPaymentDialog,
@@ -692,46 +832,129 @@ const TablaGastosProject: React.FC = () => {
   );
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Paper sx={{ p: 3, width: "100%", overflow: "hidden" }}>
+    <Box
+      sx={{
+        p: { xs: 2, sm: 3 },
+        width: "90%",
+        margin: "0 auto",
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
+      }}
+    >
+      <Paper
+        elevation={8}
+        sx={{
+          p: { xs: 2, sm: 3 },
+          width: "100%",
+          overflow: "hidden",
+          borderRadius: 3,
+          background: "rgba(255, 255, 255, 0.95)",
+          backdropFilter: "blur(10px)",
+          border: "1px solid rgba(255, 255, 255, 0.2)",
+        }}
+      >
+        {/* Header mejorado */}
         <Box
           sx={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            mb: 3,
             flexWrap: "wrap",
-            gap: "1rem",
+            gap: 2,
             flexDirection: { xs: "column", sm: "row" },
             textAlign: { xs: "center", sm: "left" },
+            background: "linear-gradient(135deg, #667eea 0%, #008380 100%)",
+            color: "white",
+            p: 3,
+            borderRadius: 2,
+            mx: -3,
+            mt: -3,
+            mb: 3,
           }}
         >
-          <Typography
-            variant="h4"
-            component="h1"
-            fontWeight="bold"
-            sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }}
-          >
-            Gestión de Proyectos
-          </Typography>
+          <Box>
+            <Typography
+              variant="h4"
+              component="h1"
+              fontWeight="700"
+              sx={{
+                fontSize: { xs: "1.5rem", sm: "2rem" },
+                textShadow: "0 2px 4px rgba(0,0,0,0.3)",
+              }}
+            >
+              💼 Gestión de Proyectos
+            </Typography>
+          </Box>
           <Button
             component={Link}
             to="/crear-proyecto"
             variant="contained"
-            color="primary"
             startIcon={<AddIcon />}
-            sx={{ borderRadius: 2, minWidth: "fit-content" }}
+            sx={{
+              borderRadius: 3,
+              minWidth: "fit-content",
+              background: "rgba(255, 255, 255, 0.2)",
+              backdropFilter: "blur(10px)",
+              border: "1px solid rgba(255, 255, 255, 0.3)",
+              color: "white",
+              fontWeight: 600,
+              px: 3,
+              py: 1.5,
+              fontSize: "0.95rem",
+              textTransform: "none",
+              "&:hover": {
+                background: "rgba(255, 255, 255, 0.3)",
+                transform: "translateY(-2px)",
+                boxShadow: "0 8px 25px rgba(0,0,0,0.2)",
+              },
+              transition: "all 0.3s ease",
+            }}
           >
             Nuevo Proyecto
           </Button>
-        </Box>{" "}
+        </Box>
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert
+            severity="error"
+            sx={{
+              mb: 3,
+              borderRadius: 2,
+              "& .MuiAlert-icon": {
+                fontSize: "1.5rem",
+              },
+            }}
+            variant="filled"
+          >
             Error al cargar proyectos: {error.message}
           </Alert>
         )}
-        {/* Filtros */}
-        <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
+
+        {/* Filtros mejorados */}
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 3,
+            mb: 3,
+            borderRadius: 3,
+            background: "linear-gradient(135deg, #f8f9ff 0%, #f0f2ff 100%)",
+            border: "1px solid #e3e8ff",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+          }}
+        >
+          <Typography
+            variant="h6"
+            sx={{
+              mb: 2,
+              color: "#4c51bf",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            🔍 Filtros de Búsqueda
+          </Typography>
+
           <Grid2 container spacing={2} alignItems="center">
             <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
               <TextField
@@ -745,8 +968,21 @@ const TablaGastosProject: React.FC = () => {
                 }
                 InputProps={{
                   startAdornment: (
-                    <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />
+                    <SearchIcon sx={{ mr: 1, color: "primary.main" }} />
                   ),
+                }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    background: "rgba(255, 255, 255, 0.8)",
+                    "&:hover": {
+                      background: "rgba(255, 255, 255, 1)",
+                    },
+                    "&.Mui-focused": {
+                      background: "rgba(255, 255, 255, 1)",
+                      boxShadow: "0 0 0 3px rgba(66, 153, 225, 0.1)",
+                    },
+                  },
                 }}
               />
             </Grid2>
@@ -760,6 +996,19 @@ const TablaGastosProject: React.FC = () => {
                 onChange={(e) =>
                   handleTextInputChange("solicitante", e.target.value)
                 }
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    background: "rgba(255, 255, 255, 0.8)",
+                    "&:hover": {
+                      background: "rgba(255, 255, 255, 1)",
+                    },
+                    "&.Mui-focused": {
+                      background: "rgba(255, 255, 255, 1)",
+                      boxShadow: "0 0 0 3px rgba(66, 153, 225, 0.1)",
+                    },
+                  },
+                }}
               />
             </Grid2>
             <Grid2 size={{ xs: 12, sm: 6, md: 2 }}>
@@ -773,6 +1022,19 @@ const TablaGastosProject: React.FC = () => {
                 onChange={(e) =>
                   updateFilter("status", e.target.value || undefined)
                 }
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    background: "rgba(255, 255, 255, 0.8)",
+                    "&:hover": {
+                      background: "rgba(255, 255, 255, 1)",
+                    },
+                    "&.Mui-focused": {
+                      background: "rgba(255, 255, 255, 1)",
+                      boxShadow: "0 0 0 3px rgba(66, 153, 225, 0.1)",
+                    },
+                  },
+                }}
               >
                 {STATUS_OPTIONS.map((option) => (
                   <MenuItem key={option.value} value={option.value}>
@@ -798,6 +1060,17 @@ const TablaGastosProject: React.FC = () => {
                     showAdvancedFilters: !prev.showAdvancedFilters,
                   }))
                 }
+                sx={{
+                  borderRadius: 2,
+                  borderColor: "#e3e8ff",
+                  color: "#4c51bf",
+                  fontWeight: 500,
+                  textTransform: "none",
+                  "&:hover": {
+                    borderColor: "#4c51bf",
+                    background: "rgba(76, 81, 191, 0.04)",
+                  },
+                }}
               >
                 Más Filtros
               </Button>
@@ -813,23 +1086,65 @@ const TablaGastosProject: React.FC = () => {
                   startIcon={<ClearIcon />}
                   onClick={handleClearFilters}
                   disabled={!hasActiveFilters}
-                  sx={{ whiteSpace: "nowrap", minWidth: "fit-content" }}
+                  sx={{
+                    whiteSpace: "nowrap",
+                    minWidth: "fit-content",
+                    borderRadius: 2,
+                    textTransform: "none",
+                    fontWeight: 500,
+                    borderColor: "#f56565",
+                    color: "#f56565",
+                    "&:hover": {
+                      borderColor: "#e53e3e",
+                      background: "rgba(245, 101, 101, 0.04)",
+                    },
+                  }}
                 >
                   Limpiar
-                </Button>{" "}
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ textAlign: "center" }}
+                </Button>
+                <Box
+                  sx={{
+                    background:
+                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    color: "white",
+                    px: 2,
+                    py: 1,
+                    borderRadius: 2,
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  }}
                 >
-                  {paginationData.totalItems} resultado(s)
-                </Typography>
+                  📊 {paginationData.totalItems} resultado(s)
+                </Box>
               </Stack>
             </Grid2>
           </Grid2>
-          {/* Filtros avanzados */}
+          {/* Filtros avanzados mejorados */}
           <Collapse in={state.showAdvancedFilters}>
-            <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: "divider" }}>
+            <Box
+              sx={{
+                mt: 3,
+                pt: 3,
+                borderTop: "2px dashed #e3e8ff",
+                background: "rgba(255, 255, 255, 0.5)",
+                borderRadius: 2,
+                p: 2,
+              }}
+            >
+              <Typography
+                variant="subtitle1"
+                sx={{
+                  mb: 2,
+                  color: "#4c51bf",
+                  fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
+                ⚙️ Filtros Avanzados
+              </Typography>
               <Grid2 container spacing={2}>
                 <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField
@@ -841,6 +1156,19 @@ const TablaGastosProject: React.FC = () => {
                     onChange={(e) =>
                       handleTextInputChange("nombreProyecto", e.target.value)
                     }
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 2,
+                        background: "rgba(255, 255, 255, 0.8)",
+                        "&:hover": {
+                          background: "rgba(255, 255, 255, 1)",
+                        },
+                        "&.Mui-focused": {
+                          background: "rgba(255, 255, 255, 1)",
+                          boxShadow: "0 0 0 3px rgba(66, 153, 225, 0.1)",
+                        },
+                      },
+                    }}
                   />
                 </Grid2>
                 <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
@@ -853,6 +1181,19 @@ const TablaGastosProject: React.FC = () => {
                     onChange={(e) =>
                       handleTextInputChange("obrero", e.target.value)
                     }
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 2,
+                        background: "rgba(255, 255, 255, 0.8)",
+                        "&:hover": {
+                          background: "rgba(255, 255, 255, 1)",
+                        },
+                        "&.Mui-focused": {
+                          background: "rgba(255, 255, 255, 1)",
+                          boxShadow: "0 0 0 3px rgba(66, 153, 225, 0.1)",
+                        },
+                      },
+                    }}
                   />
                 </Grid2>
                 {DATE_FILTER_FIELDS.map((field) => (
@@ -866,6 +1207,19 @@ const TablaGastosProject: React.FC = () => {
                       value={filters[field.key] || ""}
                       onChange={(e) => updateFilter(field.key, e.target.value)}
                       slotProps={{ inputLabel: { shrink: true } }}
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 2,
+                          background: "rgba(255, 255, 255, 0.8)",
+                          "&:hover": {
+                            background: "rgba(255, 255, 255, 1)",
+                          },
+                          "&.Mui-focused": {
+                            background: "rgba(255, 255, 255, 1)",
+                            boxShadow: "0 0 0 3px rgba(66, 153, 225, 0.1)",
+                          },
+                        },
+                      }}
                     />
                   </Grid2>
                 ))}
@@ -880,6 +1234,19 @@ const TablaGastosProject: React.FC = () => {
                     onChange={(e) =>
                       updateFilter("metodoDePago", e.target.value || undefined)
                     }
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 2,
+                        background: "rgba(255, 255, 255, 0.8)",
+                        "&:hover": {
+                          background: "rgba(255, 255, 255, 1)",
+                        },
+                        "&.Mui-focused": {
+                          background: "rgba(255, 255, 255, 1)",
+                          boxShadow: "0 0 0 3px rgba(66, 153, 225, 0.1)",
+                        },
+                      },
+                    }}
                   >
                     {PAYMENT_METHOD_OPTIONS.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
@@ -892,101 +1259,371 @@ const TablaGastosProject: React.FC = () => {
             </Box>
           </Collapse>
         </Paper>
-        {/* Tabla */}{" "}
-        <DataTable
-          data={projects}
-          columns={tableColumns as ColumnConfig[]}
-          keyField="id"
-          rowActions={rowActions as RowAction[]}
-          loading={isLoading}
-          emptyMessage="No se encontraron proyectos"
-        />{" "}
-        {/* Paginación */}
+        {/* Tabla con wrapper mejorado */}
+        <Paper
+          elevation={4}
+          sx={{
+            borderRadius: 3,
+            overflow: "hidden",
+            mb: 3,
+            background: "rgba(255, 255, 255, 0.9)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            "& .MuiDataGrid-root": {
+              border: "none",
+              "& .MuiDataGrid-columnHeaders": {
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                color: "white",
+                fontWeight: 600,
+                fontSize: "0.95rem",
+              },
+              "& .MuiDataGrid-row": {
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  background:
+                    "linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%)",
+                  transform: "translateY(-1px)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                },
+              },
+            },
+          }}
+        >
+          {isEmpty && !isLoading ? (
+            <Box
+              sx={{
+                p: 6,
+                textAlign: "center",
+                background: "linear-gradient(135deg, #f8f9ff 0%, #f0f2ff 100%)",
+              }}
+            >
+              <Typography
+                variant="h3"
+                sx={{
+                  fontSize: "4rem",
+                  mb: 2,
+                  opacity: 0.6,
+                }}
+              >
+                📋
+              </Typography>
+              <Typography
+                variant="h5"
+                sx={{
+                  mb: 2,
+                  color: "#4c51bf",
+                  fontWeight: 600,
+                }}
+              >
+                No se encontraron proyectos
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  color: "#718096",
+                  mb: 3,
+                  maxWidth: 400,
+                  mx: "auto",
+                }}
+              >
+                No hay proyectos que coincidan con los filtros aplicados.
+                Intenta ajustar los criterios de búsqueda o crear un nuevo
+                proyecto.
+              </Typography>
+              <Button
+                component={Link}
+                to="/crear-proyecto"
+                variant="contained"
+                startIcon={<AddIcon />}
+                sx={{
+                  background:
+                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  borderRadius: 2,
+                  px: 3,
+                  py: 1.5,
+                  textTransform: "none",
+                  fontWeight: 600,
+                  "&:hover": {
+                    background:
+                      "linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)",
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 8px 25px rgba(0,0,0,0.2)",
+                  },
+                }}
+              >
+                Crear Primer Proyecto
+              </Button>
+            </Box>
+          ) : (
+            <DataTable
+              data={projects}
+              columns={tableColumns as ColumnConfig[]}
+              keyField="id"
+              rowActions={rowActions as RowAction[]}
+              loading={isLoading}
+              emptyMessage="No se encontraron proyectos"
+            />
+          )}
+        </Paper>
+        {/* Paginación mejorada */}
         {!isEmpty && (
-          <DataTablePagination
-            paginationData={paginationData}
-            onPageChange={handlePageChange}
-            onRowsPerPageChange={handleRowsPerPageChange}
-            rowsPerPageOptions={[5, 10, 25, 50]}
-            labelRowsPerPage="Proyectos por página:"
-            showFirstLastButtons={true}
-            showRowsPerPage={true}
-          />
+          <Box
+            sx={{
+              background: "rgba(255, 255, 255, 0.8)",
+              borderRadius: 2,
+              p: 2,
+              border: "1px solid #e3e8ff",
+            }}
+          >
+            <DataTablePagination
+              paginationData={paginationData}
+              onPageChange={handlePageChange}
+              onRowsPerPageChange={handleRowsPerPageChange}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+              labelRowsPerPage="Proyectos por página:"
+              showFirstLastButtons={true}
+              showRowsPerPage={true}
+            />
+          </Box>
         )}
       </Paper>
 
-      {/* Modal de Confirmación de Eliminación */}
-      <Dialog open={state.modals.delete} onClose={closeModals}>
-        <DialogTitle>Confirmar Eliminación</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            ¿Está seguro de que desea eliminar el proyecto &quot;
-            <strong>{state.selectedProject?.nombreProyecto}</strong>&quot;? Esta
-            acción no se puede deshacer.
+      {/* Modal de Confirmación de Eliminación mejorado */}
+      <Dialog
+        open={state.modals.delete}
+        onClose={closeModals}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            background: "linear-gradient(135deg, #fff 0%, #f8f9ff 100%)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.1)",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            background: "linear-gradient(135deg, #f56565 0%, #e53e3e 100%)",
+            color: "white",
+            textAlign: "center",
+            fontWeight: 600,
+            fontSize: "1.2rem",
+          }}
+        >
+          ⚠️ Confirmar Eliminación
+        </DialogTitle>
+        <DialogContent sx={{ p: 3, textAlign: "center" }}>
+          <DialogContentText sx={{ fontSize: "1rem", color: "#4a5568" }}>
+            ¿Está seguro de que desea eliminar el proyecto{" "}
+            <Box component="span" sx={{ fontWeight: 700, color: "#2d3748" }}>
+              &quot;{state.selectedProject?.nombreProyecto}&quot;
+            </Box>
+            ? Esta acción no se puede deshacer.
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={closeModals} color="inherit">
+        <DialogActions sx={{ p: 3, justifyContent: "center", gap: 2 }}>
+          <Button
+            onClick={closeModals}
+            variant="outlined"
+            sx={{
+              borderRadius: 2,
+              px: 3,
+              textTransform: "none",
+              fontWeight: 500,
+            }}
+          >
             Cancelar
           </Button>
-          <Button onClick={handleDelete} color="error" variant="contained">
-            Eliminar
+          <Button
+            onClick={handleDelete}
+            variant="contained"
+            color="error"
+            sx={{
+              borderRadius: 2,
+              px: 3,
+              textTransform: "none",
+              fontWeight: 600,
+              background: "linear-gradient(135deg, #f56565 0%, #e53e3e 100%)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #e53e3e 0%, #c53030 100%)",
+                transform: "translateY(-1px)",
+                boxShadow: "0 8px 25px rgba(229, 62, 62, 0.3)",
+              },
+            }}
+          >
+            🗑️ Eliminar
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Modal de Registro de Pago */}
+      {/* Modal de Registro de Pago mejorado */}
       <Dialog
         open={state.modals.payment}
         onClose={closeModals}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            background: "linear-gradient(135deg, #fff 0%, #f8f9ff 100%)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.1)",
+          },
+        }}
       >
-        <DialogTitle>Registrar Pago</DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ mb: 2 }}>
-            Proyecto: <strong>{state.selectedProject?.nombreProyecto}</strong>
-            <br />
-            Costo Total:
-            <strong>
-              ${formatNumber(state.selectedProject?.costoServicio || 0)}
-            </strong>
-            <br />
-            Abonado:
-            <strong>${formatNumber(state.selectedProject?.abono || 0)}</strong>
-            <br /> Saldo:
-            <strong>
-              $
-              {formatNumber(
-                Number(state.selectedProject?.costoServicio ?? 0) -
-                  Number(state.selectedProject?.abono ?? 0)
-              )}
-            </strong>
+        <DialogTitle
+          sx={{
+            background: "linear-gradient(135deg, #48bb78 0%, #38a169 100%)",
+            color: "white",
+            textAlign: "center",
+            fontWeight: 600,
+            fontSize: "1.2rem",
+          }}
+        >
+          💰 Registrar Pago
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
+          <DialogContentText sx={{ mb: 3, fontSize: "1rem" }}>
+            <Box
+              sx={{
+                background: "rgba(72, 187, 120, 0.1)",
+                borderRadius: 2,
+                p: 2,
+                border: "1px solid rgba(72, 187, 120, 0.2)",
+              }}
+            >
+              <Typography
+                variant="subtitle1"
+                sx={{ fontWeight: 600, mb: 1, color: "#2d3748" }}
+              >
+                📋 {state.selectedProject?.nombreProyecto}
+              </Typography>
+              <Grid2 container spacing={2}>
+                <Grid2 size={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    Costo Total:
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{ fontWeight: 700, color: "#2d3748" }}
+                  >
+                    ${formatNumber(state.selectedProject?.costoServicio || 0)}
+                  </Typography>
+                </Grid2>
+                <Grid2 size={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    Abonado:
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{ fontWeight: 700, color: "#48bb78" }}
+                  >
+                    ${formatNumber(state.selectedProject?.abono || 0)}
+                  </Typography>
+                </Grid2>
+              </Grid2>
+              <Box sx={{ mt: 2, pt: 2, borderTop: "1px dashed #e2e8f0" }}>
+                <Typography variant="body2" color="text.secondary">
+                  Saldo Pendiente:
+                </Typography>
+                <Typography
+                  variant="h5"
+                  sx={{ fontWeight: 700, color: "#e53e3e" }}
+                >
+                  $
+                  {formatNumber(
+                    Number(state.selectedProject?.costoServicio ?? 0) -
+                      Number(state.selectedProject?.abono ?? 0)
+                  )}
+                </Typography>
+              </Box>
+            </Box>
           </DialogContentText>
 
           <TextField
             fullWidth
-            label="Monto del Pago"
+            label="💵 Monto del Pago"
             value={formatNumber(state.paymentAmount)}
             onChange={handlePaymentAmountChange}
             variant="outlined"
             placeholder="0"
-            sx={{ mt: 2 }}
+            sx={{
+              mt: 2,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 2,
+                background: "rgba(255, 255, 255, 0.8)",
+                fontSize: "1.1rem",
+                "&:hover": {
+                  background: "rgba(255, 255, 255, 1)",
+                },
+                "&.Mui-focused": {
+                  background: "rgba(255, 255, 255, 1)",
+                  boxShadow: "0 0 0 3px rgba(72, 187, 120, 0.1)",
+                },
+              },
+              "& .MuiInputLabel-root": {
+                fontWeight: 500,
+              },
+            }}
             autoFocus
-            helperText="Ingrese el monto del pago"
+            helperText="💡 Ingrese el monto del pago que desea registrar"
           />
+
+          {/* Botón de pago completo */}
+          <Box sx={{ mt: 2, textAlign: "center" }}>
+            <Button
+              variant="outlined"
+              onClick={handleFullPayment}
+              sx={{
+                borderRadius: 2,
+                textTransform: "none",
+                fontWeight: 500,
+                borderColor: "#4c51bf",
+                color: "#4c51bf",
+                "&:hover": {
+                  borderColor: "#3c366b",
+                  background: "rgba(76, 81, 191, 0.04)",
+                },
+              }}
+            >
+              🎯 Pagar Saldo Completo
+            </Button>
+          </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={closeModals} color="inherit">
+        <DialogActions sx={{ p: 3, justifyContent: "center", gap: 2 }}>
+          <Button
+            onClick={closeModals}
+            variant="outlined"
+            sx={{
+              borderRadius: 2,
+              px: 3,
+              textTransform: "none",
+              fontWeight: 500,
+            }}
+          >
             Cancelar
           </Button>
           <Button
             onClick={handlePayment}
-            color="primary"
             variant="contained"
             disabled={!state.paymentAmount || Number(state.paymentAmount) <= 0}
+            sx={{
+              borderRadius: 2,
+              px: 3,
+              textTransform: "none",
+              fontWeight: 600,
+              background: "linear-gradient(135deg, #48bb78 0%, #38a169 100%)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #38a169 0%, #2f855a 100%)",
+                transform: "translateY(-1px)",
+                boxShadow: "0 8px 25px rgba(72, 187, 120, 0.3)",
+              },
+              "&:disabled": {
+                background: "#cbd5e0",
+                color: "#a0aec0",
+              },
+            }}
           >
-            Registrar Pago
+            💰 Registrar Pago
           </Button>
         </DialogActions>
       </Dialog>
