@@ -84,7 +84,8 @@ const TableCellRenderer: React.FC<{
   column: ColumnConfig;
   value: unknown;
   row: unknown;
-}> = ({ column, value, row }) => {
+  isMobile?: boolean;
+}> = ({ column, value, row, isMobile = false }) => {
   if (column.render) {
     return <>{column.render(value, row)}</>;
   }
@@ -93,9 +94,13 @@ const TableCellRenderer: React.FC<{
     return (
       <Chip
         label={value ? "Sí" : "No"}
-        size="small"
+        size={isMobile ? "small" : "medium"}
         color={value ? "success" : "default"}
         variant="outlined"
+        sx={{
+          fontSize: isMobile ? "0.6rem" : "0.75rem",
+          height: isMobile ? 20 : 24,
+        }}
       />
     );
   }
@@ -105,10 +110,11 @@ const TableCellRenderer: React.FC<{
         variant="body2"
         sx={{
           fontWeight: "medium",
-          fontSize: "0.875rem",
+          fontSize: isMobile ? "0.65rem" : "0.875rem",
           fontFamily: "monospace",
           textAlign: "right",
           color: "text.primary",
+          lineHeight: 1.2,
         }}
       >
         {value.toLocaleString("es-ES", {
@@ -119,7 +125,8 @@ const TableCellRenderer: React.FC<{
     );
   }
   const stringValue = value?.toString() || "-";
-  const isLongText = stringValue.length > 50;
+  const maxLength = isMobile ? 12 : 50;
+  const isLongText = stringValue.length > maxLength;
 
   if (isLongText) {
     return (
@@ -127,19 +134,27 @@ const TableCellRenderer: React.FC<{
         title={
           <Typography
             variant="body2"
-            sx={{ whiteSpace: "pre-wrap", maxWidth: 300 }}
+            sx={{
+              whiteSpace: "pre-wrap",
+              maxWidth: isMobile ? 280 : 320,
+              fontSize: isMobile ? "0.7rem" : "0.75rem",
+              lineHeight: 1.4,
+              padding: "4px 0",
+            }}
           >
             {stringValue}
           </Typography>
         }
         arrow
-        placement="top"
+        placement="top-start"
         componentsProps={{
           tooltip: {
             sx: {
-              backgroundColor: "rgba(97, 97, 97, 0.95)",
-              fontSize: "0.75rem",
-              maxWidth: 350,
+              backgroundColor: "rgba(0, 0, 0, 0.9)",
+              fontSize: isMobile ? "0.65rem" : "0.75rem",
+              maxWidth: isMobile ? 300 : 350,
+              padding: "8px 12px",
+              borderRadius: "8px",
             },
           },
         }}
@@ -147,24 +162,32 @@ const TableCellRenderer: React.FC<{
         <Box
           sx={{
             cursor: "help",
-            maxWidth: column.width || "200px",
+            maxWidth: isMobile ? "80px" : column.width || "180px",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
+            display: "flex",
+            alignItems: "center",
             "&:hover": {
               color: "primary.main",
+              backgroundColor: "action.hover",
+              borderRadius: "4px",
             },
+            transition: "all 0.2s ease",
+            padding: "2px 4px",
+            margin: "-2px -4px",
           }}
         >
           <Typography
             variant="body2"
             component="span"
             sx={{
-              fontSize: "0.875rem",
-              lineHeight: 1.4,
+              fontSize: isMobile ? "0.65rem" : "0.875rem",
+              lineHeight: 1.2,
+              fontWeight: 400,
             }}
           >
-            {stringValue}
+            {isMobile ? `${stringValue.substring(0, 10)}...` : stringValue}
           </Typography>
         </Box>
       </Tooltip>
@@ -172,18 +195,30 @@ const TableCellRenderer: React.FC<{
   }
 
   return (
-    <Typography
-      variant="body2"
+    <Box
       sx={{
-        maxWidth: column.width || "200px",
-        wordBreak: "break-word",
-        fontSize: "0.875rem",
-        lineHeight: 1.4,
-        hyphens: "auto",
+        maxWidth: isMobile ? "100px" : column.width || "180px",
+        minHeight: isMobile ? "20px" : "24px",
+        display: "flex",
+        alignItems: "center",
+        py: isMobile ? 0.25 : 0.5,
       }}
     >
-      {stringValue}
-    </Typography>
+      <Typography
+        variant="body2"
+        sx={{
+          wordBreak: "break-word",
+          fontSize: isMobile ? "0.65rem" : "0.875rem",
+          lineHeight: isMobile ? 1.3 : 1.4,
+          hyphens: "auto",
+          overflowWrap: "anywhere",
+          fontWeight: 400,
+          color: "text.primary",
+        }}
+      >
+        {stringValue}
+      </Typography>
+    </Box>
   );
 };
 
@@ -340,13 +375,45 @@ export const DataTable: React.FC<DataTableProps> = ({
         />
       )}
 
+      {/* Mobile Info Bar */}
+      {isMobile && data.length > 0 && (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            backgroundColor: "primary.50",
+            borderRadius: 1,
+            padding: "8px 12px",
+            marginBottom: 1,
+            fontSize: "0.7rem",
+            color: "primary.dark",
+            border: "1px solid",
+            borderColor: "primary.200",
+          }}
+        >
+          <Typography
+            variant="caption"
+            sx={{ fontSize: "0.65rem", fontWeight: 500 }}
+          >
+            📊 {data.length} registro{data.length !== 1 ? "s" : ""}
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{ fontSize: "0.65rem", opacity: 0.8 }}
+          >
+            ← Desliza para ver más →
+          </Typography>
+        </Box>
+      )}
+
       {/* Table */}
       <LoadingOverlay loading={loading} type="skeleton">
         {data.length === 0 ? (
           renderEmptyState()
         ) : (
           <Box sx={{ position: "relative" }}>
-            {/* Indicadores de scroll horizontal */}
+            {/* Indicadores de scroll horizontal mejorados */}
             {isMobile && canScrollLeft && (
               <Box
                 sx={{
@@ -354,13 +421,28 @@ export const DataTable: React.FC<DataTableProps> = ({
                   left: 0,
                   top: "50%",
                   transform: "translateY(-50%)",
-                  width: 20,
+                  width: 30,
                   height: "80%",
                   background:
-                    "linear-gradient(to right, rgba(0,0,0,0.1), transparent)",
+                    "linear-gradient(to right, rgba(25,118,210,0.15), transparent)",
                   pointerEvents: "none",
                   zIndex: 5,
-                  borderRadius: "0 10px 10px 0",
+                  borderRadius: "0 15px 15px 0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-start",
+                  paddingLeft: "8px",
+                  "&::before": {
+                    content: '"‹"',
+                    color: "primary.main",
+                    fontSize: "1.2rem",
+                    fontWeight: "bold",
+                    animation: "pulse 2s infinite",
+                  },
+                  "@keyframes pulse": {
+                    "0%, 100%": { opacity: 0.6 },
+                    "50%": { opacity: 1 },
+                  },
                 }}
               />
             )}
@@ -371,13 +453,28 @@ export const DataTable: React.FC<DataTableProps> = ({
                   right: 0,
                   top: "50%",
                   transform: "translateY(-50%)",
-                  width: 20,
+                  width: 30,
                   height: "80%",
                   background:
-                    "linear-gradient(to left, rgba(0,0,0,0.1), transparent)",
+                    "linear-gradient(to left, rgba(25,118,210,0.15), transparent)",
                   pointerEvents: "none",
                   zIndex: 5,
-                  borderRadius: "10px 0 0 10px",
+                  borderRadius: "15px 0 0 15px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  paddingRight: "8px",
+                  "&::before": {
+                    content: '"›"',
+                    color: "primary.main",
+                    fontSize: "1.2rem",
+                    fontWeight: "bold",
+                    animation: "pulse 2s infinite",
+                  },
+                  "@keyframes pulse": {
+                    "0%, 100%": { opacity: 0.6 },
+                    "50%": { opacity: 1 },
+                  },
                 }}
               />
             )}
@@ -385,7 +482,7 @@ export const DataTable: React.FC<DataTableProps> = ({
             <TableContainer
               component={Paper}
               sx={{
-                maxHeight: isMobile ? 400 : 600,
+                maxHeight: isMobile ? 500 : 600,
                 minHeight: 200,
                 border: "1px solid",
                 borderColor: "divider",
@@ -400,7 +497,24 @@ export const DataTable: React.FC<DataTableProps> = ({
                 ...(isMobile && {
                   touchAction: "pan-x pan-y",
                   WebkitOverflowScrolling: "touch",
+                  scrollBehavior: "smooth",
                 }),
+                // Mejor scrollbar para móviles
+                "&::-webkit-scrollbar": {
+                  height: isMobile ? 6 : 8,
+                  width: isMobile ? 6 : 8,
+                },
+                "&::-webkit-scrollbar-track": {
+                  background: "rgba(0,0,0,0.1)",
+                  borderRadius: 10,
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  background: "rgba(0,0,0,0.3)",
+                  borderRadius: 10,
+                  "&:hover": {
+                    background: "rgba(0,0,0,0.5)",
+                  },
+                },
               }}
               onScroll={handleScroll}
             >
@@ -408,7 +522,38 @@ export const DataTable: React.FC<DataTableProps> = ({
                 stickyHeader
                 sx={{
                   minWidth: isMobile ? 600 : 1000,
-                  tableLayout: "fixed",
+                  tableLayout: "auto", // Cambio a auto para mejor manejo de contenido
+                  "& .MuiTableCell-root": {
+                    // Mejoras generales para celdas
+                    wordBreak: "break-word",
+                    overflowWrap: "anywhere",
+                    hyphens: "auto",
+                    // Mejor spacing para móviles
+                    ...(isMobile && {
+                      padding: "8px 6px",
+                      fontSize: "0.65rem",
+                      lineHeight: 1.3,
+                    }),
+                  },
+                  // Mejoras para el scroll horizontal en móviles
+                  ...(isMobile && {
+                    "& .MuiTableHead-root": {
+                      "& .MuiTableCell-root": {
+                        fontSize: "0.6rem",
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        padding: "12px 6px",
+                      },
+                    },
+                    "& .MuiTableBody-root": {
+                      "& .MuiTableRow-root": {
+                        "&:hover": {
+                          transform: "none", // Disable transform on mobile for better performance
+                        },
+                      },
+                    },
+                  }),
                 }}
               >
                 <TableHead>
@@ -443,27 +588,101 @@ export const DataTable: React.FC<DataTableProps> = ({
                         align={column.align}
                         sx={{
                           width: column.width,
-                          minWidth: column.width ? "auto" : 120,
-                          maxWidth: column.width || 250,
+                          minWidth: isMobile ? 80 : column.width ? "auto" : 120,
+                          maxWidth: isMobile ? 150 : column.width || 250,
                           fontWeight: "bold",
-                          backgroundColor: alpha(theme.palette.grey[100], 0.8),
+                          backgroundColor: alpha(theme.palette.grey[100], 0.9),
                           borderBottom: "2px solid",
                           borderColor: "divider",
                           position: "sticky",
                           top: 0,
                           zIndex: 10,
-                          fontSize: "0.8rem",
+                          fontSize: isMobile ? "0.65rem" : "0.8rem",
                           textTransform: "uppercase",
                           letterSpacing: "0.08em",
                           color: "text.primary",
-                          backdropFilter: "blur(8px)",
+                          backdropFilter: "blur(10px)",
                           "&:not(:last-child)": {
                             borderRight: "1px solid",
                             borderRightColor: "grey.300",
                           },
+                          // Mejoras para títulos largos
+                          textOverflow: "ellipsis",
+                          overflow: "hidden",
+                          whiteSpace: "nowrap",
+                          lineHeight: isMobile ? 1.3 : 1.4,
+                          py: isMobile ? 1 : 1.5,
+                          px: isMobile ? 0.75 : 1.5,
+                          height: isMobile ? 48 : 56,
+                          transition: "background-color 0.2s ease",
+                          "&:hover": {
+                            backgroundColor: alpha(
+                              theme.palette.grey[200],
+                              0.8
+                            ),
+                          },
                         }}
                       >
-                        {column.label}
+                        {isMobile && column.label.length > 10 ? (
+                          <Tooltip
+                            title={
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  fontSize: "0.75rem",
+                                  lineHeight: 1.3,
+                                  whiteSpace: "pre-wrap",
+                                }}
+                              >
+                                {column.label}
+                              </Typography>
+                            }
+                            arrow
+                            placement="top"
+                            componentsProps={{
+                              tooltip: {
+                                sx: {
+                                  backgroundColor: "rgba(0, 0, 0, 0.9)",
+                                  fontSize: "0.7rem",
+                                  maxWidth: 250,
+                                  padding: "8px 12px",
+                                },
+                              },
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                cursor: "help",
+                                display: "flex",
+                                alignItems: "center",
+                                "&:hover": {
+                                  color: "primary.main",
+                                },
+                              }}
+                            >
+                              {column.label.substring(0, 8)}...
+                            </Box>
+                          </Tooltip>
+                        ) : (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent:
+                                column.align === "center"
+                                  ? "center"
+                                  : column.align === "right"
+                                  ? "flex-end"
+                                  : "flex-start",
+                              lineHeight: 1.2,
+                            }}
+                          >
+                            {column.label}
+                          </Box>
+                        )}
                       </TableCell>
                     ))}
                     {rowActions.length > 0 && (
@@ -560,16 +779,33 @@ export const DataTable: React.FC<DataTableProps> = ({
                             sx={{
                               borderBottom: "1px solid",
                               borderColor: "divider",
-                              py: 2,
-                              px: 2,
-                              minWidth: column.width ? "auto" : 120,
-                              maxWidth: column.width || 250,
+                              py: isMobile ? 0.75 : 1.5,
+                              px: isMobile ? 0.75 : 1.5,
+                              minWidth: isMobile
+                                ? 80
+                                : column.width
+                                ? "auto"
+                                : 120,
+                              maxWidth: isMobile ? 120 : column.width || 250,
                               width: column.width,
-                              verticalAlign: "top",
+                              verticalAlign: "middle",
                               position: "relative",
+                              height: isMobile ? "auto" : 60,
                               "&:not(:last-child)": {
                                 borderRight: "1px solid",
                                 borderRightColor: "grey.200",
+                              },
+                              // Mejoras para móviles
+                              ...(isMobile && {
+                                fontSize: "0.65rem",
+                                lineHeight: 1.3,
+                                overflow: "hidden",
+                                minHeight: 40,
+                              }),
+                              // Hover effect
+                              transition: "background-color 0.15s ease",
+                              "&:hover": {
+                                backgroundColor: "action.hover",
                               },
                             }}
                           >
@@ -581,6 +817,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                                 ]
                               }
                               row={row}
+                              isMobile={isMobile}
                             />
                           </TableCell>
                         ))}

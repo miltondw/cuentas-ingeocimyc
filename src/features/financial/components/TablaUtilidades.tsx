@@ -10,11 +10,18 @@ import {
   Chip,
   IconButton,
   Tooltip,
+  Button,
+  Collapse,
+  TextField,
+  MenuItem,
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import { projectsService } from "../services/projectsService";
 import { useNotifications } from "@/hooks/useNotifications";
 import { LoadingOverlay } from "@/components/common/LoadingOverlay";
@@ -75,7 +82,18 @@ const TablaUtilidades: React.FC = () => {
   const { showNotification } = useNotifications();
   const [resumen, setResumen] = useState<MonthlyData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null); // Procesamiento de datos actualizado con nueva estructura
+  const [error, setError] = useState<string | null>(null);
+
+  // Estados para filtros
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    year: "",
+    month: "",
+    minAmount: "",
+    maxAmount: "",
+  });
+
+  // Procesamiento de datos actualizado con nueva estructura
   const processData = useCallback(
     (gastosMensuales: GastoMensual[], proyectos: Project[]): MonthlyData[] => {
       const monthlyData: { [key: string]: MonthlyData } = {};
@@ -220,14 +238,22 @@ const TablaUtilidades: React.FC = () => {
       sortable: true,
       render: (value) => (
         <Box
-          sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 130 }}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: { xs: 0.5, sm: 1 },
+            minWidth: { xs: 80, sm: 100, md: 130 },
+            maxWidth: { xs: 90, sm: 120, md: 150 },
+            overflow: "hidden",
+            pr: { xs: 0.5, sm: 1 },
+          }}
         >
           <Box
             sx={{
-              width: 8,
-              height: 8,
+              width: { xs: 6, sm: 8 },
+              height: { xs: 6, sm: 8 },
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #3498db 0%, #2980b9 100%)",
+              background: "linear-gradient(135deg, #34495e 0%, #2c3e50 100%)",
               flexShrink: 0,
             }}
           />
@@ -237,8 +263,11 @@ const TablaUtilidades: React.FC = () => {
             sx={{
               color: "#2c3e50",
               textTransform: "capitalize",
-              fontSize: { xs: "0.8rem", sm: "0.875rem" },
-              lineHeight: 1.2,
+              fontSize: { xs: "0.6rem", sm: "0.75rem", md: "0.875rem" },
+              lineHeight: { xs: 1.0, sm: 1.1 },
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
             {String(value)}
@@ -248,19 +277,30 @@ const TablaUtilidades: React.FC = () => {
     },
     {
       key: "GastosProyectos",
-      label: "🏗️ Gastos Proyectos",
+      label: "🏗️ Proyectos",
       sortable: true,
       align: "right",
       render: (value) => (
-        <Box sx={{ textAlign: "right", minWidth: 110 }}>
+        <Box
+          sx={{
+            textAlign: "right",
+            minWidth: { xs: 60, sm: 80, md: 100 },
+            maxWidth: { xs: 70, sm: 90, md: 120 },
+            overflow: "hidden",
+            px: { xs: 0.25, sm: 0.5 },
+          }}
+        >
           <Typography
             variant="body2"
             sx={{
               fontWeight: 600,
               fontFamily: "monospace",
               color: "#e67e22",
-              fontSize: { xs: "0.75rem", sm: "0.9rem" },
-              lineHeight: 1.2,
+              fontSize: { xs: "0.55rem", sm: "0.65rem", md: "0.75rem" },
+              lineHeight: { xs: 1.0, sm: 1.1 },
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
             ${formatNumber(value as number)}
@@ -270,19 +310,30 @@ const TablaUtilidades: React.FC = () => {
     },
     {
       key: "GastosEmpresa",
-      label: "🏢 Gastos Empresa",
+      label: "🏢 Empresa",
       sortable: true,
       align: "right",
       render: (value) => (
-        <Box sx={{ textAlign: "right", minWidth: 110 }}>
+        <Box
+          sx={{
+            textAlign: "right",
+            minWidth: { xs: 60, sm: 80, md: 100 },
+            maxWidth: { xs: 70, sm: 90, md: 120 },
+            overflow: "hidden",
+            px: { xs: 0.25, sm: 0.5 },
+          }}
+        >
           <Typography
             variant="body2"
             sx={{
               fontWeight: 600,
               fontFamily: "monospace",
               color: "#d35400",
-              fontSize: { xs: "0.75rem", sm: "0.9rem" },
-              lineHeight: 1.2,
+              fontSize: { xs: "0.55rem", sm: "0.65rem", md: "0.75rem" },
+              lineHeight: { xs: 1.0, sm: 1.1 },
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
             ${formatNumber(value as number)}
@@ -292,24 +343,36 @@ const TablaUtilidades: React.FC = () => {
     },
     {
       key: "TotalGastos",
-      label: "💸 Total Gastos",
+      label: "💸 Total",
       sortable: true,
       align: "right",
       render: (value) => (
-        <Box sx={{ textAlign: "right", minWidth: 120 }}>
+        <Box
+          sx={{
+            textAlign: "right",
+            minWidth: { xs: 65, sm: 85, md: 110 },
+            maxWidth: { xs: 75, sm: 95, md: 130 },
+            overflow: "hidden",
+            px: { xs: 0.25, sm: 0.5 },
+          }}
+        >
           <Typography
             variant="body2"
             fontWeight="700"
             sx={{
               fontFamily: "monospace",
               color: "#c0392b",
-              fontSize: { xs: "0.75rem", sm: "0.85rem" },
+              fontSize: { xs: "0.55rem", sm: "0.65rem", md: "0.75rem" },
               background: "rgba(192, 57, 43, 0.1)",
-              px: { xs: 0.5, sm: 1 },
-              py: 0.5,
+              px: { xs: 0.2, sm: 0.3, md: 0.5 },
+              py: { xs: 0.1, sm: 0.2, md: 0.3 },
               borderRadius: 1,
               display: "inline-block",
-              lineHeight: 1.2,
+              lineHeight: { xs: 1.0, sm: 1.1 },
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              maxWidth: "100%",
             }}
           >
             ${formatNumber(value as number)}
@@ -319,19 +382,30 @@ const TablaUtilidades: React.FC = () => {
     },
     {
       key: "TotalRetencion",
-      label: "📊 Retención",
+      label: "📊 Ret.",
       sortable: true,
       align: "right",
       render: (value) => (
-        <Box sx={{ textAlign: "right", minWidth: 100 }}>
+        <Box
+          sx={{
+            textAlign: "right",
+            minWidth: { xs: 50, sm: 70, md: 90 },
+            maxWidth: { xs: 60, sm: 80, md: 100 },
+            overflow: "hidden",
+            px: { xs: 0.25, sm: 0.5 },
+          }}
+        >
           <Typography
             variant="body2"
             sx={{
               fontWeight: 500,
               fontFamily: "monospace",
               color: "#8e44ad",
-              fontSize: { xs: "0.7rem", sm: "0.8rem" },
-              lineHeight: 1.2,
+              fontSize: { xs: "0.5rem", sm: "0.6rem", md: "0.7rem" },
+              lineHeight: { xs: 1.0, sm: 1.1 },
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
             ${formatNumber(value as number)}
@@ -345,15 +419,26 @@ const TablaUtilidades: React.FC = () => {
       sortable: true,
       align: "right",
       render: (value) => (
-        <Box sx={{ textAlign: "right", minWidth: 90 }}>
+        <Box
+          sx={{
+            textAlign: "right",
+            minWidth: { xs: 50, sm: 70, md: 80 },
+            maxWidth: { xs: 60, sm: 80, md: 90 },
+            overflow: "hidden",
+            px: { xs: 0.25, sm: 0.5 },
+          }}
+        >
           <Typography
             variant="body2"
             sx={{
               fontWeight: 500,
               fontFamily: "monospace",
               color: "#7f8c8d",
-              fontSize: { xs: "0.7rem", sm: "0.8rem" },
-              lineHeight: 1.2,
+              fontSize: { xs: "0.5rem", sm: "0.6rem", md: "0.7rem" },
+              lineHeight: { xs: 1.0, sm: 1.1 },
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
             ${formatNumber(value as number)}
@@ -367,20 +452,32 @@ const TablaUtilidades: React.FC = () => {
       sortable: true,
       align: "right",
       render: (value) => (
-        <Box sx={{ textAlign: "right", minWidth: 120 }}>
+        <Box
+          sx={{
+            textAlign: "right",
+            minWidth: { xs: 65, sm: 85, md: 110 },
+            maxWidth: { xs: 75, sm: 95, md: 130 },
+            overflow: "hidden",
+            px: { xs: 0.25, sm: 0.5 },
+          }}
+        >
           <Typography
             variant="body2"
             fontWeight="700"
             sx={{
               fontFamily: "monospace",
               color: "#27ae60",
-              fontSize: { xs: "0.75rem", sm: "0.85rem" },
+              fontSize: { xs: "0.55rem", sm: "0.65rem", md: "0.75rem" },
               background: "rgba(39, 174, 96, 0.1)",
-              px: { xs: 0.5, sm: 1 },
-              py: 0.5,
+              px: { xs: 0.2, sm: 0.3, md: 0.5 },
+              py: { xs: 0.1, sm: 0.2, md: 0.3 },
               borderRadius: 1,
               display: "inline-block",
-              lineHeight: 1.2,
+              lineHeight: { xs: 1.0, sm: 1.1 },
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              maxWidth: "100%",
             }}
           >
             ${formatNumber(value as number)}
@@ -390,14 +487,22 @@ const TablaUtilidades: React.FC = () => {
     },
     {
       key: "UtilidadNeta",
-      label: "📈 Utilidad Neta",
+      label: "📈 Utilidad",
       sortable: true,
       align: "right",
       render: (value) => {
         const utilidad = value as number;
         const isPositive = utilidad >= 0;
         return (
-          <Box sx={{ textAlign: "right", minWidth: 130 }}>
+          <Box
+            sx={{
+              textAlign: "right",
+              minWidth: { xs: 70, sm: 90, md: 120 },
+              maxWidth: { xs: 80, sm: 100, md: 140 },
+              overflow: "hidden",
+              px: { xs: 0.25, sm: 0.5 },
+            }}
+          >
             <Chip
               icon={isPositive ? <TrendingUpIcon /> : <TrendingDownIcon />}
               label={`$${formatNumber(utilidad)}`}
@@ -405,19 +510,23 @@ const TablaUtilidades: React.FC = () => {
               sx={{
                 fontWeight: 700,
                 fontFamily: "monospace",
-                fontSize: { xs: "0.7rem", sm: "0.8rem" },
-                height: { xs: 24, sm: 32 },
+                fontSize: { xs: "0.5rem", sm: "0.6rem", md: "0.7rem" },
+                height: { xs: 18, sm: 20, md: 24 },
                 background: isPositive
                   ? "linear-gradient(135deg, #27ae60 0%, #229954 100%)"
                   : "linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)",
                 color: "white",
                 border: `1px solid ${isPositive ? "#27ae60" : "#e74c3c"}`,
+                maxWidth: "100%",
                 "& .MuiChip-icon": {
                   color: "white",
-                  fontSize: { xs: "0.9rem", sm: "1rem" },
+                  fontSize: { xs: "0.7rem", sm: "0.8rem", md: "0.9rem" },
                 },
                 "& .MuiChip-label": {
-                  px: { xs: 0.5, sm: 1 },
+                  px: { xs: 0.2, sm: 0.3, md: 0.5 },
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                 },
               }}
             />
@@ -438,6 +547,59 @@ const TablaUtilidades: React.FC = () => {
       { totalIngresos: 0, totalGastos: 0, totalUtilidad: 0 }
     );
   }, [resumen]);
+
+  // Funciones para manejar filtros
+  const handleFilterChange = (
+    filterName: keyof typeof filters,
+    value: string
+  ) => {
+    setFilters((prev) => ({
+      ...prev,
+      [filterName]: value,
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      year: "",
+      month: "",
+      minAmount: "",
+      maxAmount: "",
+    });
+  };
+
+  // Datos filtrados
+  const filteredData = useMemo(() => {
+    return resumen.filter((item) => {
+      // Filtro por año
+      if (filters.year) {
+        const itemYear = new Date(item.mes).getFullYear().toString();
+        if (!itemYear.includes(filters.year)) return false;
+      }
+
+      // Filtro por mes
+      if (filters.month) {
+        const itemMonth = (new Date(item.mes).getMonth() + 1)
+          .toString()
+          .padStart(2, "0");
+        if (itemMonth !== filters.month) return false;
+      }
+
+      // Filtro por monto mínimo
+      if (filters.minAmount) {
+        const minAmount = parseFloat(filters.minAmount);
+        if (item.UtilidadNeta < minAmount) return false;
+      }
+
+      // Filtro por monto máximo
+      if (filters.maxAmount) {
+        const maxAmount = parseFloat(filters.maxAmount);
+        if (item.UtilidadNeta > maxAmount) return false;
+      }
+
+      return true;
+    });
+  }, [resumen, filters]);
 
   if (error) {
     return (
@@ -556,26 +718,251 @@ const TablaUtilidades: React.FC = () => {
                 📊 Resumen Financiero
               </Typography>
             </Box>
-            <Tooltip title="Actualizar datos financieros" arrow>
-              <IconButton
-                onClick={fetchData}
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Tooltip title="Mostrar/Ocultar filtros" arrow>
+                <Button
+                  onClick={() => setShowFilters(!showFilters)}
+                  variant="contained"
+                  startIcon={<FilterListIcon />}
+                  endIcon={
+                    showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />
+                  }
+                  sx={{
+                    background: "rgba(255, 255, 255, 0.15)",
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                    color: "white",
+                    textTransform: "none",
+                    fontWeight: 500,
+                    "&:hover": {
+                      background: "rgba(255, 255, 255, 0.25)",
+                      transform: "translateY(-2px)",
+                      boxShadow: "0 8px 25px rgba(0,0,0,0.2)",
+                    },
+                    transition: "all 0.3s ease",
+                  }}
+                >
+                  Filtros
+                </Button>
+              </Tooltip>
+              <Tooltip title="Actualizar datos financieros" arrow>
+                <IconButton
+                  onClick={fetchData}
+                  sx={{
+                    background: "rgba(255, 255, 255, 0.15)",
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                    color: "white",
+                    "&:hover": {
+                      background: "rgba(255, 255, 255, 0.25)",
+                      transform: "translateY(-2px)",
+                      boxShadow: "0 8px 25px rgba(0,0,0,0.2)",
+                    },
+                    transition: "all 0.3s ease",
+                  }}
+                >
+                  <RefreshIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Box>
+
+          {/* Sección de Filtros Colapsable */}
+          <Collapse in={showFilters}>
+            <Paper
+              sx={{
+                p: 3,
+                mb: 3,
+                borderRadius: 3,
+                background: "linear-gradient(135deg, #718096 0%, #4a5568 100%)",
+                border: "1px solid #a0aec0",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+              }}
+            >
+              <Typography
+                variant="h6"
                 sx={{
-                  background: "rgba(255, 255, 255, 0.15)",
-                  backdropFilter: "blur(10px)",
-                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                  mb: 2,
                   color: "white",
-                  "&:hover": {
-                    background: "rgba(255, 255, 255, 0.25)",
-                    transform: "translateY(-2px)",
-                    boxShadow: "0 8px 25px rgba(0,0,0,0.2)",
-                  },
-                  transition: "all 0.3s ease",
+                  fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  textShadow: "0 1px 2px rgba(0,0,0,0.2)",
                 }}
               >
-                <RefreshIcon />
-              </IconButton>
-            </Tooltip>
-          </Box>
+                🔍 Filtros de Búsqueda
+              </Typography>
+              <Grid2 container spacing={2}>
+                {/* Filtros de fecha */}
+                <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+                  <TextField
+                    label="🗓️ Año"
+                    value={filters.year}
+                    onChange={(e) => handleFilterChange("year", e.target.value)}
+                    placeholder="2025"
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 2,
+                        background: "rgba(255, 255, 255, 0.9)",
+                        "&:hover": {
+                          background: "rgba(255, 255, 255, 1)",
+                        },
+                        "&.Mui-focused": {
+                          background: "rgba(255, 255, 255, 1)",
+                          boxShadow: "0 0 0 3px rgba(52, 73, 94, 0.2)",
+                        },
+                      },
+                    }}
+                  />
+                </Grid2>
+                <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+                  <TextField
+                    select
+                    label="📅 Mes"
+                    value={filters.month}
+                    onChange={(e) =>
+                      handleFilterChange("month", e.target.value)
+                    }
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 2,
+                        background: "rgba(255, 255, 255, 0.9)",
+                        "&:hover": {
+                          background: "rgba(255, 255, 255, 1)",
+                        },
+                        "&.Mui-focused": {
+                          background: "rgba(255, 255, 255, 1)",
+                          boxShadow: "0 0 0 3px rgba(52, 73, 94, 0.2)",
+                        },
+                      },
+                    }}
+                  >
+                    <MenuItem value="">Todos los meses</MenuItem>
+                    <MenuItem value="01">Enero</MenuItem>
+                    <MenuItem value="02">Febrero</MenuItem>
+                    <MenuItem value="03">Marzo</MenuItem>
+                    <MenuItem value="04">Abril</MenuItem>
+                    <MenuItem value="05">Mayo</MenuItem>
+                    <MenuItem value="06">Junio</MenuItem>
+                    <MenuItem value="07">Julio</MenuItem>
+                    <MenuItem value="08">Agosto</MenuItem>
+                    <MenuItem value="09">Septiembre</MenuItem>
+                    <MenuItem value="10">Octubre</MenuItem>
+                    <MenuItem value="11">Noviembre</MenuItem>
+                    <MenuItem value="12">Diciembre</MenuItem>
+                  </TextField>
+                </Grid2>
+                {/* Filtros de montos */}
+                <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+                  <TextField
+                    label="💰 Utilidad Mínima"
+                    value={filters.minAmount}
+                    onChange={(e) =>
+                      handleFilterChange("minAmount", e.target.value)
+                    }
+                    placeholder="100000"
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                    type="number"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 2,
+                        background: "rgba(255, 255, 255, 0.9)",
+                        "&:hover": {
+                          background: "rgba(255, 255, 255, 1)",
+                        },
+                        "&.Mui-focused": {
+                          background: "rgba(255, 255, 255, 1)",
+                          boxShadow: "0 0 0 3px rgba(52, 73, 94, 0.2)",
+                        },
+                      },
+                    }}
+                  />
+                </Grid2>
+                <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+                  <TextField
+                    label="💸 Utilidad Máxima"
+                    value={filters.maxAmount}
+                    onChange={(e) =>
+                      handleFilterChange("maxAmount", e.target.value)
+                    }
+                    placeholder="5000000"
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                    type="number"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 2,
+                        background: "rgba(255, 255, 255, 0.9)",
+                        "&:hover": {
+                          background: "rgba(255, 255, 255, 1)",
+                        },
+                        "&.Mui-focused": {
+                          background: "rgba(255, 255, 255, 1)",
+                          boxShadow: "0 0 0 3px rgba(52, 73, 94, 0.2)",
+                        },
+                      },
+                    }}
+                  />
+                </Grid2>
+                {/* Botón para limpiar filtros */}
+                <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Button
+                    onClick={clearFilters}
+                    variant="outlined"
+                    fullWidth
+                    sx={{
+                      height: 40,
+                      borderRadius: 2,
+                      textTransform: "none",
+                      fontWeight: 500,
+                      borderColor: "#e67e22",
+                      color: "#e67e22",
+                      "&:hover": {
+                        borderColor: "#d35400",
+                        background: "rgba(230, 126, 34, 0.04)",
+                        transform: "translateY(-1px)",
+                      },
+                      transition: "all 0.3s ease",
+                    }}
+                  >
+                    🧹 Limpiar Filtros
+                  </Button>
+                </Grid2>
+                {/* Información de resultados */}
+                <Grid2 size={{ xs: 12 }}>
+                  <Box
+                    sx={{
+                      background:
+                        "linear-gradient(135deg, #34495e 0%, #2c3e50 100%)",
+                      color: "white",
+                      px: 3,
+                      py: 2,
+                      borderRadius: 2,
+                      mt: 2,
+                      textAlign: "center",
+                      fontWeight: 500,
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    📊 {filteredData.length} resultado
+                    {filteredData.length !== 1 ? "s" : ""} encontrado
+                    {filteredData.length !== 1 ? "s" : ""}
+                  </Box>
+                </Grid2>
+              </Grid2>
+            </Paper>
+          </Collapse>
+
           {/* Tarjetas de resumen financiero mejoradas con mejor responsive */}
           <Grid2 container spacing={{ xs: 2, sm: 3 }} sx={{ mb: 4 }}>
             <Grid2 size={{ xs: 12, sm: 6, lg: 4 }}>
@@ -813,7 +1200,7 @@ const TablaUtilidades: React.FC = () => {
               </Card>
             </Grid2>
           </Grid2>
-          {/* Tabla de utilidades con contenedor mejorado y responsive */}
+          {/* Tabla de utilidades - DataTable maneja su propio scroll */}
           <Paper
             elevation={4}
             sx={{
@@ -823,38 +1210,21 @@ const TablaUtilidades: React.FC = () => {
               border: "1px solid rgba(52, 73, 94, 0.2)",
             }}
           >
-            {/* Contenedor con scroll horizontal para móviles */}
-            <Box
-              sx={{
-                width: "100%",
-                overflowX: "auto",
-                "&::-webkit-scrollbar": {
-                  height: 8,
-                },
-                "&::-webkit-scrollbar-track": {
-                  background: "rgba(52, 73, 94, 0.1)",
-                  borderRadius: 4,
-                },
-                "&::-webkit-scrollbar-thumb": {
-                  background:
-                    "linear-gradient(135deg, #34495e 0%, #2c3e50 100%)",
-                  borderRadius: 4,
-                  "&:hover": {
-                    background:
-                      "linear-gradient(135deg, #2c3e50 0%, #34495e 100%)",
-                  },
-                },
-              }}
-            >
-              <DataTable
-                data={resumen}
-                columns={columns}
-                keyField="mes"
-                loading={loading}
-                title="📊 Resumen Financiero Mensual Detallado"
-                emptyMessage="📋 No hay datos financieros disponibles para mostrar"
-              />
-            </Box>
+            <DataTable
+              data={filteredData}
+              columns={columns}
+              keyField="mes"
+              loading={loading}
+              title="📊 Resumen Financiero Mensual Detallado"
+              emptyMessage={
+                filters.year ||
+                filters.month ||
+                filters.minAmount ||
+                filters.maxAmount
+                  ? "📋 No hay datos que coincidan con los filtros aplicados"
+                  : "📋 No hay datos financieros disponibles para mostrar"
+              }
+            />
           </Paper>
         </Paper>
       </Box>

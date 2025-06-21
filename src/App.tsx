@@ -1,6 +1,6 @@
 import { BrowserRouter as Router } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Alert, Container, Button } from "@mui/material";
+import { Alert } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -8,16 +8,8 @@ import theme from "./theme";
 import AppRoutes from "./routes";
 import { AuthProvider } from "@/features/auth/providers/AuthProvider";
 import { syncPendingRequests } from "@/utils/sync";
-
-// Tipos para PWA
-interface NavigatorWithStandalone extends Navigator {
-  standalone?: boolean;
-}
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
+import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { PWAInstallBanner } from "@/components/common/PWAInstallBanner";
 
 // Crear el cliente de React Query con configuración óptima
 const queryClient = new QueryClient({
@@ -32,8 +24,15 @@ const queryClient = new QueryClient({
 
 function App() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
-  const [installPrompt, setInstallPrompt] =
-    useState<BeforeInstallPromptEvent | null>(null);
+
+  // Usar el hook personalizado para PWA
+  const { showBanner, isInstalling, install, dismiss, remindLater } =
+    usePWAInstall({
+      initialDelay: 2, // Mostrar después de 2 días
+      reminderInterval: 7, // Recordar cada 7 días
+      maxReminders: 3, // Máximo 3 recordatorios
+      mobileOnly: true, // Solo en móviles
+    });
 
   // Manejar estado online/offline
   useEffect(() => {
@@ -51,70 +50,23 @@ function App() {
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
-  // Manejar instalación de PWA
-  useEffect(() => {
-    // Detectar si se está ejecutando en un navegador móvil
-    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-
-    // Verificar si la PWA ya está instalada
-    const isInstalled =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as NavigatorWithStandalone).standalone ||
-      document.referrer.startsWith("android-app://");
-
-    // Escuchar el evento beforeinstallprompt
-    const handleBeforeInstallPrompt = (event: Event) => {
-      event.preventDefault(); // Evitar el comportamiento predeterminado
-
-      if (isMobile && !isInstalled) {
-        setInstallPrompt(event as BeforeInstallPromptEvent); // Guardar el evento para usarlo más tarde
-      }
-    };
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener(
-        "beforeinstallprompt",
-        handleBeforeInstallPrompt
-      );
-    };
-  }, []);
-  // Manejar clic en botón de instalación
-  const handleInstallClick = () => {
-    if (installPrompt) {
-      installPrompt.prompt();
-
-      // Esperar a la respuesta del usuario
-      installPrompt.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === "accepted") {
-          console.info("Usuario aceptó la instalación");
-        } else {
-          console.info("Usuario rechazó la instalación");
-        }
-        setInstallPrompt(null);
-      });
-    }
-  };
 
   return (
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <Router>
-            {/* Botón de instalación de PWA */}
-            {installPrompt && (
-              <Container maxWidth="sm" sx={{ mt: 2, textAlign: "center" }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleInstallClick}
-                  sx={{ fontWeight: "bold" }}
-                >
-                  Instalar la aplicación
-                </Button>
-              </Container>
-            )}
+            {/* Banner de instalación de PWA más amigable */}
+            <PWAInstallBanner
+              show={showBanner}
+              isInstalling={isInstalling}
+              onInstall={install}
+              onDismiss={dismiss}
+              onRemindLater={remindLater}
+              variant="detailed" // Puedes cambiar a 'minimal' o 'card'
+              position="top"
+            />
+
             {/* Alerta de offline */}
             {isOffline && (
               <Alert severity="warning" sx={{ m: 2 }}>
@@ -122,6 +74,7 @@ function App() {
                 señal.
               </Alert>
             )}
+
             <AppRoutes />
           </Router>
         </AuthProvider>
