@@ -7,18 +7,17 @@ import {
   Avatar,
   TextField,
   Button,
-  Grid,
+  Grid2,
   Divider,
-  Alert,
   CircularProgress,
   List,
   ListItem,
   ListItemText,
   ListItemIcon,
-  ListItemSecondaryAction,
   IconButton,
   Chip,
 } from "@mui/material";
+import { useNotifications } from "@/hooks/useNotifications";
 import PersonIcon from "@mui/icons-material/Person";
 import EmailIcon from "@mui/icons-material/Email";
 import DevicesIcon from "@mui/icons-material/Devices";
@@ -34,9 +33,8 @@ import type { SessionInfo } from "@/types/api";
  */
 const ProfilePage = () => {
   const { user, updateUserProfile } = useAuth();
+  const { showSuccess, showError } = useNotifications();
   const [isEditing, setIsEditing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [profileData, setProfileData] = useState<{
     firstName: string;
     lastName: string;
@@ -57,16 +55,15 @@ const ProfilePage = () => {
     },
     enabled: !!user, // Solo ejecutar si hay un usuario autenticado
   });
-
   // Mutación para revocar sesión
   const revokeSessionMutation = useMutation({
     mutationFn: (sessionId: string) => authService.revokeSession(sessionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user-sessions"] });
-      setSuccessMessage("Sesión revocada correctamente");
+      showSuccess("Sesión revocada correctamente");
     },
     onError: () => {
-      setErrorMessage("Error al revocar la sesión");
+      showError("Error al revocar la sesión");
     },
   });
 
@@ -80,7 +77,6 @@ const ProfilePage = () => {
       });
     }
   }, [user]);
-
   // Manejar actualización de perfil
   const handleUpdateProfile = async () => {
     if (!user) return;
@@ -92,14 +88,14 @@ const ProfilePage = () => {
       });
 
       if (result.success) {
-        setSuccessMessage("Perfil actualizado correctamente");
+        showSuccess("Perfil actualizado correctamente");
         setIsEditing(false);
       } else {
-        setErrorMessage(result.error || "Error al actualizar el perfil");
+        showError(result.error || "Error al actualizar el perfil");
       }
     } catch (error) {
       console.error("Error updating profile:", error);
-      setErrorMessage("Error inesperado al actualizar el perfil");
+      showError("Error inesperado al actualizar el perfil");
     }
   };
 
@@ -128,22 +124,10 @@ const ProfilePage = () => {
 
   return (
     <Box sx={{ maxWidth: 800, mx: "auto", py: 4 }}>
+      {" "}
       <Typography variant="h4" gutterBottom>
         Perfil de Usuario
       </Typography>
-
-      {errorMessage && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {errorMessage}
-        </Alert>
-      )}
-
-      {successMessage && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {successMessage}
-        </Alert>
-      )}
-
       <Paper sx={{ p: 3, mb: 4 }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
           <Avatar
@@ -182,32 +166,32 @@ const ProfilePage = () => {
         <Divider sx={{ my: 2 }} />
 
         {isEditing ? (
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+          <Grid2 container spacing={2}>
+            <Grid2 size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Nombre"
                 value={profileData.firstName}
                 onChange={(e) => handleChange("firstName", e.target.value)}
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Grid2>
+            <Grid2 size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Apellido"
                 value={profileData.lastName}
                 onChange={(e) => handleChange("lastName", e.target.value)}
               />
-            </Grid>
-            <Grid item xs={12}>
+            </Grid2>
+            <Grid2 size={{ xs: 12 }}>
               <TextField
                 fullWidth
                 label="Email"
                 value={profileData.email}
                 disabled
               />
-            </Grid>
-            <Grid item xs={12}>
+            </Grid2>
+            <Grid2 size={{ xs: 12 }}>
               <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
                 <Button variant="outlined" onClick={() => setIsEditing(false)}>
                   Cancelar
@@ -216,12 +200,12 @@ const ProfilePage = () => {
                   Guardar cambios
                 </Button>
               </Box>
-            </Grid>
-          </Grid>
+            </Grid2>
+          </Grid2>
         ) : (
           <Box>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+            <Grid2 container spacing={2}>
+              <Grid2 size={{ xs: 12, sm: 6 }}>
                 <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                   <PersonIcon sx={{ mr: 1, color: "text.secondary" }} />
                   <Typography variant="body2" color="text.secondary">
@@ -231,8 +215,8 @@ const ProfilePage = () => {
                 <Typography variant="body1">
                   {user.firstName} {user.lastName || ""}
                 </Typography>
-              </Grid>
-              <Grid item xs={12} sm={6}>
+              </Grid2>
+              <Grid2 size={{ xs: 12, sm: 6 }}>
                 <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                   <EmailIcon sx={{ mr: 1, color: "text.secondary" }} />
                   <Typography variant="body2" color="text.secondary">
@@ -240,8 +224,8 @@ const ProfilePage = () => {
                   </Typography>
                 </Box>
                 <Typography variant="body1">{user.email}</Typography>
-              </Grid>
-              <Grid item xs={12} sm={6}>
+              </Grid2>
+              <Grid2 size={{ xs: 12, sm: 6 }}>
                 <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                   <CalendarTodayIcon sx={{ mr: 1, color: "text.secondary" }} />
                   <Typography variant="body2" color="text.secondary">
@@ -253,8 +237,8 @@ const ProfilePage = () => {
                     ? new Date(user.lastLogin).toLocaleString()
                     : "No disponible"}
                 </Typography>
-              </Grid>
-            </Grid>
+              </Grid2>
+            </Grid2>
             <Box sx={{ mt: 3, textAlign: "right" }}>
               <Button variant="outlined" onClick={() => setIsEditing(true)}>
                 Editar perfil
@@ -263,7 +247,6 @@ const ProfilePage = () => {
           </Box>
         )}
       </Paper>
-
       <Paper sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom>
           Sesiones activas
@@ -285,6 +268,19 @@ const ProfilePage = () => {
                   borderRadius: 1,
                   mb: 1,
                 }}
+                secondaryAction={
+                  session.isCurrentSession ? (
+                    <Chip label="Sesión actual" color="primary" size="small" />
+                  ) : (
+                    <IconButton
+                      edge="end"
+                      onClick={() => handleRevokeSession(session.id)}
+                      disabled={revokeSessionMutation.isPending}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  )
+                }
               >
                 <ListItemIcon>
                   <DevicesIcon />
@@ -295,19 +291,6 @@ const ProfilePage = () => {
                     session.lastUsedAt
                   ).toLocaleString()}`}
                 />
-                <ListItemSecondaryAction>
-                  {session.isCurrentSession ? (
-                    <Chip label="Sesión actual" color="primary" size="small" />
-                  ) : (
-                    <IconButton
-                      edge="end"
-                      onClick={() => handleRevokeSession(session.id)}
-                      disabled={revokeSessionMutation.isPending}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  )}
-                </ListItemSecondaryAction>
               </ListItem>
             ))}
           </List>

@@ -9,7 +9,6 @@ import type {
   CreateApiqueRequest,
   UpdateApiqueRequest,
   ApiquesListResponse,
-  ApiqueLayer,
 } from "@/types/api";
 
 // API Endpoints
@@ -35,7 +34,9 @@ class ApiquesService {
   /**
    * Get all apiques with optional filters
    */
-  async getAll(params?: Record<string, any>): Promise<ApiquesListResponse> {
+  async getAll(
+    params?: Record<string, string | number | boolean>
+  ): Promise<ApiquesListResponse> {
     try {
       const queryParams = new URLSearchParams();
       if (params) {
@@ -70,7 +71,7 @@ class ApiquesService {
    */
   async getByProject(
     projectId: number,
-    params?: Record<string, any>
+    params?: Record<string, string | number | boolean>
   ): Promise<ApiquesListResponse> {
     try {
       const queryParams = new URLSearchParams();
@@ -128,8 +129,8 @@ class ApiquesService {
           },
         ],
         total: 1,
-        page: params?.page || 1,
-        limit: params?.limit || 20,
+        page: params?.page ? Number(params.page) : 1,
+        limit: params?.limit ? Number(params.limit) : 20,
       };
 
       return mockResponse;
@@ -262,7 +263,9 @@ class ApiquesService {
   /**
    * Get statistics for project apiques
    */
-  async getStatistics(projectId: number): Promise<any> {
+  async getStatistics(
+    projectId: number
+  ): Promise<{ data: Record<string, number> }> {
     try {
       const url = API_ENDPOINTS.APIQUES.STATISTICS(projectId);
       const response = await fetch(url, {

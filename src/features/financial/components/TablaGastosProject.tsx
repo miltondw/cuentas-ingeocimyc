@@ -36,7 +36,7 @@ import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ClearIcon from "@mui/icons-material/Clear";
 import SearchIcon from "@mui/icons-material/Search";
 import api from "@/api";
-import { useNotifications } from "@/api/hooks/useNotifications";
+import { useNotifications } from "@/hooks/useNotifications";
 import { LoadingOverlay } from "@/components/common/LoadingOverlay";
 import {
   Project,
@@ -367,7 +367,7 @@ const TablaGastosProject: React.FC = () => {
     });
     setState((prev) => ({ ...prev, showAdvancedFilters: false }));
     showNotification({
-      type: "info",
+      severity: "info",
       message: "Filtros limpiados correctamente",
       duration: 2000,
     });
@@ -420,8 +420,8 @@ const TablaGastosProject: React.FC = () => {
 
         if (proyectos.length === 0) {
           showNotification({
-            type: "info",
-            title: "Sin resultados",
+            severity: "info",
+
             message: "No se encontraron proyectos con los filtros aplicados",
             duration: 3000,
           });
@@ -484,8 +484,8 @@ const TablaGastosProject: React.FC = () => {
       });
 
       showNotification({
-        type: "success",
-        title: "Pago Procesado",
+        severity: "success",
+
         message: `Se ha registrado el abono de $${formatNumber(
           montoNumerico
         )} al proyecto ${selectedProject.nombreProyecto}`,
@@ -532,8 +532,7 @@ const TablaGastosProject: React.FC = () => {
       await api.delete(`/projects/${state.selectedProject.id}`);
 
       showNotification({
-        type: "success",
-        title: "Proyecto Eliminado",
+        severity: "success",
         message: `El proyecto "${state.selectedProject.nombreProyecto}" ha sido eliminado correctamente`,
         duration: 3000,
       });

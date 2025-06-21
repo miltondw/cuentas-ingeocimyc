@@ -1,6 +1,6 @@
 /**
- * Hook simple para notificaciones
- * Temporalmente usa alert, pero puede ser reemplazado con una librería de toast/snackbar
+ * Hook para notificaciones usando el sistema centralizado de MainLayout
+ * Utiliza eventos personalizados para mostrar notificaciones tipo Snackbar
  */
 import { useCallback } from "react";
 
@@ -10,48 +10,37 @@ export interface NotificationOptions {
   duration?: number;
 }
 
+// Función utilitaria para disparar eventos de notificación
+const dispatchNotification = (options: NotificationOptions) => {
+  const event = new CustomEvent("app:notification", {
+    detail: {
+      message: options.message,
+      severity: options.severity || "info",
+    },
+  });
+  window.dispatchEvent(event);
+};
+
 export const useNotifications = () => {
   const showNotification = useCallback((options: NotificationOptions) => {
-    // Temporalmente usar alert, idealmente usar una librería como react-hot-toast
-    const icon =
-      options.severity === "success"
-        ? "✅"
-        : options.severity === "error"
-        ? "❌"
-        : options.severity === "warning"
-        ? "⚠️"
-        : "ℹ️";
-
-    alert(`${icon} ${options.message}`);
+    dispatchNotification(options);
   }, []);
 
-  const showSuccess = useCallback(
-    (message: string) => {
-      showNotification({ message, severity: "success" });
-    },
-    [showNotification]
-  );
+  const showSuccess = useCallback((message: string) => {
+    dispatchNotification({ message, severity: "success" });
+  }, []);
 
-  const showError = useCallback(
-    (message: string) => {
-      showNotification({ message, severity: "error" });
-    },
-    [showNotification]
-  );
+  const showError = useCallback((message: string) => {
+    dispatchNotification({ message, severity: "error" });
+  }, []);
 
-  const showWarning = useCallback(
-    (message: string) => {
-      showNotification({ message, severity: "warning" });
-    },
-    [showNotification]
-  );
+  const showWarning = useCallback((message: string) => {
+    dispatchNotification({ message, severity: "warning" });
+  }, []);
 
-  const showInfo = useCallback(
-    (message: string) => {
-      showNotification({ message, severity: "info" });
-    },
-    [showNotification]
-  );
+  const showInfo = useCallback((message: string) => {
+    dispatchNotification({ message, severity: "info" });
+  }, []);
 
   return {
     showNotification,

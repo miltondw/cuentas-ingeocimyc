@@ -7,9 +7,9 @@
 // =============== TIPOS BASE ===============
 export type ServiceRequestStatus =
   | "pendiente"
-  | "en_proceso"
-  | "completada"
-  | "cancelada";
+  | "en proceso"
+  | "completado"
+  | "cancelado";
 
 // =============== SOLICITUD DE SERVICIO INTERFACES ===============
 export interface ServiceRequest {
@@ -24,21 +24,6 @@ export interface ServiceRequest {
   status: ServiceRequestStatus;
   created_at: string;
   updated_at: string;
-  // Mantener campos antiguos por compatibilidad (deprecados)
-  /** @deprecated usar name */
-  nombre?: string;
-  /** @deprecated usar nameProject */
-  empresa?: string;
-  /** @deprecated usar phone */
-  telefono?: string;
-  /** @deprecated usar description */
-  descripcion?: string;
-  /** @deprecated usar location */
-  ubicacionProyecto?: string;
-  /** @deprecated */
-  tipoServicio?: string;
-  /** @deprecated */
-  fechaSolicitud?: string;
 }
 
 // =============== INTERFACES DE SERVICIO SELECCIONADO ===============
@@ -336,3 +321,113 @@ export interface ProcessedServiceField {
 
 // Alias para compatibilidad con código anterior
 export type ServiceCategory = APIServiceCategory;
+
+// =============== INTERFACES PARA ADMINISTRACIÓN ===============
+
+// Interface completa de solicitud de servicio con servicios seleccionados
+export interface AdminServiceRequest extends ServiceRequest {
+  selectedServices: AdminSelectedService[];
+  updatedAt: string;
+}
+
+// Interface para servicio seleccionado en administración
+export interface AdminSelectedService {
+  id: number;
+  requestId: number;
+  serviceId: number;
+  quantity: number;
+  created_at: string;
+  service: {
+    id: number;
+    categoryId: number;
+    code: string;
+    name: string;
+    created_at: string;
+    updatedAt: string;
+    category: {
+      id: number;
+      code: string;
+      name: string;
+      created_at: string;
+      updatedAt: string;
+    };
+    additionalFields: APIServiceAdditionalField[];
+  };
+  serviceInstances: unknown[]; // Para futuras extensiones
+  additionalValues: AdminAdditionalValue[];
+}
+
+// Interface para valores adicionales en administración
+export interface AdminAdditionalValue {
+  id: number;
+  selectedServiceId: number;
+  fieldName: string;
+  fieldValue: string;
+  created_at: string;
+}
+
+// Interface para respuesta de lista de solicitudes en administración
+export interface AdminServiceRequestsListResponse {
+  data: AdminServiceRequest[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+// Interface para actualizar el estado de una solicitud (solo para administración)
+export interface UpdateServiceRequestStatusRequest {
+  status?: ServiceRequestStatus;
+  // Campos adicionales que se podrían actualizar en administración
+  description?: string;
+  // No permitir cambiar datos del cliente por seguridad
+}
+
+// Interface para filtros de administración (estructura independiente para la nueva API)
+export interface AdminServiceRequestFilters {
+  // Estados
+  status?: ServiceRequestStatus | ServiceRequestStatus[];
+
+  // Filtros por campos específicos de la nueva estructura
+  name?: string;
+  nameContains?: string;
+  nameProject?: string;
+  nameProjectContains?: string;
+  identification?: string;
+  email?: string;
+  emailContains?: string;
+  phone?: string;
+  location?: string;
+  locationContains?: string;
+  description?: string;
+  descriptionContains?: string;
+
+  // Filtros adicionales para administración
+  categoryId?: number;
+  serviceId?: number;
+  hasAdditionalData?: boolean;
+
+  // Fechas
+  startDate?: string; // YYYY-MM-DD
+  endDate?: string; // YYYY-MM-DD
+
+  // Búsqueda general
+  search?: string; // Busca en name, email, nameProject, description
+
+  // Ordenamiento por nuevos campos
+  sortBy?:
+    | "id"
+    | "name"
+    | "nameProject"
+    | "email"
+    | "phone"
+    | "identification"
+    | "location"
+    | "status"
+    | "created_at"
+    | "updated_at";
+  sortOrder?: "ASC" | "DESC";
+
+  // Paginación
+  page?: number;
+  limit?: number;
+}

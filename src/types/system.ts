@@ -229,9 +229,9 @@ export enum ProjectStatus {
 
 export enum ServiceRequestStatus {
   PENDING = "pendiente",
-  IN_PROCESS = "en_proceso",
-  COMPLETED = "completada",
-  CANCELLED = "cancelada",
+  IN_PROCESS = "en proceso",
+  COMPLETED = "completado",
+  CANCELLED = "cancelado",
 }
 
 // =============== ENDPOINTS CONSTANTES ===============
@@ -285,7 +285,8 @@ export const API_ENDPOINTS = {
     DETAIL: (id: number) => `/service-requests/${id}`,
     UPDATE: (id: number) => `/service-requests/${id}`,
     DELETE: (id: number) => `/service-requests/${id}`,
-  },  SERVICES: {
+  },
+  SERVICES: {
     LIST: "/services",
     CREATE: "/services",
     DETAIL: (id: number) => `/services/${id}`,

@@ -45,6 +45,9 @@ const ServicesManagementPage = lazy(
 const ServiceFormPage = lazy(
   () => import("@/features/admin/pages/ServiceFormPage")
 );
+const ServiceRequestsManagementPage = lazy(
+  () => import("@/features/admin/pages/ServiceRequestsManagementPage")
+);
 
 // Páginas de laboratorio
 const ProjectsDashboard = lazy(
@@ -65,7 +68,7 @@ const ApiqueDetallesPage = lazy(
 
 // Páginas financieras/admin
 const GastosProjectPage = lazy(
-  () => import("@/features/projects/components/TablaGastosProject")
+  () => import("@/features/financial/components/TablaGastosProject")
 );
 const GastosMensualesPage = lazy(
   () => import("@/features/financial/pages/GastosMensualesPage")
@@ -194,7 +197,7 @@ const AppRoutes = () => {
             <Route
               path={ROUTES.ADMIN.DASHBOARD}
               element={<AdminDashboardPage />}
-            />
+            />{" "}
             <Route
               path={ROUTES.ADMIN.CATEGORIES}
               element={<CategoriesManagementPage />}
@@ -210,6 +213,10 @@ const AppRoutes = () => {
             <Route
               path={ROUTES.ADMIN.SERVICE_EDIT}
               element={<ServiceFormPage />}
+            />
+            <Route
+              path={ROUTES.ADMIN.SERVICE_REQUESTS}
+              element={<ServiceRequestsManagementPage />}
             />
           </Route>
         </Route>

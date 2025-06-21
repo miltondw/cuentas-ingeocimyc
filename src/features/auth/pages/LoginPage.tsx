@@ -10,11 +10,11 @@ import {
   Box,
   Checkbox,
   FormControlLabel,
-  Alert,
   Link,
   CircularProgress,
 } from "@mui/material";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useNotifications } from "@/hooks/useNotifications";
 
 // Esquema de validación con Zod
 const loginSchema = z.object({
@@ -35,8 +35,8 @@ type LoginFormData = z.infer<typeof loginSchema>;
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { showError } = useNotifications();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // Configurar React Hook Form con validación de Zod
   const {
     register,
@@ -50,11 +50,9 @@ const LoginPage = () => {
       rememberMe: false as const,
     },
   });
-
   // Manejar envío del formulario
   const onSubmit = async (data: LoginFormData) => {
     setIsSubmitting(true);
-    setErrorMessage(null);
 
     try {
       const result = await login({
@@ -67,14 +65,14 @@ const LoginPage = () => {
         navigate("/");
       } else {
         // Mostrar mensaje de error específico o genérico
-        setErrorMessage(
+        showError(
           result.error?.message ||
             "Error al iniciar sesión. Verifica tus credenciales."
         );
       }
     } catch (error) {
       console.error("Login error:", error);
-      setErrorMessage("Error inesperado. Inténtalo de nuevo más tarde.");
+      showError("Error inesperado. Inténtalo de nuevo más tarde.");
     } finally {
       setIsSubmitting(false);
     }
@@ -82,6 +80,7 @@ const LoginPage = () => {
 
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      {" "}
       <Box sx={{ textAlign: "center", mb: 3 }}>
         <Typography component="h1" variant="h4" gutterBottom>
           Iniciar sesión
@@ -90,13 +89,6 @@ const LoginPage = () => {
           Ingrese sus credenciales para acceder al sistema
         </Typography>
       </Box>
-
-      {errorMessage && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {errorMessage}
-        </Alert>
-      )}
-
       <TextField
         margin="normal"
         fullWidth
@@ -109,7 +101,6 @@ const LoginPage = () => {
         helperText={errors.email?.message}
         disabled={isSubmitting}
       />
-
       <TextField
         margin="normal"
         fullWidth
@@ -122,7 +113,6 @@ const LoginPage = () => {
         helperText={errors.password?.message}
         disabled={isSubmitting}
       />
-
       <FormControlLabel
         control={
           <Checkbox
@@ -133,7 +123,6 @@ const LoginPage = () => {
         }
         label="Recordarme"
       />
-
       <Button
         type="submit"
         fullWidth
@@ -147,7 +136,6 @@ const LoginPage = () => {
           "Iniciar sesión"
         )}
       </Button>
-
       <Box sx={{ mt: 2, textAlign: "center" }}>
         <Link href="/register" variant="body2">
           ¿No tienes cuenta? Regístrate

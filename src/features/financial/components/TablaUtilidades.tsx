@@ -17,8 +17,8 @@ import {
   Grid2,
   Button,
 } from "@mui/material";
-import { projectsService } from "../services/projectsServiceNew";
-import { useNotifications } from "@/api/hooks/useNotifications";
+import { projectsService } from "../services/projectsService";
+import { useNotifications } from "@/hooks/useNotifications";
 import { LoadingOverlay } from "@/components/common/LoadingOverlay";
 import { formatNumber } from "@/utils/formatNumber";
 import type { Project } from "@/types/typesProject/projectTypes";
@@ -78,7 +78,7 @@ const sumOtrosCampos = (
 };
 
 const TablaUtilidades: React.FC = () => {
-  const { showNotification, showError } = useNotifications();
+  const { showNotification } = useNotifications();
   const [resumen, setResumen] = useState<MonthlyData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -204,8 +204,7 @@ const TablaUtilidades: React.FC = () => {
 
       if (processedData.length === 0) {
         showNotification({
-          type: "info",
-          title: "Sin datos",
+          severity: "info",
           message: "No se encontraron datos financieros para mostrar",
           duration: 3000,
         });
@@ -217,12 +216,11 @@ const TablaUtilidades: React.FC = () => {
           : "Error al cargar datos financieros";
 
       setError(errorMessage);
-      showError(errorMessage);
       console.error("Error fetching financial data:", err);
     } finally {
       setLoading(false);
     }
-  }, [processData, showNotification, showError]);
+  }, [processData, showNotification]);
 
   useEffect(() => {
     fetchData();

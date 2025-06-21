@@ -14,17 +14,21 @@ import {
   Category as CategoryIcon,
   MiscellaneousServices as ServicesIcon,
   Dashboard as DashboardIcon,
+  RequestQuote as RequestIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import { ROUTES } from "@/utils/routes";
 import {
   useAdminCategories,
   useAdminServices,
 } from "@/api/hooks/useAdminServices";
+import { useAdminServiceRequestStats } from "@/api/hooks/useAdminServiceRequests";
 
 const AdminDashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { data: categories } = useAdminCategories();
   const { data: services } = useAdminServices();
+  const { data: serviceRequestStats } = useAdminServiceRequestStats();
 
   const statsCards = [
     {
@@ -32,7 +36,7 @@ const AdminDashboardPage: React.FC = () => {
       count: categories?.data?.length || 0,
       icon: <CategoryIcon sx={{ fontSize: 40, color: "primary.main" }} />,
       description: "Gestiona las categorías de servicios",
-      action: () => navigate("/admin/categories"),
+      action: () => navigate(ROUTES.ADMIN.CATEGORIES),
       color: "primary.light",
     },
     {
@@ -40,8 +44,16 @@ const AdminDashboardPage: React.FC = () => {
       count: services?.data?.length || 0,
       icon: <ServicesIcon sx={{ fontSize: 40, color: "secondary.main" }} />,
       description: "Administra todos los servicios disponibles",
-      action: () => navigate("/admin/services"),
+      action: () => navigate(ROUTES.ADMIN.SERVICES),
       color: "secondary.light",
+    },
+    {
+      title: "Solicitudes de Servicio",
+      count: serviceRequestStats?.total || 0,
+      icon: <RequestIcon sx={{ fontSize: 40, color: "info.main" }} />,
+      description: "Gestiona las solicitudes de los clientes",
+      action: () => navigate(ROUTES.ADMIN.SERVICE_REQUESTS),
+      color: "info.light",
     },
   ];
 
@@ -128,6 +140,7 @@ const AdminDashboardPage: React.FC = () => {
             Acciones Rápidas
           </Typography>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mt: 2 }}>
+            {" "}
             <Button
               variant="outlined"
               startIcon={<CategoryIcon />}
@@ -138,9 +151,16 @@ const AdminDashboardPage: React.FC = () => {
             <Button
               variant="outlined"
               startIcon={<ServicesIcon />}
-              onClick={() => navigate("/admin/services/new")}
+              onClick={() => navigate(ROUTES.ADMIN.SERVICE_NEW)}
             >
               Nuevo Servicio
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<RequestIcon />}
+              onClick={() => navigate(ROUTES.ADMIN.SERVICE_REQUESTS)}
+            >
+              Ver Solicitudes
             </Button>
           </Box>
         </CardContent>
@@ -153,6 +173,7 @@ const AdminDashboardPage: React.FC = () => {
             Resumen del Sistema
           </Typography>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2 }}>
+            {" "}
             <Chip
               label={`${categories?.data?.length || 0} Categorías activas`}
               color="primary"
@@ -161,6 +182,13 @@ const AdminDashboardPage: React.FC = () => {
             <Chip
               label={`${services?.data?.length || 0} Servicios disponibles`}
               color="secondary"
+              variant="outlined"
+            />
+            <Chip
+              label={`${
+                serviceRequestStats?.total || 0
+              } Solicitudes registradas`}
+              color="info"
               variant="outlined"
             />
             <Chip

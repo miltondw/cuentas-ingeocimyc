@@ -1,39 +1,56 @@
 import { apiClient } from "@/lib/axios/apiClient";
-import type { Project, ApiResponse } from "@/types/api";
-import { CreateProjectDto } from "@/types/typesProject";
-import { UpdateProjectDto } from "@/types/typesProject/projectTypes";
+import type { ApiResponse } from "@/types/api";
+import type {
+  Project,
+  CreateProjectDto,
+  UpdateProjectDto,
+  ProjectWithExpenses,
+  ProjectFilters,
+  ProjectStats,
+  CreateProjectExpensesDto,
+  ProjectExpenses,
+} from "@/types/typesProject/projectTypes";
+
+const BASE_URL = "/projects";
 
 /**
  * Servicio para gestión de proyectos
- * Reemplaza las llamadas a la API antigua con la nueva estructura
+ * Basado en la estructura real del backend NestJS
  */
 export const projectsService = {
   /**
-   * Obtener todos los proyectos
+   * Obtener todos los proyectos con filtros opcionales
    */
-  async getProjects(): Promise<ApiResponse<Project[]>> {
-    const response = await apiClient.get<ApiResponse<Project[]>>("/projects");
+  async getProjects(filters?: ProjectFilters): Promise<ApiResponse<Project[]>> {
+    const params = new URLSearchParams();
+
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, String(value));
+        }
+      });
+    }
+
+    const response = await apiClient.get(`${BASE_URL}?${params.toString()}`);
     return response.data;
   },
 
   /**
-   * Obtener un proyecto por ID
+   * Obtener un proyecto específico por ID
    */
-  async getProject(id: string): Promise<ApiResponse<Project>> {
-    const response = await apiClient.get<ApiResponse<Project>>(
-      `/projects/${id}`
-    );
+  async getProject(id: number): Promise<ProjectWithExpenses> {
+    const response = await apiClient.get(`${BASE_URL}/${id}`);
     return response.data;
   },
 
   /**
    * Crear un nuevo proyecto
    */
-  async createProject(data: CreateProjectDto): Promise<ApiResponse<Project>> {
-    const response = await apiClient.post<ApiResponse<Project>>(
-      "/projects",
-      data
-    );
+  async createProject(
+    projectData: CreateProjectDto
+  ): Promise<ApiResponse<Project>> {
+    const response = await apiClient.post(BASE_URL, projectData);
     return response.data;
   },
 
@@ -41,72 +58,75 @@ export const projectsService = {
    * Actualizar un proyecto existente
    */
   async updateProject(
-    id: string,
-    data: UpdateProjectDto
+    id: number,
+    projectData: UpdateProjectDto
   ): Promise<ApiResponse<Project>> {
-    const response = await apiClient.put<ApiResponse<Project>>(
-      `/projects/${id}`,
-      data
-    );
+    const response = await apiClient.patch(`${BASE_URL}/${id}`, projectData);
     return response.data;
   },
 
   /**
    * Eliminar un proyecto
    */
-  async deleteProject(id: string): Promise<ApiResponse<void>> {
-    await apiClient.delete(`/projects/${id}`);
-    return { success: true, data: undefined };
-  },
-  /**
-   * Obtener estadísticas de proyectos
-   */
-  async getProjectStats(): Promise<
-    ApiResponse<{
-      total: number;
-      active: number;
-      completed: number;
-      totalValue: number;
-    }>
-  > {
-    const response = await apiClient.get<
-      ApiResponse<{
-        total: number;
-        active: number;
-        completed: number;
-        totalValue: number;
-      }>
-    >("/projects/stats");
+  async deleteProject(id: number): Promise<ApiResponse<void>> {
+    const response = await apiClient.delete(`${BASE_URL}/${id}`);
     return response.data;
   },
 
   /**
-   * Buscar proyectos con filtros
+   * Crear gastos para un proyecto
    */
-  async searchProjects(params: {
-    search?: string;
-    category?: string;
-    status?: string;
-    dateFrom?: string;
-    dateTo?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<
-    ApiResponse<{
-      projects: Project[];
-      total: number;
-      page: number;
-      limit: number;
-    }>
-  > {
-    const response = await apiClient.get<
-      ApiResponse<{
-        projects: Project[];
-        total: number;
-        page: number;
-        limit: number;
-      }>
-    >("/projects/search", { params });
+  async createProjectExpenses(
+    expensesData: CreateProjectExpensesDto
+  ): Promise<ApiResponse<ProjectExpenses>> {
+    const response = await apiClient.post(
+      `${BASE_URL}/${expensesData.project_id}/expenses`,
+      expensesData
+    );
+    return response.data;
+  },
+
+  /**
+   * Actualizar gastos de un proyecto
+   */
+  async updateProjectExpenses(
+    projectId: number,
+    expensesData: Partial<CreateProjectExpensesDto>
+  ): Promise<ApiResponse<ProjectExpenses>> {
+    const response = await apiClient.patch(
+      `${BASE_URL}/${projectId}/expenses`,
+      expensesData
+    );
+    return response.data;
+  },
+
+  /**
+   * Agregar un pago a un proyecto
+   */
+  async addPayment(
+    id: number,
+    paymentData: { monto: number; factura?: string }
+  ): Promise<ApiResponse<Project>> {
+    const response = await apiClient.patch(
+      `${BASE_URL}/${id}/payment`,
+      paymentData
+    );
+    return response.data;
+  },
+
+  /**
+   * Obtener estadísticas de proyectos
+   */
+  async getProjectStats(): Promise<ApiResponse<ProjectStats>> {
+    const response = await apiClient.get(`${BASE_URL}/summary`);
+    return response.data;
+  },
+
+  /**
+   * Obtener resumen financiero por año
+   */
+  async getFinancialSummary(year: number): Promise<ApiResponse<ProjectStats>> {
+    const response = await apiClient.get(`/resumen/projects/${year}`);
     return response.data;
   },
 };

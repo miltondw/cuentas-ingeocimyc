@@ -13,10 +13,10 @@ const updateSW = registerSW({
     }
   },
   onOfflineReady() {
-    console.log("La aplicación está lista para uso sin conexión");
+    console.info("La aplicación está lista para uso sin conexión");
   },
   onRegistered(r) {
-    console.log("Service worker registrado correctamente");
+    console.info("Service worker registrado correctamente");
 
     // Verificar actualizaciones cada hora si la aplicación permanece abierta
     if (import.meta.env.PROD && r) {

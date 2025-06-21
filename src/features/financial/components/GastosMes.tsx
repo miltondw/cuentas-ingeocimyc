@@ -27,7 +27,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import api from "@/api";
-import { useNotifications } from "@/api/hooks/useNotifications";
+import { useNotifications } from "@/hooks/useNotifications";
 import { LoadingOverlay } from "@/components/common/LoadingOverlay";
 import { formatNumber } from "@/utils/formatNumber";
 
@@ -211,8 +211,7 @@ const TablaGastosEmpresa: React.FC = () => {
 
       if (apiData.data?.length === 0) {
         showNotification({
-          type: "info",
-          title: "Sin resultados",
+          severity: "info",
           message: "No se encontraron gastos para los filtros seleccionados",
           duration: 3000,
         });
@@ -270,7 +269,7 @@ const TablaGastosEmpresa: React.FC = () => {
       currentPage: 1,
     }));
     showNotification({
-      type: "info",
+      severity: "info",
       message: "Todos los filtros han sido eliminados",
       duration: 2000,
     });
@@ -286,8 +285,7 @@ const TablaGastosEmpresa: React.FC = () => {
       await api.delete(`/gastos-mes/expenses/${selectedId}`);
 
       showNotification({
-        type: "success",
-        title: "Gasto Eliminado",
+        severity: "success",
         message: "El registro de gastos ha sido eliminado correctamente",
         duration: 3000,
       });

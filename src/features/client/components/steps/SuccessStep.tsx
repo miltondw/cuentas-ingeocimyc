@@ -25,15 +25,11 @@ import {
   PhoneOutlined,
   PictureAsPdfOutlined,
   RefreshOutlined,
-  VisibilityOutlined,
   DownloadOutlined,
 } from "@mui/icons-material";
 
-import {
-  useDownloadServiceRequestPDF,
-  usePreviewServiceRequestPDF,
-} from "../../hooks/useServiceRequests";
-import { ServiceRequest } from "../../../../types/serviceRequests";
+import { useDownloadServiceRequestPDF } from "../../hooks/useServiceRequests";
+import { ServiceRequest } from "@/types/serviceRequests";
 
 export interface SuccessStepProps {
   serviceRequest: ServiceRequest; // El objeto de la solicitud creada
@@ -47,15 +43,12 @@ export interface SuccessStepProps {
 export const SuccessStep: React.FC<SuccessStepProps> = ({
   serviceRequest,
   onNewRequest,
-  onViewDetails,
 }) => {
   const { downloadPDF, isDownloading } = useDownloadServiceRequestPDF();
-  const { previewPDF, isLoading: isPreviewLoading } =
-    usePreviewServiceRequestPDF();
+
   const handleDownloadPDF = () => {
     if (serviceRequest?.id) {
-      const clientName =
-        serviceRequest.name || serviceRequest.nombre || "cliente";
+      const clientName = serviceRequest.name || "cliente";
       downloadPDF(
         serviceRequest.id,
         `solicitud-${serviceRequest.id}-${clientName.replace(/\s+/g, "-")}.pdf`
@@ -109,25 +102,21 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
                   Cliente:
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {serviceRequest?.name || serviceRequest?.nombre || "N/A"}
+                  {serviceRequest?.name || "N/A"}
                 </Typography>
 
                 <Typography variant="body2" color="text.secondary">
                   Proyecto:
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {serviceRequest?.nameProject ||
-                    serviceRequest?.empresa ||
-                    "N/A"}
+                  {serviceRequest?.nameProject || "N/A"}
                 </Typography>
 
                 <Typography variant="body2" color="text.secondary">
                   Ubicación:
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {serviceRequest?.location ||
-                    serviceRequest?.ubicacionProyecto ||
-                    "N/A"}
+                  {serviceRequest?.location || "N/A"}
                 </Typography>
 
                 <Typography variant="body2" color="text.secondary">
@@ -148,7 +137,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
                   Teléfono:
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {serviceRequest?.phone || serviceRequest?.telefono || "N/A"}
+                  {serviceRequest?.phone || "N/A"}
                 </Typography>
 
                 <Typography variant="body2" color="text.secondary">
@@ -166,16 +155,17 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
                           minute: "2-digit",
                         }
                       )
-                    : serviceRequest?.fechaSolicitud
-                    ? new Date(
-                        serviceRequest.fechaSolicitud
-                      ).toLocaleDateString("es-ES", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
+                    : serviceRequest?.created_at
+                    ? new Date(serviceRequest.created_at).toLocaleDateString(
+                        "es-ES",
+                        {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }
+                      )
                     : "N/A"}
                 </Typography>
               </Box>
@@ -238,7 +228,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
           <br />• Conserve el número de solicitud
           <strong>#{serviceRequest?.id}</strong> para futuras referencias
           <br />• Nuestro equipo se pondrá en contacto con usted al teléfono:
-          <strong>{serviceRequest?.phone || serviceRequest?.telefono}</strong>
+          <strong>{serviceRequest?.phone || "N/A"}</strong>
           <br />• Si tiene alguna pregunta urgente, puede contactarnos
           directamente
         </Typography>

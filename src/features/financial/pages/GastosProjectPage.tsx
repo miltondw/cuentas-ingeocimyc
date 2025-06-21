@@ -1,5 +1,5 @@
 import { Box, Paper } from "@mui/material";
-import TablaGastosProject from "@/features/projects/components/TablaGastosProject";
+import TablaGastosProject from "@/features/financial/components/TablaGastosProject";
 
 /**
  * Página de gastos de proyectos

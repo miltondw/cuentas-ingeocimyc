@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import TablaGastosEmpresa from "../components/gasto-mes";
+import TablaGastosEmpresa from "../components/GastosMes";
 
 /**
  * Página de gastos mensuales

@@ -14,17 +14,19 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
+import { useNotifications } from "@/hooks/useNotifications";
 import api from "@/api";
 import { fetchMonthData, transformFormData } from "./form-create-month.api";
-import { parseNumber, formatNumber } from "@utils/formatNumber";
 import {
   validationSchema,
   MonthFormData,
   defaultValues,
 } from "./form-create-month.types";
+import { parseNumber, formatNumber } from "@utils/formatNumber";
 
 const FormCreateMonth: React.FC<{ id?: string }> = ({ id }) => {
   const navigate = useNavigate();
+  const { showSuccess, showError } = useNotifications();
 
   const {
     control,
@@ -53,7 +55,6 @@ const FormCreateMonth: React.FC<{ id?: string }> = ({ id }) => {
       reset(defaultValues);
     }
   }, [id, reset]);
-
   const onSubmit = async (data: MonthFormData) => {
     try {
       const payload = transformFormData(data);
@@ -61,9 +62,21 @@ const FormCreateMonth: React.FC<{ id?: string }> = ({ id }) => {
         ? `/gastos-mes/expenses/${id}`
         : "/gastos-mes/expenses";
       await api[id ? "patch" : "post"](endpoint, payload);
+
+      showSuccess(
+        id
+          ? "Gastos mensuales actualizados exitosamente"
+          : "Gastos mensuales creados exitosamente"
+      );
+
       navigate("/gastos");
     } catch (error) {
       console.error("Error submitting form:", error);
+      showError(
+        id
+          ? "Error al actualizar los gastos mensuales"
+          : "Error al crear los gastos mensuales"
+      );
     }
   };
 

@@ -43,6 +43,9 @@ export const ROUTES = {
     SERVICE_NEW: "/admin/services/new",
     SERVICE_DETAIL: "/admin/services/:id",
     SERVICE_EDIT: "/admin/services/:id/edit",
+    // Rutas para solicitudes de servicio
+    SERVICE_REQUESTS: "/admin/service-requests",
+    SERVICE_REQUEST_DETAIL: "/admin/service-requests/:id",
   },
   LAB: {
     PROJECTS: "/lab/proyectos",

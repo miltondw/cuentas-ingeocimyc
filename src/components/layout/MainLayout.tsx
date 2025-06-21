@@ -32,10 +32,12 @@ const MainLayout = () => {
     open: boolean;
     message: string;
     severity: "success" | "info" | "warning" | "error";
+    autoHideDuration: number;
   }>({
     open: false,
     message: "",
     severity: "info",
+    autoHideDuration: 6000,
   });
 
   // Ejemplo de escucha de eventos de notificación
@@ -49,6 +51,7 @@ const MainLayout = () => {
           open: true,
           message,
           severity: severity || "info",
+          autoHideDuration: severity === "error" ? 8000 : 6000, // Errores duran más tiempo
         });
       }
     };
@@ -87,12 +90,10 @@ const MainLayout = () => {
         }}
       >
         {isLoading && <PageLoadingFallback />}
-
-        <Outlet />
-
+        <Outlet />{" "}
         <Snackbar
           open={notification.open}
-          autoHideDuration={6000}
+          autoHideDuration={notification.autoHideDuration}
           onClose={handleCloseNotification}
           anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         >
@@ -100,7 +101,11 @@ const MainLayout = () => {
             onClose={handleCloseNotification}
             severity={notification.severity}
             variant="filled"
-            sx={{ width: "100%" }}
+            sx={{
+              width: "100%",
+              boxShadow: 2,
+              borderRadius: 1,
+            }}
           >
             {notification.message}
           </Alert>

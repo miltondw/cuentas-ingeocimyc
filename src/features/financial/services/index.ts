@@ -3,4 +3,4 @@
  * Exporta todos los servicios del módulo financiero
  */
 
-export { projectsService } from "./projectsServiceNew";
+export { projectsService } from "./projectsService";

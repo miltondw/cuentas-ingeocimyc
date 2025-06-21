@@ -4,7 +4,6 @@ import {
   Button,
   Typography,
   Paper,
-  Alert,
   MenuItem,
   FormControl,
   InputLabel,
@@ -15,10 +14,11 @@ import {
   Card,
   CardContent,
 } from "@mui/material";
+import { useNotifications } from "@/hooks/useNotifications";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate, useParams } from "react-router-dom";
-import { projectsService } from "../services/projectsServiceNew";
+import { projectsService } from "../services/projectsService";
 import { formatNumber, parseNumber } from "@/utils/formatNumber";
 import type {
   CreateProjectDto,
@@ -48,6 +48,7 @@ const paymentMethods: { value: PaymentMethod; label: string }[] = [
 export const ProjectFormCreate: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { showSuccess, showError } = useNotifications();
   const isEditing = Boolean(id);
 
   // Estados para el proyecto principal
@@ -95,74 +96,73 @@ export const ProjectFormCreate: React.FC = () => {
   });
 
   // Estado para campos extras dinámicos
-  const [extraFields, setExtraFields] = useState<ExtraField[]>([]);
-
-  // Estados de la UI
+  const [extraFields, setExtraFields] = useState<ExtraField[]>([]); // Estados de la UI
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<boolean>(false);
+
+  const loadProject = useCallback(
+    async (projectId: number) => {
+      try {
+        setLoading(true);
+        const response = await projectsService.getProject(projectId);
+
+        if (response) {
+          // Cargar datos del proyecto
+          setProject({
+            fecha: response?.fecha,
+            solicitante: response?.solicitante,
+            nombreProyecto: response?.nombreProyecto,
+            obrero: response?.obrero,
+            costoServicio: response?.costoServicio,
+            abono: response?.abono || 0,
+            factura: response?.factura || "",
+            valorRetencion: response?.valorRetencion || 0,
+            metodoDePago: response?.metodoDePago || "efectivo",
+            expenses: [],
+          });
+
+          // Cargar gastos si existen
+          if (response?.expenses?.[0]) {
+            setExpenses({
+              camioneta: response?.expenses[0].camioneta || 0,
+              campo: response?.expenses[0].campo || 0,
+              obreros: response?.expenses[0].obreros || 0,
+              comidas: response?.expenses[0].comidas || 0,
+              otros: response?.expenses[0].otros || 0,
+              peajes: response?.expenses[0].peajes || 0,
+              combustible: response?.expenses[0].combustible || 0,
+              hospedaje: response?.expenses[0].hospedaje || 0,
+              otrosCampos: response?.expenses[0].otrosCampos || {},
+            });
+
+            // Cargar campos extras desde otrosCampos
+            if (response?.expenses[0].otrosCampos) {
+              const extraFieldsFromData = Object.entries(
+                response?.expenses[0].otrosCampos
+              ).map(([key, value], index) => ({
+                id: `existing_${index}`,
+                description: key.replace(/_/g, " "),
+                value: typeof value === "number" ? value : 0,
+              }));
+              setExtraFields(extraFieldsFromData);
+            }
+          }
+        }
+      } catch (err) {
+        showError("Error al cargar el proyecto");
+        console.error("Error loading project:", err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [showError]
+  );
 
   // Cargar proyecto si estamos editando
   useEffect(() => {
     if (isEditing && id) {
       loadProject(parseInt(id));
     }
-  }, [id, isEditing]);
-
-  const loadProject = async (projectId: number) => {
-    try {
-      setLoading(true);
-      const response = await projectsService.getProject(projectId);
-
-      if (response) {
-        // Cargar datos del proyecto
-        setProject({
-          fecha: response?.fecha,
-          solicitante: response?.solicitante,
-          nombreProyecto: response?.nombreProyecto,
-          obrero: response?.obrero,
-          costoServicio: response?.costoServicio,
-          abono: response?.abono || 0,
-          factura: response?.factura || "",
-          valorRetencion: response?.valorRetencion || 0,
-          metodoDePago: response?.metodoDePago || "efectivo",
-          expenses: [],
-        });
-
-        // Cargar gastos si existen
-        if (response?.expenses?.[0]) {
-          setExpenses({
-            camioneta: response?.expenses[0].camioneta || 0,
-            campo: response?.expenses[0].campo || 0,
-            obreros: response?.expenses[0].obreros || 0,
-            comidas: response?.expenses[0].comidas || 0,
-            otros: response?.expenses[0].otros || 0,
-            peajes: response?.expenses[0].peajes || 0,
-            combustible: response?.expenses[0].combustible || 0,
-            hospedaje: response?.expenses[0].hospedaje || 0,
-            otrosCampos: response?.expenses[0].otrosCampos || {},
-          });
-
-          // Cargar campos extras desde otrosCampos
-          if (response?.expenses[0].otrosCampos) {
-            const extraFieldsFromData = Object.entries(
-              response?.expenses[0].otrosCampos
-            ).map(([key, value], index) => ({
-              id: `existing_${index}`,
-              description: key.replace(/_/g, " "),
-              value: typeof value === "number" ? value : 0,
-            }));
-            setExtraFields(extraFieldsFromData);
-          }
-        }
-      }
-    } catch (err) {
-      setError("Error al cargar el proyecto");
-      console.error("Error loading project:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [id, isEditing, loadProject]);
 
   const handleProjectChange = useCallback(
     (field: keyof CreateProjectDto, value: string | number) => {
@@ -173,13 +173,11 @@ export const ProjectFormCreate: React.FC = () => {
     },
     []
   );
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
       setLoading(true);
-      setError(null);
 
       // Construir otrosCampos desde extraFields
       const otrosCampos: Record<string, number> = {};
@@ -198,20 +196,20 @@ export const ProjectFormCreate: React.FC = () => {
         // Actualizar proyecto existente - usar función de transformación
         const transformedData = transformDataForAPI(project, expensesData);
         await projectsService.updateProject(parseInt(id), transformedData);
+        showSuccess("Proyecto actualizado exitosamente");
       } else {
         // Crear nuevo proyecto - usar función de transformación
         const transformedData = transformDataForAPI(project, expensesData);
         await projectsService.createProject(transformedData);
+        showSuccess("Proyecto creado exitosamente");
       }
-
-      setSuccess(true);
 
       // Redirigir después de 2 segundos
       setTimeout(() => {
         navigate("/proyectos");
       }, 2000);
     } catch (err) {
-      setError(
+      showError(
         isEditing
           ? "Error al actualizar el proyecto"
           : "Error al crear el proyecto"
@@ -299,24 +297,10 @@ export const ProjectFormCreate: React.FC = () => {
 
   return (
     <Paper sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
+      {" "}
       <Typography variant="h4" gutterBottom>
         {isEditing ? "Editar Proyecto" : "Crear Nuevo Proyecto"}
       </Typography>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {isEditing
-            ? "Proyecto actualizado exitosamente"
-            : "Proyecto creado exitosamente"}
-        </Alert>
-      )}
-
       <form onSubmit={handleSubmit}>
         <Grid2 container spacing={3}>
           {/* Información básica del proyecto */}

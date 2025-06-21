@@ -8,7 +8,6 @@ import {
   Button,
   Typography,
   Box,
-  Alert,
   CircularProgress,
   FormControl,
   FormHelperText,
@@ -17,6 +16,7 @@ import {
   InputLabel,
 } from "@mui/material";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useNotifications } from "@/hooks/useNotifications";
 import type { UserRole } from "@/types/api";
 
 // Esquema de validación con Zod
@@ -52,8 +52,8 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { register: registerUser } = useAuth();
+  const { showError, showSuccess } = useNotifications();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // Configurar React Hook Form con validación de Zod
   const {
     register,
@@ -74,11 +74,9 @@ const RegisterPage = () => {
 
   const selectedRole = watch("role");
   const isAdmin = selectedRole === "admin";
-
   // Manejar envío del formulario
   const onSubmit = async (data: RegisterFormData) => {
     setIsSubmitting(true);
-    setErrorMessage(null);
 
     try {
       const result = await registerUser({
@@ -93,15 +91,16 @@ const RegisterPage = () => {
       });
 
       if (result.success) {
+        showSuccess("Usuario registrado exitosamente. Puede iniciar sesión.");
         // Redirigir al login
         navigate("/login", { replace: true });
       } else {
         // Mostrar mensaje de error específico o genérico
-        setErrorMessage(result.error?.message || "Error al registrar usuario.");
+        showError(result.error?.message || "Error al registrar usuario.");
       }
     } catch (error) {
       console.error("Registration error:", error);
-      setErrorMessage("Error inesperado. Inténtalo de nuevo más tarde.");
+      showError("Error inesperado. Inténtalo de nuevo más tarde.");
     } finally {
       setIsSubmitting(false);
     }
@@ -117,13 +116,6 @@ const RegisterPage = () => {
           Complete el formulario para crear una nueva cuenta
         </Typography>
       </Box>
-
-      {errorMessage && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {errorMessage}
-        </Alert>
-      )}
-
       <TextField
         margin="normal"
         fullWidth
@@ -136,7 +128,6 @@ const RegisterPage = () => {
         helperText={errors.email?.message}
         disabled={isSubmitting}
       />
-
       <TextField
         margin="normal"
         fullWidth
@@ -149,7 +140,6 @@ const RegisterPage = () => {
         helperText={errors.password?.message}
         disabled={isSubmitting}
       />
-
       <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
         <TextField
           fullWidth
@@ -173,7 +163,6 @@ const RegisterPage = () => {
           disabled={isSubmitting}
         />
       </Box>
-
       <FormControl fullWidth margin="normal" error={!!errors.role}>
         <InputLabel id="role-label">Tipo de usuario</InputLabel>
         <Select
@@ -189,7 +178,6 @@ const RegisterPage = () => {
         </Select>
         {errors.role && <FormHelperText>{errors.role.message}</FormHelperText>}
       </FormControl>
-
       {isAdmin && (
         <TextField
           margin="normal"
@@ -203,7 +191,6 @@ const RegisterPage = () => {
           disabled={isSubmitting}
         />
       )}
-
       <Button
         type="submit"
         fullWidth
@@ -217,7 +204,6 @@ const RegisterPage = () => {
           "Registrarse"
         )}
       </Button>
-
       <Box sx={{ mt: 2, textAlign: "center" }}>
         <Button
           variant="text"

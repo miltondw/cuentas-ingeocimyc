@@ -78,7 +78,7 @@ apiClient.interceptors.request.use(
     console.info(
       `🔌 Auth Request: ${config.method?.toUpperCase()} ${config.url}`
     );
-    
+
     const token = tokenStorage.getAccessToken();
     console.info(`🔑 Auth token present: ${!!token}`);
 
@@ -91,7 +91,7 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error: AxiosError) => {
-    console.error('❌ Auth Request Error:', error);
+    console.error("❌ Auth Request Error:", error);
     return Promise.reject(error);
   }
 );
@@ -100,7 +100,9 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => {
     console.info(
-      `✅ Auth Response: ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`
+      `✅ Auth Response: ${
+        response.status
+      } ${response.config.method?.toUpperCase()} ${response.config.url}`
     );
     return response;
   },
@@ -111,11 +113,13 @@ apiClient.interceptors.response.use(
     };
 
     console.error(
-      `❌ Auth Error: ${error.response?.status || 'NETWORK'} ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`,
-      { 
-        code: error.code, 
+      `❌ Auth Error: ${
+        error.response?.status || "NETWORK"
+      } ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`,
+      {
+        code: error.code,
         message: error.message,
-        status: error.response?.status 
+        status: error.response?.status,
       }
     );
 
@@ -134,9 +138,7 @@ apiClient.interceptors.response.use(
         originalRequest._retryCount = retryCount + 1;
         originalRequest._retry = true;
 
-        console.info(
-          `🔄 Reintentando login (${retryCount + 1}/3)...`
-        );
+        console.info(`🔄 Reintentando login (${retryCount + 1}/3)...`);
 
         // Esperar antes del reintento (exponential backoff)
         await new Promise((resolve) =>
@@ -213,33 +215,50 @@ apiClient.interceptors.response.use(
 // Función para "despertar" el servidor (pre-warm) en caso de que esté dormido
 const warmUpServer = async (): Promise<void> => {
   try {
-    console.info('🔥 Intentando despertar servidor...');
-    const response = await fetch(`${getBaseURL()}/health`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: {
-        'Accept': 'application/json',
+    console.info("🔥 Intentando despertar servidor...");
+    const response = await fetch(
+      `https://api-cuentas-zlut.onrender.com/health`,
+      {
+        method: "GET",
+        mode: "cors",
+        headers: {
+          Accept: "application/json",
+        },
       }
-    });
-    console.info('🔥 Server warm-up:', response.status === 200 ? 'Success ✅' : `Failed ❌ (${response.status})`);
+    );
+    console.info(
+      "🔥 Server warm-up:",
+      response.status === 200 ? "Success ✅" : `Failed ❌ (${response.status})`
+    );
   } catch (error) {
-    console.warn('⚠️ Server warm-up failed (server might be cold starting):', (error as Error).message);
-    
+    console.warn(
+      "⚠️ Server warm-up failed (server might be cold starting):",
+      (error as Error).message
+    );
+
     // Intentar con el endpoint base como fallback
     try {
       const fallbackResponse = await fetch(getBaseURL(), {
-        method: 'GET',
-        mode: 'cors'
+        method: "GET",
+        mode: "cors",
       });
-      console.info('🔥 Fallback warm-up:', fallbackResponse.status === 200 ? 'Success ✅' : `Status: ${fallbackResponse.status}`);
+      console.info(
+        "🔥 Fallback warm-up:",
+        fallbackResponse.status === 200
+          ? "Success ✅"
+          : `Status: ${fallbackResponse.status}`
+      );
     } catch (fallbackError) {
-      console.warn('⚠️ Fallback warm-up also failed:', (fallbackError as Error).message);
+      console.warn(
+        "⚠️ Fallback warm-up also failed:",
+        (fallbackError as Error).message
+      );
     }
   }
 };
 
 // Hacer warm-up automático cuando se carga el módulo
-if (typeof window !== 'undefined' && import.meta.env.DEV) {
+if (typeof window !== "undefined" && import.meta.env.DEV) {
   warmUpServer();
 }
 

@@ -5,5 +5,5 @@
 
 export { ProjectFormCreate } from "./ProjectFormCreate";
 export { default as TablaUtilidades } from "./TablaUtilidades";
-export { default as TablaGastosEmpresa } from "./gasto-mes";
+export { default as TablaGastosEmpresa } from "./GastosMes";
 export { default as FormCreateMonth } from "./CreateMonth";
