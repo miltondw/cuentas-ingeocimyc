@@ -110,7 +110,7 @@ export const ClientInfoForm: React.FC<ClientInfoFormProps> = ({
               }}
               placeholder="Ej: 301 351 7044"
             />
-          </Grid2>{" "}
+          </Grid2>
           {/* Empresa */}
           <Grid2 size={{ xs: 12, md: 6 }}>
             <TextField

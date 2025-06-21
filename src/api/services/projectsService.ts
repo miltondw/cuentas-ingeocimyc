@@ -191,6 +191,49 @@ export class ProjectsService {
     return response.data;
   }
 
+  /**
+   * Obtener proyectos con paginación de servidor (formato estándar)
+   * Retorna datos en formato: {data, total, page, limit}
+   */
+  async getProjectsPaginated(
+    page: number = 1,
+    limit: number = 10,
+    filters?: Omit<ProjectFilters, "page" | "limit">
+  ): Promise<{
+    data: Project[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const params = new URLSearchParams();
+
+    // Agregar parámetros de paginación
+    params.append("page", page.toString());
+    params.append("limit", limit.toString());
+
+    // Agregar filtros si existen
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+          if (Array.isArray(value)) {
+            value.forEach((v) => params.append(key, String(v)));
+          } else {
+            params.append(key, String(value));
+          }
+        }
+      });
+    }
+
+    const response = await api.get<{
+      data: Project[];
+      total: number;
+      page: number;
+      limit: number;
+    }>(`${this.basePath}?${params.toString()}`);
+
+    return response.data;
+  }
+
   // =============== MÉTODOS DE UTILIDAD ===============
 
   /**

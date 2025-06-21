@@ -90,7 +90,7 @@ const MainLayout = () => {
         }}
       >
         {isLoading && <PageLoadingFallback />}
-        <Outlet />{" "}
+        <Outlet />
         <Snackbar
           open={notification.open}
           autoHideDuration={notification.autoHideDuration}

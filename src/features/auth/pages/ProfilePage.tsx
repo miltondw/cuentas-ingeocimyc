@@ -124,7 +124,6 @@ const ProfilePage = () => {
 
   return (
     <Box sx={{ maxWidth: 800, mx: "auto", py: 4 }}>
-      {" "}
       <Typography variant="h4" gutterBottom>
         Perfil de Usuario
       </Typography>

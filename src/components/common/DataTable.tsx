@@ -15,10 +15,17 @@ import {
   Chip,
   Box,
   Typography,
+  Tooltip,
+  useTheme,
+  useMediaQuery,
+  alpha,
 } from "@mui/material";
 import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import { LoadingOverlay } from "./LoadingOverlay";
 import { SearchAndFilter, FilterField } from "./SearchAndFilter";
+import DataTablePagination, {
+  type PaginationData,
+} from "./DataTablePagination";
 
 export interface ColumnConfig<T = unknown> {
   key: keyof T | string;
@@ -40,7 +47,7 @@ export interface RowAction<T = unknown> {
 export interface DataTableProps<T = unknown> {
   data: T[];
   columns: ColumnConfig<T>[];
-  keyField?: keyof T;
+  keyField?: keyof T | string;
   loading?: boolean;
 
   // Search and filters
@@ -60,6 +67,13 @@ export interface DataTableProps<T = unknown> {
 
   // Callbacks
   onRowClick?: (row: T) => void;
+
+  // Pagination
+  enablePagination?: boolean;
+  paginationData?: PaginationData;
+  onPageChange?: (page: number) => void;
+  onRowsPerPageChange?: (rowsPerPage: number) => void;
+  rowsPerPageOptions?: number[];
 
   // UI
   title?: string;
@@ -85,16 +99,90 @@ const TableCellRenderer: React.FC<{
       />
     );
   }
-
   if (typeof value === "number") {
     return (
-      <Typography variant="body2">{value.toLocaleString("es-ES")}</Typography>
+      <Typography
+        variant="body2"
+        sx={{
+          fontWeight: "medium",
+          fontSize: "0.875rem",
+          fontFamily: "monospace",
+          textAlign: "right",
+          color: "text.primary",
+        }}
+      >
+        {value.toLocaleString("es-ES", {
+          minimumFractionDigits: value % 1 === 0 ? 0 : 2,
+          maximumFractionDigits: 2,
+        })}
+      </Typography>
+    );
+  }
+  const stringValue = value?.toString() || "-";
+  const isLongText = stringValue.length > 50;
+
+  if (isLongText) {
+    return (
+      <Tooltip
+        title={
+          <Typography
+            variant="body2"
+            sx={{ whiteSpace: "pre-wrap", maxWidth: 300 }}
+          >
+            {stringValue}
+          </Typography>
+        }
+        arrow
+        placement="top"
+        componentsProps={{
+          tooltip: {
+            sx: {
+              backgroundColor: "rgba(97, 97, 97, 0.95)",
+              fontSize: "0.75rem",
+              maxWidth: 350,
+            },
+          },
+        }}
+      >
+        <Box
+          sx={{
+            cursor: "help",
+            maxWidth: column.width || "200px",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            "&:hover": {
+              color: "primary.main",
+            },
+          }}
+        >
+          <Typography
+            variant="body2"
+            component="span"
+            sx={{
+              fontSize: "0.875rem",
+              lineHeight: 1.4,
+            }}
+          >
+            {stringValue}
+          </Typography>
+        </Box>
+      </Tooltip>
     );
   }
 
   return (
-    <Typography variant="body2" noWrap>
-      {value?.toString() || "-"}
+    <Typography
+      variant="body2"
+      sx={{
+        maxWidth: column.width || "200px",
+        wordBreak: "break-word",
+        fontSize: "0.875rem",
+        lineHeight: 1.4,
+        hyphens: "auto",
+      }}
+    >
+      {stringValue}
     </Typography>
   );
 };
@@ -102,7 +190,7 @@ const TableCellRenderer: React.FC<{
 export const DataTable: React.FC<DataTableProps> = ({
   data,
   columns,
-  keyField = "id" as keyof unknown,
+  keyField = "id" as keyof unknown | string,
   loading = false,
   searchValue = "",
   onSearchChange,
@@ -114,14 +202,31 @@ export const DataTable: React.FC<DataTableProps> = ({
   onSelectionChange,
   rowActions = [],
   onRowClick,
+  enablePagination = false,
+  paginationData,
+  onPageChange,
+  onRowsPerPageChange,
+  rowsPerPageOptions = [5, 10, 25, 50],
   title,
   emptyMessage = "No hay datos disponibles",
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
   const [actionAnchorEl, setActionAnchorEl] = useState<null | HTMLElement>(
     null
   );
   const [selectedRowForAction, setSelectedRowForAction] =
     useState<unknown>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  // Detectar capacidad de scroll horizontal
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollLeft, scrollWidth, clientWidth } = e.currentTarget;
+    setCanScrollLeft(scrollLeft > 0);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+  };
   // Handle selection
   const handleSelectAll = (checked: boolean) => {
     if (!onSelectionChange) return;
@@ -129,7 +234,10 @@ export const DataTable: React.FC<DataTableProps> = ({
     if (checked) {
       const allIds = new Set(
         data
-          .map((row) => (row as Record<string, unknown>)[keyField as string])
+          .map((row, index) => {
+            const id = (row as Record<string, unknown>)[keyField as string];
+            return id !== undefined && id !== null ? id : `row-${index}`;
+          })
           .filter(
             (id): id is string | number =>
               typeof id === "string" || typeof id === "number"
@@ -156,14 +264,62 @@ export const DataTable: React.FC<DataTableProps> = ({
   const isAllSelected = data.length > 0 && selectedRows.size === data.length;
   const isIndeterminate =
     selectedRows.size > 0 && selectedRows.size < data.length;
+  const renderEmptyState = () => {
+    const hasActiveFilters = Object.values(filterValues).some((value) =>
+      Array.isArray(value) ? value.length > 0 : Boolean(value)
+    );
 
-  const renderEmptyState = () => (
-    <Box sx={{ textAlign: "center", py: 8 }}>
-      <Typography variant="h6" color="text.secondary">
-        {emptyMessage}
-      </Typography>
-    </Box>
-  );
+    return (
+      <Box
+        sx={{
+          textAlign: "center",
+          py: 8,
+          px: 4,
+          backgroundColor: "grey.50",
+          borderRadius: 2,
+          border: "2px dashed",
+          borderColor: "grey.300",
+          margin: 2,
+          transition: "all 0.3s ease",
+          "&:hover": {
+            borderColor: "primary.300",
+            backgroundColor: "primary.25",
+          },
+        }}
+      >
+        <Typography
+          variant="h6"
+          color="text.secondary"
+          gutterBottom
+          sx={{ fontSize: "1.125rem", fontWeight: 600 }}
+        >
+          📋 {emptyMessage}
+        </Typography>
+        <Typography
+          variant="body2"
+          color="text.disabled"
+          sx={{ mb: 2, fontSize: "0.875rem" }}
+        >
+          {hasActiveFilters || searchValue
+            ? "No se encontraron resultados que coincidan con los criterios de búsqueda"
+            : "Aún no hay datos disponibles para mostrar"}
+        </Typography>
+        {(hasActiveFilters || searchValue) && (
+          <Typography
+            variant="caption"
+            color="text.disabled"
+            sx={{
+              fontStyle: "italic",
+              display: "block",
+              mt: 1,
+            }}
+          >
+            Intenta ajustar los filtros o la búsqueda para ver más resultados
+          </Typography>
+        )}
+      </Box>
+    );
+  };
 
   return (
     <Box>
@@ -173,7 +329,6 @@ export const DataTable: React.FC<DataTableProps> = ({
           {title}
         </Typography>
       )}
-
       {/* Search and Filter */}
       {(onSearchChange || filters.length > 0) && (
         <SearchAndFilter
@@ -190,106 +345,281 @@ export const DataTable: React.FC<DataTableProps> = ({
         {data.length === 0 ? (
           renderEmptyState()
         ) : (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  {selectable && (
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        indeterminate={isIndeterminate}
-                        checked={isAllSelected}
-                        onChange={(e) => handleSelectAll(e.target.checked)}
-                      />
-                    </TableCell>
-                  )}
+          <Box sx={{ position: "relative" }}>
+            {/* Indicadores de scroll horizontal */}
+            {isMobile && canScrollLeft && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  left: 0,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  width: 20,
+                  height: "80%",
+                  background:
+                    "linear-gradient(to right, rgba(0,0,0,0.1), transparent)",
+                  pointerEvents: "none",
+                  zIndex: 5,
+                  borderRadius: "0 10px 10px 0",
+                }}
+              />
+            )}
+            {isMobile && canScrollRight && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  right: 0,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  width: 20,
+                  height: "80%",
+                  background:
+                    "linear-gradient(to left, rgba(0,0,0,0.1), transparent)",
+                  pointerEvents: "none",
+                  zIndex: 5,
+                  borderRadius: "10px 0 0 10px",
+                }}
+              />
+            )}
 
-                  {columns.map((column) => (
-                    <TableCell
-                      key={String(column.key)}
-                      align={column.align}
-                      sx={{ width: column.width, fontWeight: "bold" }}
-                    >
-                      {column.label}
-                    </TableCell>
-                  ))}
+            <TableContainer
+              component={Paper}
+              sx={{
+                maxHeight: isMobile ? 400 : 600,
+                minHeight: 200,
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 2,
+                overflow: "auto",
+                boxShadow: theme.shadows[2],
+                transition: "box-shadow 0.3s ease",
+                "&:hover": {
+                  boxShadow: theme.shadows[4],
+                },
+                // Mejora del scroll en móviles
+                ...(isMobile && {
+                  touchAction: "pan-x pan-y",
+                  WebkitOverflowScrolling: "touch",
+                }),
+              }}
+              onScroll={handleScroll}
+            >
+              <Table
+                stickyHeader
+                sx={{
+                  minWidth: isMobile ? 600 : 1000,
+                  tableLayout: "fixed",
+                }}
+              >
+                <TableHead>
+                  <TableRow>
+                    {selectable && (
+                      <TableCell
+                        padding="checkbox"
+                        sx={{
+                          backgroundColor: alpha(theme.palette.grey[100], 0.8),
+                          borderBottom: "2px solid",
+                          borderColor: "divider",
+                          position: "sticky",
+                          top: 0,
+                          zIndex: 10,
+                          backdropFilter: "blur(8px)",
+                          borderRight: "1px solid",
+                          borderRightColor: "grey.300",
+                        }}
+                      >
+                        <Checkbox
+                          indeterminate={isIndeterminate}
+                          checked={isAllSelected}
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                          color="primary"
+                        />
+                      </TableCell>
+                    )}
 
-                  {rowActions.length > 0 && (
-                    <TableCell align="center" sx={{ width: 80 }}>
-                      Acciones
-                    </TableCell>
-                  )}
-                </TableRow>
-              </TableHead>
+                    {columns.map((column) => (
+                      <TableCell
+                        key={String(column.key)}
+                        align={column.align}
+                        sx={{
+                          width: column.width,
+                          minWidth: column.width ? "auto" : 120,
+                          maxWidth: column.width || 250,
+                          fontWeight: "bold",
+                          backgroundColor: alpha(theme.palette.grey[100], 0.8),
+                          borderBottom: "2px solid",
+                          borderColor: "divider",
+                          position: "sticky",
+                          top: 0,
+                          zIndex: 10,
+                          fontSize: "0.8rem",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.08em",
+                          color: "text.primary",
+                          backdropFilter: "blur(8px)",
+                          "&:not(:last-child)": {
+                            borderRight: "1px solid",
+                            borderRightColor: "grey.300",
+                          },
+                        }}
+                      >
+                        {column.label}
+                      </TableCell>
+                    ))}
+                    {rowActions.length > 0 && (
+                      <TableCell
+                        align="center"
+                        sx={{
+                          width: 80,
+                          fontWeight: "bold",
+                          backgroundColor: alpha(theme.palette.grey[100], 0.8),
+                          borderBottom: "2px solid",
+                          borderColor: "divider",
+                          position: "sticky",
+                          top: 0,
+                          zIndex: 10,
+                          fontSize: "0.8rem",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.08em",
+                          color: "text.primary",
+                          backdropFilter: "blur(8px)",
+                        }}
+                      >
+                        Acciones
+                      </TableCell>
+                    )}
+                  </TableRow>
+                </TableHead>{" "}
+                <TableBody>
+                  {data.map((row, index) => {
+                    const rowId = (row as Record<string, unknown>)[
+                      keyField as string
+                    ]; // Generar un key único incluso si rowId es undefined
+                    const uniqueKey =
+                      rowId !== undefined && rowId !== null
+                        ? String(rowId)
+                        : `row-${index}`;
+                    const selectionId =
+                      rowId !== undefined && rowId !== null
+                        ? (rowId as string | number)
+                        : uniqueKey;
+                    const isSelected = selectedRows.has(selectionId);
 
-              <TableBody>
-                {data.map((row) => {
-                  const rowId = (row as Record<string, unknown>)[
-                    keyField as string
-                  ];
-                  return (
-                    <TableRow
-                      key={String(rowId)}
-                      hover={!!onRowClick}
-                      selected={selectedRows.has(rowId as string | number)}
-                      sx={{ cursor: onRowClick ? "pointer" : "default" }}
-                      onClick={onRowClick ? () => onRowClick(row) : undefined}
-                    >
-                      {selectable && (
-                        <TableCell padding="checkbox">
-                          <Checkbox
-                            checked={selectedRows.has(rowId as string | number)}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              handleSelectRow(
-                                rowId as string | number,
-                                e.target.checked
-                              );
-                            }}
-                          />
-                        </TableCell>
-                      )}
-
-                      {columns.map((column) => (
-                        <TableCell
-                          key={String(column.key)}
-                          align={column.align}
-                        >
-                          <TableCellRenderer
-                            column={column}
-                            value={
-                              (row as Record<string, unknown>)[
-                                column.key as string
-                              ]
-                            }
-                            row={row}
-                          />
-                        </TableCell>
-                      ))}
-
-                      {rowActions.length > 0 && (
-                        <TableCell align="center">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedRowForAction(row);
-                              setActionAnchorEl(e.currentTarget);
+                    return (
+                      <TableRow
+                        key={uniqueKey}
+                        hover={!!onRowClick}
+                        selected={isSelected}
+                        sx={{
+                          cursor: onRowClick ? "pointer" : "default",
+                          "&:nth-of-type(odd)": {
+                            backgroundColor: "grey.50",
+                          },
+                          "&:hover": {
+                            backgroundColor: onRowClick
+                              ? "action.hover"
+                              : "grey.100",
+                            transform: onRowClick ? "translateY(-1px)" : "none",
+                            transition: "all 0.2s ease-in-out",
+                          },
+                          "&.Mui-selected": {
+                            backgroundColor: "primary.50",
+                            "&:hover": {
+                              backgroundColor: "primary.100",
+                            },
+                          },
+                          borderBottom: "1px solid",
+                          borderColor: "divider",
+                        }}
+                        onClick={onRowClick ? () => onRowClick(row) : undefined}
+                      >
+                        {selectable && (
+                          <TableCell
+                            padding="checkbox"
+                            sx={{
+                              borderBottom: "1px solid",
+                              borderColor: "divider",
                             }}
                           >
-                            <MoreVertIcon />
-                          </IconButton>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                            {" "}
+                            <Checkbox
+                              checked={isSelected}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleSelectRow(selectionId, e.target.checked);
+                              }}
+                              color="primary"
+                            />
+                          </TableCell>
+                        )}
+
+                        {columns.map((column) => (
+                          <TableCell
+                            key={String(column.key)}
+                            align={column.align}
+                            sx={{
+                              borderBottom: "1px solid",
+                              borderColor: "divider",
+                              py: 2,
+                              px: 2,
+                              minWidth: column.width ? "auto" : 120,
+                              maxWidth: column.width || 250,
+                              width: column.width,
+                              verticalAlign: "top",
+                              position: "relative",
+                              "&:not(:last-child)": {
+                                borderRight: "1px solid",
+                                borderRightColor: "grey.200",
+                              },
+                            }}
+                          >
+                            <TableCellRenderer
+                              column={column}
+                              value={
+                                (row as Record<string, unknown>)[
+                                  column.key as string
+                                ]
+                              }
+                              row={row}
+                            />
+                          </TableCell>
+                        ))}
+                        {rowActions.length > 0 && (
+                          <TableCell
+                            align="center"
+                            sx={{
+                              borderBottom: "1px solid",
+                              borderColor: "divider",
+                            }}
+                          >
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedRowForAction(row);
+                                setActionAnchorEl(e.currentTarget);
+                              }}
+                              sx={{
+                                color: "text.secondary",
+                                "&:hover": {
+                                  color: "primary.main",
+                                  backgroundColor: "primary.50",
+                                },
+                              }}
+                            >
+                              <MoreVertIcon />
+                            </IconButton>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
         )}
       </LoadingOverlay>
-
       {/* Actions Menu */}
       <Menu
         anchorEl={actionAnchorEl}
@@ -315,6 +645,19 @@ export const DataTable: React.FC<DataTableProps> = ({
           </MenuItem>
         ))}
       </Menu>
+
+      {/* Pagination */}
+      {enablePagination &&
+        paginationData &&
+        onPageChange &&
+        onRowsPerPageChange && (
+          <DataTablePagination
+            paginationData={paginationData}
+            onPageChange={onPageChange}
+            onRowsPerPageChange={onRowsPerPageChange}
+            rowsPerPageOptions={rowsPerPageOptions}
+          />
+        )}
     </Box>
   );
 };

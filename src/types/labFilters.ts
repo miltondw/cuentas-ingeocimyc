@@ -7,6 +7,7 @@ import type { BaseFilters } from "@/lib/axios/apiClient";
 // =============== FILTROS PARA PROYECTOS DE LABORATORIO ===============
 export interface LabProjectFilters extends BaseFilters {
   // Filtros de búsqueda
+  search?: string; // Búsqueda global en nombre_proyecto, solicitante y obrero
   nombreProyecto?: string;
   solicitante?: string;
   obrero?: string;

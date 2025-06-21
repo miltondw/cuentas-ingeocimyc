@@ -80,7 +80,6 @@ const LoginPage = () => {
 
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
-      {" "}
       <Box sx={{ textAlign: "center", mb: 3 }}>
         <Typography component="h1" variant="h4" gutterBottom>
           Iniciar sesión

@@ -1,32 +1,23 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   TextField,
   Button,
   Typography,
-  IconButton,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
-  TablePagination,
   Alert,
-  TableSortLabel,
-  Tooltip,
   MenuItem,
   Grid2,
   Box,
   Stack,
   Collapse,
+  Paper,
 } from "@mui/material";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import PaymentIcon from "@mui/icons-material/Payment";
@@ -39,22 +30,45 @@ import api from "@/api";
 import { useNotifications } from "@/hooks/useNotifications";
 import { LoadingOverlay } from "@/components/common/LoadingOverlay";
 import {
+  DataTable,
+  type ColumnConfig,
+  type RowAction,
+} from "@/components/common/DataTable";
+import DataTablePagination from "@/components/common/DataTablePagination";
+import { useServerPagination } from "@/hooks/useServerPagination";
+import {
   Project,
   ProjectFilters,
   DEFAULT_PROJECT_FILTERS,
 } from "@/types/projects";
 import { formatNumber, parseNumber } from "@/utils/formatNumber";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useUrlFilters } from "@/hooks/useUrlFilters";
-// Types
-interface TableColumn {
-  id: string;
-  label: string;
-  sortable: boolean;
-  filterType?: "text" | "date" | "select";
-  width: number;
-}
 
+// Constants for select options
+const STATUS_OPTIONS = [
+  { value: "", label: "Todos" },
+  { value: "activo", label: "Activo" },
+  { value: "completado", label: "Completado" },
+  { value: "suspendido", label: "Suspendido" },
+  { value: "cancelado", label: "Cancelado" },
+];
+
+const PAYMENT_METHOD_OPTIONS = [
+  { value: "", label: "Todos" },
+  { value: "efectivo", label: "Efectivo" },
+  { value: "transferencia", label: "Transferencia" },
+  { value: "cheque", label: "Cheque" },
+  { value: "credito", label: "Crédito" },
+];
+
+// Campos de fecha para filtros
+const DATE_FILTER_FIELDS = [
+  { key: "startDate", label: "Fecha desde" },
+  { key: "endDate", label: "Fecha hasta" },
+] as const;
+
+// Types
 interface ProjectGastos {
   [key: string]: number;
 }
@@ -67,108 +81,16 @@ interface ProjectCalculations {
 }
 
 interface AppState {
-  allProjects: Project[];
-  loading: boolean;
-  error: string | null;
   modals: {
     delete: boolean;
     payment: boolean;
   };
   selectedProject: Project | null;
   paymentAmount: string;
-  expandedRows: Set<number>; // Para controlar qué filas están expandidas
-  showAdvancedFilters: boolean; // Para controlar filtros avanzados
-  totalProjects: number; // Total de proyectos para paginación
+  showAdvancedFilters: boolean;
 }
 
 // Constants
-const tableRowInputs: TableColumn[] = [
-  { id: "acciones", label: "Acciones", sortable: false, width: 150 },
-  {
-    id: "fecha",
-    label: "Fecha",
-    sortable: true,
-    filterType: "date",
-    width: 120,
-  },
-  {
-    id: "solicitante",
-    label: "Solicitante",
-    sortable: true,
-    filterType: "text",
-    width: 150,
-  },
-  {
-    id: "nombreProyecto",
-    label: "Proyecto",
-    sortable: true,
-    filterType: "text",
-    width: 200,
-  },
-  {
-    id: "factura",
-    label: "N° Factura",
-    sortable: true,
-    filterType: "text",
-    width: 120,
-  },
-  {
-    id: "valorRetencion",
-    label: "% De Retención",
-    sortable: true,
-    filterType: "text",
-    width: 120,
-  },
-  {
-    id: "valor_iva",
-    label: "Valor de Iva",
-    sortable: true,
-    filterType: "text",
-    width: 120,
-  },
-  {
-    id: "valor_re",
-    label: "Valor de Retención",
-    sortable: true,
-    filterType: "text",
-    width: 120,
-  },
-  {
-    id: "obrero",
-    label: "Obrero",
-    sortable: true,
-    filterType: "text",
-    width: 150,
-  },
-  {
-    id: "metodoDePago",
-    label: "Método de Pago",
-    sortable: true,
-    filterType: "text",
-    width: 150,
-  },
-  { id: "costoServicio", label: "Costo Servicio", sortable: true, width: 150 },
-  { id: "abono", label: "Abonado", sortable: true, width: 120 },
-  { id: "total_gastos", label: "Total Gastos", sortable: true, width: 150 },
-  { id: "utilidad_neta", label: "Utilidad Neta", sortable: true, width: 150 },
-  { id: "saldo", label: "Saldo", sortable: true, width: 120 },
-  {
-    id: "estado_cuenta",
-    label: "Estado",
-    sortable: true,
-    filterType: "select",
-    width: 120,
-  },
-  {
-    id: "gastos",
-    label: "Gastos",
-    sortable: false,
-    width: 120,
-  },
-];
-
-// Utility functions
-
 const formatDate = (dateStr: string): string =>
   dateStr
     ? new Date(dateStr).toLocaleDateString("es", { timeZone: "UTC" })
@@ -264,7 +186,274 @@ const colorEstadoCuenta = (estado: string): string => {
   }
 };
 
+// Función auxiliar para formatear valores monetarios
+const formatCurrency = (value: string | number): string => {
+  const numValue = typeof value === "string" ? parseFloat(value) || 0 : value;
+  return `$${formatNumber(numValue)}`;
+};
+
+// Configuración de columnas para DataTable
+const createTableColumns = (
+  calculations: Record<string, ProjectCalculations>,
+  colorEstadoCuenta: (estado: string) => string
+): ColumnConfig<Project>[] => [
+  {
+    key: "fecha",
+    label: "Fecha",
+    sortable: true,
+    width: 120,
+    render: (value) => formatDate(value as string),
+  },
+  {
+    key: "solicitante",
+    label: "Solicitante",
+    sortable: true,
+    width: 150,
+  },
+  {
+    key: "nombreProyecto",
+    label: "Proyecto",
+    sortable: true,
+    width: 200,
+    render: (value) => (
+      <Typography variant="body2" sx={{ fontWeight: "medium" }}>
+        {value as string}
+      </Typography>
+    ),
+  },
+  {
+    key: "factura",
+    label: "N° Factura",
+    sortable: true,
+    width: 120,
+    render: (value) => (value as string) || "N/A",
+  },
+  {
+    key: "valorRetencion",
+    label: "% De Retención",
+    sortable: true,
+    width: 120,
+    render: (value) => `${value}%`,
+  },
+  {
+    key: "valor_iva",
+    label: "Valor de Iva",
+    sortable: true,
+    width: 120,
+    render: (value) => formatCurrency(value as number),
+  },
+  {
+    key: "valor_re",
+    label: "Valor de Retención",
+    sortable: true,
+    width: 120,
+    render: (value) => formatCurrency(value as number),
+  },
+  {
+    key: "obrero",
+    label: "Obrero",
+    sortable: true,
+    width: 150,
+  },
+  {
+    key: "metodoDePago",
+    label: "Método de Pago",
+    sortable: true,
+    width: 150,
+  },
+  {
+    key: "costoServicio",
+    label: "Costo Servicio",
+    sortable: true,
+    width: 150,
+    render: (value) => (
+      <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+        {formatCurrency(value as string)}
+      </Typography>
+    ),
+  },
+  {
+    key: "abono",
+    label: "Abonado",
+    sortable: true,
+    width: 120,
+    render: (value) => formatCurrency(value as string),
+  },
+  {
+    key: "total_gastos",
+    label: "Total Gastos",
+    sortable: true,
+    width: 150,
+    render: (_, row) => {
+      const calc = calculations[row.id];
+      return formatCurrency(calc?.totalGastos || 0);
+    },
+  },
+  {
+    key: "utilidad_neta",
+    label: "Utilidad Neta",
+    sortable: true,
+    width: 150,
+    render: (_, row) => {
+      const calc = calculations[row.id];
+      const utilidad = calc?.utilidadNeta || 0;
+      return (
+        <Typography
+          variant="body2"
+          sx={{
+            fontWeight: "bold",
+            color: utilidad >= 0 ? "green" : "red",
+          }}
+        >
+          {formatCurrency(utilidad)}
+        </Typography>
+      );
+    },
+  },
+  {
+    key: "saldo",
+    label: "Saldo",
+    sortable: true,
+    width: 120,
+    render: (_, row) => {
+      const calc = calculations[row.id];
+      return formatCurrency(calc?.saldo || 0);
+    },
+  },
+  {
+    key: "estado_cuenta",
+    label: "Estado",
+    sortable: true,
+    width: 120,
+    render: (_, row) => {
+      const calc = calculations[row.id];
+      const estado = calc?.estadoCuenta || "Pendiente";
+      return (
+        <Box
+          sx={{
+            backgroundColor: colorEstadoCuenta(estado),
+            color: "white",
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            textAlign: "center",
+            fontSize: "0.875rem",
+            fontWeight: "medium",
+          }}
+        >
+          {estado}
+        </Box>
+      );
+    },
+  },
+];
+
+// Configuración de acciones para DataTable
+const createRowActions = (
+  navigate: ReturnType<typeof useNavigate>,
+  openPaymentDialog: (project: Project) => void,
+  openDeleteDialog: (project: Project) => void,
+  _calculations: Record<string, ProjectCalculations>
+): RowAction<Project>[] => [
+  {
+    key: "edit",
+    label: "Editar proyecto",
+    icon: <EditIcon fontSize="small" />,
+    color: "primary",
+    action: (project) => navigate(`/crear-proyecto/${project.id}`),
+  },
+  {
+    key: "payment",
+    label: "Registrar pago",
+    icon: <PaymentIcon fontSize="small" />,
+    color: "primary",
+    action: (project) => openPaymentDialog(project),
+  },
+  {
+    key: "delete",
+    label: "Eliminar proyecto",
+    icon: <DeleteIcon fontSize="small" />,
+    color: "error",
+    action: openDeleteDialog,
+  },
+];
+
+// Función para fetch de proyectos con el formato correcto para paginación de servidor
+const fetchProjects = async (filters: ProjectFilters) => {
+  const params: Record<string, string | number> = {
+    page: filters.page || 1,
+    limit: filters.limit || 10,
+  };
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      if (typeof value === "boolean") {
+        params[key] = value ? "true" : "false";
+      } else if (Array.isArray(value)) {
+        params[key] = value.join(",");
+      } else {
+        params[key] = value;
+      }
+    }
+  });
+
+  const response = await api.get("/projects", { params });
+
+  // Procesar los datos para agregar campos calculados
+  const processedData =
+    response.data.data?.map((p: Project) => ({
+      ...p,
+      valor_re: p.valorRetencion
+        ? (Number(p.valorRetencion) / 100) * Number(p.costoServicio)
+        : 0,
+      valor_iva: Number(p.costoServicio) ? 0.19 * Number(p.costoServicio) : 0,
+    })) || [];
+
+  return {
+    data: processedData,
+    total: response.data.total || 0,
+    page: response.data.page || filters.page || 1,
+    limit: response.data.limit || filters.limit || 10,
+  };
+};
+
+// Hook personalizado para proyectos con paginación
+const useProjectsWithPagination = (filters: ProjectFilters, enabled = true) => {
+  const queryResult = useQuery({
+    queryKey: ["projects-financial", filters],
+    queryFn: () => fetchProjects(filters),
+    enabled,
+    staleTime: 2 * 60 * 1000, // 2 minutos
+    gcTime: 5 * 60 * 1000, // 5 minutos
+    retry: (failureCount, error) => {
+      // Retry logic similar al original
+      const axiosError = error as {
+        code?: string;
+        response?: { status: number };
+        message?: string;
+      };
+
+      if (
+        failureCount < 2 &&
+        (axiosError?.code === "NETWORK_ERROR" ||
+          (axiosError?.response?.status && axiosError.response.status >= 500) ||
+          axiosError?.message?.includes("fetch"))
+      ) {
+        return true;
+      }
+      return false;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
+  return useServerPagination<Project>({
+    apiResponse: queryResult.data,
+    isLoading: queryResult.isLoading,
+    error: queryResult.error,
+  });
+};
+
 const TablaGastosProject: React.FC = () => {
+  const navigate = useNavigate();
   const { showNotification, showError } = useNotifications();
   const queryClient = useQueryClient();
 
@@ -290,16 +479,19 @@ const TablaGastosProject: React.FC = () => {
     obrero: filters.obrero || "",
   });
   const [state, setState] = useState<AppState>({
-    allProjects: [],
-    loading: false,
-    error: null,
     modals: { delete: false, payment: false },
     selectedProject: null,
     paymentAmount: "",
-    expandedRows: new Set<number>(),
     showAdvancedFilters: false,
-    totalProjects: 0,
   });
+  // Hook de paginación con datos del servidor
+  const {
+    data: projects,
+    isLoading,
+    paginationData,
+    isEmpty,
+    error,
+  } = useProjectsWithPagination(filters, !filtersLoading);
 
   // Sincronizar inputs locales con filtros cuando cambien desde URL
   useEffect(() => {
@@ -326,36 +518,22 @@ const TablaGastosProject: React.FC = () => {
       updateFilter(field, value);
     },
     [updateFilter]
-  ); // Funciones de manejo
+  ); // Handlers simplificados para paginación
   const handlePageChange = useCallback(
-    (_: unknown, newPage: number) => {
-      updateFilter("page", newPage + 1); // MUI usa 0-indexed, nosotros 1-indexed
+    (page: number) => {
+      updateFilter("page", page);
     },
     [updateFilter]
   );
 
   const handleRowsPerPageChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+    (newLimit: number) => {
       updateFilters({
-        limit: parseInt(event.target.value, 10),
-        page: 1,
+        limit: newLimit,
+        page: 1, // Resetear a la primera página
       });
     },
     [updateFilters]
-  );
-
-  const handleSort = useCallback(
-    (field: string) => {
-      const isCurrentField = filters.sortBy === field;
-      const newOrder =
-        isCurrentField && filters.sortOrder === "DESC" ? "ASC" : "DESC";
-      updateFilters({
-        sortBy: field as ProjectFilters["sortBy"],
-        sortOrder: newOrder,
-        page: 1,
-      });
-    },
-    [filters.sortBy, filters.sortOrder, updateFilters]
   );
   const handleClearFilters = useCallback(() => {
     clearFilters();
@@ -373,99 +551,16 @@ const TablaGastosProject: React.FC = () => {
     });
   }, [clearFilters, showNotification]);
 
+  // Mostrar notificación cuando no hay datos (manejado por el hook)
   useEffect(() => {
-    const buildQueryParams = () => {
-      const params: Record<string, string | number> = {
-        page: filters.page || 1,
-        limit: filters.limit || 10,
-      };
-
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== "") {
-          if (typeof value === "boolean") {
-            params[key] = value ? "true" : "false";
-          } else if (Array.isArray(value)) {
-            params[key] = value.join(",");
-          } else {
-            params[key] = value;
-          }
-        }
+    if (!isLoading && isEmpty && !error) {
+      showNotification({
+        severity: "info",
+        message: "No se encontraron proyectos con los filtros aplicados",
+        duration: 3000,
       });
-
-      return params;
-    };
-    const fetchProjects = async (retryCount = 0) => {
-      setState((prev) => ({ ...prev, loading: true, error: null }));
-      try {
-        const params = buildQueryParams();
-        const response = await api.get("/projects", { params });
-
-        const proyectos =
-          response.data.data?.map((p: Project) => ({
-            ...p,
-            valor_re: p.valorRetencion
-              ? (Number(p.valorRetencion) / 100) * Number(p.costoServicio)
-              : 0,
-            valor_iva: Number(p.costoServicio)
-              ? 0.19 * Number(p.costoServicio)
-              : 0,
-          })) || [];
-
-        setState((prev) => ({
-          ...prev,
-          allProjects: proyectos,
-          totalProjects: response.data.total || 0,
-          loading: false,
-        }));
-
-        if (proyectos.length === 0) {
-          showNotification({
-            severity: "info",
-
-            message: "No se encontraron proyectos con los filtros aplicados",
-            duration: 3000,
-          });
-        }
-      } catch (error) {
-        // Retry automático para errores de red
-        const axiosError = error as {
-          code?: string;
-          response?: { status: number };
-          message?: string;
-        };
-        if (
-          retryCount < 2 &&
-          (axiosError?.code === "NETWORK_ERROR" ||
-            (axiosError?.response?.status &&
-              axiosError.response.status >= 500) ||
-            axiosError?.message?.includes("fetch"))
-        ) {
-          console.warn(
-            `Reintentando carga de proyectos (${retryCount + 1}/3)...`
-          );
-          setTimeout(
-            () => fetchProjects(retryCount + 1),
-            1000 * (retryCount + 1)
-          );
-          return;
-        }
-
-        const errorMessage = `Error al cargar proyectos: ${
-          (error as Error).message
-        }`;
-        setState((prev) => ({
-          ...prev,
-          error: errorMessage,
-          loading: false,
-        }));
-        showError(errorMessage);
-      }
-    };
-
-    if (!filtersLoading) {
-      fetchProjects();
     }
-  }, [filters, filtersLoading, showNotification, showError]);
+  }, [isLoading, isEmpty, error, showNotification]);
   const handlePayment = async () => {
     const { selectedProject, paymentAmount } = state;
     if (!selectedProject || !paymentAmount) {
@@ -474,8 +569,6 @@ const TablaGastosProject: React.FC = () => {
     }
 
     try {
-      setState((prev) => ({ ...prev, loading: true }));
-
       // Convertir a número para enviar al backend
       const montoNumerico = Number(paymentAmount);
 
@@ -485,50 +578,34 @@ const TablaGastosProject: React.FC = () => {
 
       showNotification({
         severity: "success",
-
         message: `Se ha registrado el abono de $${formatNumber(
           montoNumerico
         )} al proyecto ${selectedProject.nombreProyecto}`,
         duration: 4000,
       });
 
-      // Invalidar las queries de proyectos para refrescar automáticamente
-      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      // Invalidar las queries para refrescar automáticamente
+      await queryClient.invalidateQueries({
+        queryKey: ["projects-financial"],
+      });
+
       setState((prev) => ({
         ...prev,
-        allProjects: prev.allProjects.map((project) => {
-          if (project.id === selectedProject.id) {
-            return {
-              ...project,
-              abono: String(Number(project.abono) + Number(montoNumerico)),
-            };
-          }
-          return project;
-        }),
         modals: { ...prev.modals, payment: false },
         selectedProject: null,
         paymentAmount: "",
-        loading: false,
       }));
     } catch (error) {
       const errorMessage = `Error al procesar el pago: ${
         (error as Error).message
       }`;
-      setState((prev) => ({
-        ...prev,
-        error: errorMessage,
-        loading: false,
-      }));
       showError(errorMessage);
     }
   };
-
   const handleDelete = async () => {
     if (!state.selectedProject) return;
 
     try {
-      setState((prev) => ({ ...prev, loading: true }));
-
       await api.delete(`/projects/${state.selectedProject.id}`);
 
       showNotification({
@@ -536,24 +613,21 @@ const TablaGastosProject: React.FC = () => {
         message: `El proyecto "${state.selectedProject.nombreProyecto}" ha sido eliminado correctamente`,
         duration: 3000,
       });
+
+      // Invalidar las queries para refrescar automáticamente
+      await queryClient.invalidateQueries({
+        queryKey: ["projects-financial"],
+      });
+
       setState((prev) => ({
         ...prev,
-        allProjects: prev.allProjects.filter(
-          (project) => project.id !== (state.selectedProject?.id || "")
-        ),
         modals: { ...prev.modals, delete: false },
         selectedProject: null,
-        loading: false,
       }));
     } catch (error) {
       const errorMessage = `Error al eliminar proyecto: ${
         (error as Error).message
       }`;
-      setState((prev) => ({
-        ...prev,
-        error: errorMessage,
-        loading: false,
-      }));
       showError(errorMessage);
     }
   };
@@ -584,22 +658,6 @@ const TablaGastosProject: React.FC = () => {
     }));
   };
 
-  // Función para alternar la expansión de una fila
-  const toggleRowExpansion = (projectId: number) => {
-    setState((prev) => {
-      const newExpandedRows = new Set(prev.expandedRows);
-      if (newExpandedRows.has(projectId)) {
-        newExpandedRows.delete(projectId);
-      } else {
-        newExpandedRows.add(projectId);
-      }
-      return {
-        ...prev,
-        expandedRows: newExpandedRows,
-      };
-    });
-  };
-
   const handlePaymentAmountChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -610,12 +668,28 @@ const TablaGastosProject: React.FC = () => {
     const numericValue = parseNumber(cleaned);
     setState((prev) => ({ ...prev, paymentAmount: String(numericValue) }));
   };
-
-  if (state.loading) {
+  if (isLoading) {
     return (
       <LoadingOverlay loading={true}>Cargando proyectos...</LoadingOverlay>
     );
   }
+  // Calcular todos los valores para cada proyecto
+  const projectCalculations = projects.reduce((acc, project) => {
+    acc[project.id] = calculateValues(project);
+    return acc;
+  }, {} as Record<string, ProjectCalculations>);
+
+  // Configurar columnas y acciones para DataTable
+  const tableColumns = createTableColumns(
+    projectCalculations,
+    colorEstadoCuenta
+  );
+  const rowActions = createRowActions(
+    navigate,
+    openPaymentDialog,
+    openDeleteDialog,
+    projectCalculations
+  );
 
   return (
     <Box sx={{ p: 3 }}>
@@ -650,14 +724,10 @@ const TablaGastosProject: React.FC = () => {
           >
             Nuevo Proyecto
           </Button>
-        </Box>
-        {state.error && (
-          <Alert
-            severity="error"
-            sx={{ mb: 3 }}
-            onClose={() => setState((prev) => ({ ...prev, error: null }))}
-          >
-            {state.error}
+        </Box>{" "}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            Error al cargar proyectos: {error.message}
           </Alert>
         )}
         {/* Filtros */}
@@ -704,11 +774,11 @@ const TablaGastosProject: React.FC = () => {
                   updateFilter("status", e.target.value || undefined)
                 }
               >
-                <MenuItem value="">Todos</MenuItem>
-                <MenuItem value="activo">Activo</MenuItem>
-                <MenuItem value="completado">Completado</MenuItem>
-                <MenuItem value="suspendido">Suspendido</MenuItem>
-                <MenuItem value="cancelado">Cancelado</MenuItem>
+                {STATUS_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
               </TextField>
             </Grid2>
             <Grid2 size={{ xs: 12, sm: 6, md: 2 }}>
@@ -746,13 +816,13 @@ const TablaGastosProject: React.FC = () => {
                   sx={{ whiteSpace: "nowrap", minWidth: "fit-content" }}
                 >
                   Limpiar
-                </Button>
+                </Button>{" "}
                 <Typography
                   variant="body2"
                   color="text.secondary"
                   sx={{ textAlign: "center" }}
                 >
-                  {state.totalProjects} resultado(s)
+                  {paginationData.totalItems} resultado(s)
                 </Typography>
               </Stack>
             </Grid2>
@@ -785,30 +855,20 @@ const TablaGastosProject: React.FC = () => {
                     }
                   />
                 </Grid2>
-                <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
-                  <TextField
-                    fullWidth
-                    label="Fecha desde"
-                    type="date"
-                    variant="outlined"
-                    size="small"
-                    value={filters.startDate || ""}
-                    onChange={(e) => updateFilter("startDate", e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid2>
-                <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
-                  <TextField
-                    fullWidth
-                    label="Fecha hasta"
-                    type="date"
-                    variant="outlined"
-                    size="small"
-                    value={filters.endDate || ""}
-                    onChange={(e) => updateFilter("endDate", e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid2>
+                {DATE_FILTER_FIELDS.map((field) => (
+                  <Grid2 key={field.key} size={{ xs: 12, sm: 6, md: 3 }}>
+                    <TextField
+                      fullWidth
+                      label={field.label}
+                      type="date"
+                      variant="outlined"
+                      size="small"
+                      value={filters[field.key] || ""}
+                      onChange={(e) => updateFilter(field.key, e.target.value)}
+                      slotProps={{ inputLabel: { shrink: true } }}
+                    />
+                  </Grid2>
+                ))}
                 <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
                   <TextField
                     select
@@ -821,288 +881,38 @@ const TablaGastosProject: React.FC = () => {
                       updateFilter("metodoDePago", e.target.value || undefined)
                     }
                   >
-                    <MenuItem value="">Todos</MenuItem>
-                    <MenuItem value="efectivo">Efectivo</MenuItem>
-                    <MenuItem value="transferencia">Transferencia</MenuItem>
-                    <MenuItem value="cheque">Cheque</MenuItem>
-                    <MenuItem value="credito">Crédito</MenuItem>
+                    {PAYMENT_METHOD_OPTIONS.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
                   </TextField>
                 </Grid2>
               </Grid2>
             </Box>
           </Collapse>
         </Paper>
-        {/* Tabla */}
-        <TableContainer
-          sx={{
-            maxHeight: 600,
-            border: "1px solid #e0e0e0",
-            borderRadius: 1,
-            // Mejorar responsive
-            overflowX: "auto",
-            "& .MuiTable-root": {
-              minWidth: { xs: 800, md: 1200 },
-            },
-          }}
-        >
-          <Table stickyHeader sx={{ minWidth: { xs: 800, md: 1200 } }}>
-            <TableHead>
-              <TableRow>
-                {tableRowInputs.map(({ id, label, sortable, width }) => (
-                  <TableCell
-                    key={id}
-                    sx={{
-                      width,
-                      fontWeight: "bold",
-                      backgroundColor: "#f5f5f5",
-                      position: "sticky",
-                      top: 0,
-                      zIndex: 1,
-                    }}
-                  >
-                    {sortable ? (
-                      <TableSortLabel
-                        active={filters.sortBy === id}
-                        direction={
-                          filters.sortBy === id
-                            ? filters.sortOrder === "ASC"
-                              ? "asc"
-                              : "desc"
-                            : "desc"
-                        }
-                        onClick={() => handleSort(id)}
-                      >
-                        {label}
-                      </TableSortLabel>
-                    ) : (
-                      label
-                    )}
-                  </TableCell>
-                ))}{" "}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {state.allProjects.map((project) => {
-                const calculations = calculateValues(project);
-                const isExpanded = state.expandedRows.has(project.id); // Verificar si la fila está expandida
-                return (
-                  <React.Fragment key={project.id}>
-                    <TableRow
-                      hover
-                      sx={{
-                        "&:nth-of-type(odd)": { backgroundColor: "#fafafa" },
-                        "&:hover": { backgroundColor: "#f0f0f0" },
-                      }}
-                    >
-                      {/* Columna de Acciones */}
-                      <TableCell>
-                        <Box sx={{ display: "flex", gap: 1 }}>
-                          {" "}
-                          <Tooltip title="Editar proyecto">
-                            <span>
-                              <IconButton
-                                component={Link}
-                                to={`/crear-proyecto/${project.id}`}
-                                size="small"
-                                color="primary"
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                          <Tooltip title="Registrar pago">
-                            <span>
-                              <IconButton
-                                onClick={() => openPaymentDialog(project)}
-                                size="small"
-                                color="success"
-                                disabled={
-                                  calculations.estadoCuenta === "Pagado"
-                                }
-                              >
-                                <PaymentIcon fontSize="small" />
-                              </IconButton>
-                            </span>
-                          </Tooltip>{" "}
-                          <Tooltip title="Eliminar proyecto">
-                            <span>
-                              <IconButton
-                                onClick={() => openDeleteDialog(project)}
-                                size="small"
-                                color="error"
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
-                      {/* Datos del proyecto */}
-                      <TableCell>{formatDate(project.fecha)}</TableCell>
-                      <TableCell>{project.solicitante}</TableCell>
-                      <TableCell sx={{ fontWeight: "medium" }}>
-                        {project.nombreProyecto}
-                      </TableCell>
-                      <TableCell>{project.factura || "N/A"}</TableCell>
-                      <TableCell>{project.valorRetencion}%</TableCell>
-                      <TableCell>${formatNumber(project.valor_iva)}</TableCell>
-                      <TableCell>${formatNumber(project.valor_re)}</TableCell>
-                      <TableCell>{project.obrero}</TableCell>
-                      <TableCell>{project.metodoDePago}</TableCell>
-                      <TableCell sx={{ fontWeight: "bold" }}>
-                        ${formatNumber(project.costoServicio)}
-                      </TableCell>
-                      <TableCell>${formatNumber(project.abono)}</TableCell>
-                      <TableCell>
-                        ${formatNumber(calculations.totalGastos)}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          fontWeight: "bold",
-                          color:
-                            calculations.utilidadNeta >= 0 ? "green" : "red",
-                        }}
-                      >
-                        ${formatNumber(calculations.utilidadNeta)}
-                      </TableCell>
-                      <TableCell>${formatNumber(calculations.saldo)}</TableCell>
-                      <TableCell>
-                        <Box
-                          sx={{
-                            backgroundColor: colorEstadoCuenta(
-                              calculations.estadoCuenta
-                            ),
-                            color: "white",
-                            px: 1,
-                            py: 0.5,
-                            borderRadius: 1,
-                            textAlign: "center",
-                            fontSize: "0.875rem",
-                            fontWeight: "medium",
-                          }}
-                        >
-                          {calculations.estadoCuenta}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        {" "}
-                        <Tooltip
-                          title={isExpanded ? "Ocultar gastos" : "Ver gastos"}
-                        >
-                          <span>
-                            <IconButton
-                              onClick={() => toggleRowExpansion(project.id)}
-                              size="small"
-                              color="primary"
-                            >
-                              {isExpanded ? (
-                                <ExpandLessIcon fontSize="small" />
-                              ) : (
-                                <ExpandMoreIcon fontSize="small" />
-                              )}
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                      </TableCell>{" "}
-                      {/* Columnas dinámicas para campos extra */}
-                    </TableRow>
-                    {/* Fila expandida con detalles de gastos */}
-                    {isExpanded && (
-                      <TableRow>
-                        {/* Celdas vacías para las primeras columnas */}
-                        <TableCell /> {/* Acciones */}
-                        <TableCell /> {/* Fecha */}
-                        <TableCell /> {/* Solicitante */}
-                        <TableCell /> {/* Nombre Proyecto */}
-                        <TableCell /> {/* Factura */}
-                        <TableCell /> {/* Valor Retención */}
-                        <TableCell /> {/* Valor IVA */}
-                        <TableCell /> {/* Valor RE */}
-                        {/* Celda con el contenido de gastos que ocupa las últimas columnas */}
-                        <TableCell colSpan={8} sx={{ p: 0 }}>
-                          <Box sx={{ p: 2, backgroundColor: "#f9f9f9", ml: 2 }}>
-                            <Typography
-                              variant="subtitle2"
-                              gutterBottom
-                              sx={{ fontWeight: "bold", color: "#333" }}
-                            >
-                              📊 Detalles de Gastos
-                            </Typography>
-                            <Table
-                              size="small"
-                              sx={{ backgroundColor: "white", borderRadius: 1 }}
-                            >
-                              <TableHead>
-                                <TableRow>
-                                  <TableCell
-                                    sx={{
-                                      fontWeight: "bold",
-                                      backgroundColor: "#e3f2fd",
-                                    }}
-                                  >
-                                    Descripción
-                                  </TableCell>
-                                  <TableCell
-                                    align="right"
-                                    sx={{
-                                      fontWeight: "bold",
-                                      backgroundColor: "#e3f2fd",
-                                    }}
-                                  >
-                                    Valor
-                                  </TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {Object.entries(getGastos(project)).map(
-                                  ([description, value]) =>
-                                    value > 0 && (
-                                      <TableRow key={description} hover>
-                                        <TableCell
-                                          sx={{
-                                            borderBottom: "1px solid #eee",
-                                          }}
-                                        >
-                                          {description}
-                                        </TableCell>
-                                        <TableCell
-                                          align="right"
-                                          sx={{
-                                            borderBottom: "1px solid #eee",
-                                            fontWeight: "medium",
-                                          }}
-                                        >
-                                          ${formatNumber(value)}
-                                        </TableCell>
-                                      </TableRow>
-                                    )
-                                )}
-                              </TableBody>
-                            </Table>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </TableBody>
-          </Table>{" "}
-        </TableContainer>
+        {/* Tabla */}{" "}
+        <DataTable
+          data={projects}
+          columns={tableColumns as ColumnConfig[]}
+          keyField="id"
+          rowActions={rowActions as RowAction[]}
+          loading={isLoading}
+          emptyMessage="No se encontraron proyectos"
+        />{" "}
         {/* Paginación */}
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25, 50]}
-          component="div"
-          count={state.totalProjects}
-          rowsPerPage={filters.limit || 10}
-          page={(filters.page || 1) - 1} // Convertir de 1-indexed a 0-indexed para MUI
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
-          labelRowsPerPage="Filas por página:"
-          labelDisplayedRows={({ from, to, count }) =>
-            `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
-          }
-        />
+        {!isEmpty && (
+          <DataTablePagination
+            paginationData={paginationData}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+            labelRowsPerPage="Proyectos por página:"
+            showFirstLastButtons={true}
+            showRowsPerPage={true}
+          />
+        )}
       </Paper>
 
       {/* Modal de Confirmación de Eliminación */}

@@ -297,7 +297,6 @@ export const ProjectFormCreate: React.FC = () => {
 
   return (
     <Paper sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
-      {" "}
       <Typography variant="h4" gutterBottom>
         {isEditing ? "Editar Proyecto" : "Crear Nuevo Proyecto"}
       </Typography>
@@ -347,7 +346,7 @@ export const ProjectFormCreate: React.FC = () => {
               label="Fecha del Proyecto"
               value={project.fecha}
               onChange={(e) => handleProjectChange("fecha", e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
               required
             />
           </Grid2>

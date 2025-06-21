@@ -161,7 +161,7 @@ const AppRoutes = () => {
           <Route element={<MainLayout />}>
             <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
           </Route>
-        </Route>{" "}
+        </Route>
         {/* Rutas protegidas - Admin */}
         <Route element={<PrivateRoute requiredRoles={["admin"]} />}>
           <Route element={<MainLayout />}>
@@ -197,7 +197,7 @@ const AppRoutes = () => {
             <Route
               path={ROUTES.ADMIN.DASHBOARD}
               element={<AdminDashboardPage />}
-            />{" "}
+            />
             <Route
               path={ROUTES.ADMIN.CATEGORIES}
               element={<CategoriesManagementPage />}

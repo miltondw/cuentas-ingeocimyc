@@ -89,7 +89,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
               <Typography variant="h6" gutterBottom>
                 Detalles de la Solicitud
               </Typography>
-              <Divider sx={{ mb: 2 }} />{" "}
+              <Divider sx={{ mb: 2 }} />
               <Box sx={{ textAlign: "left" }}>
                 <Typography variant="body2" color="text.secondary">
                   Número de solicitud:
@@ -297,7 +297,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
         </Typography>
         <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 1 }}>
           <Typography variant="body2">
-            📧 Email:{" "}
+            📧 Email:
             <Box
               component="a"
               href="mailto:coordinador@ingeocimyc.com.co"
@@ -314,7 +314,7 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
             </Box>
           </Typography>
           <Typography variant="body2">
-            📞 WhatsApp:{" "}
+            📞 WhatsApp:
             <Box
               component="a"
               href="https://wa.me/573013517044"

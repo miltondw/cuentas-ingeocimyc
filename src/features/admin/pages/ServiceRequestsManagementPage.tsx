@@ -393,7 +393,6 @@ const ServiceRequestsManagementPage: React.FC = () => {
       {/* Filtros y búsqueda */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          {" "}
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
             <TextField
               placeholder="Buscar por nombre del cliente..."
@@ -482,7 +481,7 @@ const ServiceRequestsManagementPage: React.FC = () => {
                   onChange={(e) =>
                     handleFilterChange("startDate", e.target.value || undefined)
                   }
-                  InputLabelProps={{ shrink: true }}
+                  slotProps={{ inputLabel: { shrink: true } }}
                   fullWidth
                   size="small"
                 />
@@ -496,7 +495,7 @@ const ServiceRequestsManagementPage: React.FC = () => {
                   onChange={(e) =>
                     handleFilterChange("endDate", e.target.value || undefined)
                   }
-                  InputLabelProps={{ shrink: true }}
+                  slotProps={{ inputLabel: { shrink: true } }}
                   fullWidth
                   size="small"
                 />
@@ -509,7 +508,6 @@ const ServiceRequestsManagementPage: React.FC = () => {
       <Card>
         <CardContent sx={{ p: 0 }}>
           <TableContainer>
-            {" "}
             <Table>
               <TableHead>
                 <TableRow>
@@ -529,7 +527,7 @@ const ServiceRequestsManagementPage: React.FC = () => {
                   <TableCell>Fecha</TableCell>
                   <TableCell align="center">Acciones</TableCell>
                 </TableRow>
-              </TableHead>{" "}
+              </TableHead>
               <TableBody>
                 {isLoading ? (
                   <TableLoading colSpan={9} />
@@ -697,7 +695,7 @@ const ServiceRequestsManagementPage: React.FC = () => {
                     <strong>Nombre:</strong> {selectedRequest.name}
                   </Typography>
                   <Typography>
-                    <strong>Identificación:</strong>{" "}
+                    <strong>Identificación:</strong>
                     {selectedRequest.identification}
                   </Typography>
                   <Typography>
@@ -759,7 +757,7 @@ const ServiceRequestsManagementPage: React.FC = () => {
                       </Typography>
                       <Typography variant="body2">
                         Cantidad: {service.quantity}
-                      </Typography>{" "}
+                      </Typography>
                       {service.additionalValues?.length > 0 && (
                         <Box sx={{ mt: 1 }}>
                           <Typography variant="body2" fontWeight="medium">
@@ -794,10 +792,7 @@ const ServiceRequestsManagementPage: React.FC = () => {
                                         ml: groupedValues.size > 1 ? 1 : 0,
                                       }}
                                     >
-                                      {" "}
-                                      <strong>
-                                        {formattedValue.label}:
-                                      </strong>{" "}
+                                      <strong>{formattedValue.label}:</strong>
                                       {formattedValue.formattedValue}
                                       {formattedValue.required && (
                                         <Typography
@@ -865,7 +860,7 @@ const ServiceRequestsManagementPage: React.FC = () => {
             Actualizar
           </Button>
         </DialogActions>
-      </Dialog>{" "}
+      </Dialog>
       {/* Modal de confirmación de eliminación */}
       <ConfirmDeleteDialog
         open={!!deletingRequest}
@@ -888,7 +883,7 @@ const ServiceRequestsManagementPage: React.FC = () => {
             Esta acción no se puede deshacer
           </Alert>
           <Typography>
-            ¿Está seguro que desea eliminar <strong>{selectedIds.size}</strong>{" "}
+            ¿Está seguro que desea eliminar <strong>{selectedIds.size}</strong>
             solicitud{selectedIds.size !== 1 ? "es" : ""} de servicio
             seleccionada{selectedIds.size !== 1 ? "s" : ""}?
           </Typography>

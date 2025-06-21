@@ -1,17 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Paper,
   Typography,
-  Pagination,
   Box,
   Alert,
-  TableSortLabel,
-  TableContainer,
   Card,
   CardContent,
   Grid2,
@@ -20,6 +11,7 @@ import {
 import { projectsService } from "../services/projectsService";
 import { useNotifications } from "@/hooks/useNotifications";
 import { LoadingOverlay } from "@/components/common/LoadingOverlay";
+import { DataTable, ColumnConfig } from "@/components/common/DataTable";
 import { formatNumber } from "@/utils/formatNumber";
 import type { Project } from "@/types/typesProject/projectTypes";
 import api from "@/api";
@@ -50,11 +42,6 @@ interface GastoMensual {
   otros_campos?: { [key: string]: number } | null;
 }
 
-interface SortConfig {
-  key: keyof MonthlyData;
-  direction: "asc" | "desc";
-}
-
 // Utilidades de formato
 const formatDate = (dateStr: string): string => {
   if (!dateStr) return "";
@@ -81,14 +68,7 @@ const TablaUtilidades: React.FC = () => {
   const { showNotification } = useNotifications();
   const [resumen, setResumen] = useState<MonthlyData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [sortConfig, setSortConfig] = useState<SortConfig>({
-    key: "mes",
-    direction: "asc",
-  });
-
-  const rowsPerPage = 5; // Procesamiento de datos actualizado con nueva estructura
+  const [error, setError] = useState<string | null>(null); // Procesamiento de datos actualizado con nueva estructura
   const processData = useCallback(
     (gastosMensuales: GastoMensual[], proyectos: Project[]): MonthlyData[] => {
       const monthlyData: { [key: string]: MonthlyData } = {};
@@ -221,41 +201,91 @@ const TablaUtilidades: React.FC = () => {
       setLoading(false);
     }
   }, [processData, showNotification]);
-
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Manejo de ordenamiento mejorado
-  const handleSort = useCallback((key: keyof MonthlyData) => {
-    setSortConfig((prev) => ({
-      key,
-      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
-    }));
-  }, []);
-
-  // Datos ordenados y paginados con useMemo para performance
-  const sortedData = useMemo(() => {
-    return [...resumen].sort((a, b) => {
-      const aValue = a[sortConfig.key];
-      const bValue = b[sortConfig.key];
-
-      if (aValue < bValue) {
-        return sortConfig.direction === "asc" ? -1 : 1;
-      }
-      if (aValue > bValue) {
-        return sortConfig.direction === "asc" ? 1 : -1;
-      }
-      return 0;
-    });
-  }, [resumen, sortConfig]);
-
-  const paginatedData = useMemo(() => {
-    return sortedData.slice(
-      (currentPage - 1) * rowsPerPage,
-      currentPage * rowsPerPage
-    );
-  }, [sortedData, currentPage, rowsPerPage]);
+  // Configuración de columnas para DataTable
+  const columns: ColumnConfig[] = [
+    {
+      key: "mes",
+      label: "Mes",
+      sortable: true,
+      render: (value) => (
+        <Typography variant="body2" fontWeight="medium">
+          {String(value)}
+        </Typography>
+      ),
+    },
+    {
+      key: "GastosProyectos",
+      label: "Gastos Proyectos",
+      sortable: true,
+      align: "right",
+      render: (value) => `$${formatNumber(value as number)}`,
+    },
+    {
+      key: "GastosEmpresa",
+      label: "Gastos Empresa",
+      sortable: true,
+      align: "right",
+      render: (value) => `$${formatNumber(value as number)}`,
+    },
+    {
+      key: "TotalGastos",
+      label: "Total Gastos",
+      sortable: true,
+      align: "right",
+      render: (value) => (
+        <Typography variant="body2" fontWeight="medium">
+          ${formatNumber(value as number)}
+        </Typography>
+      ),
+    },
+    {
+      key: "TotalRetencion",
+      label: "Total Retención",
+      sortable: true,
+      align: "right",
+      render: (value) => `$${formatNumber(value as number)}`,
+    },
+    {
+      key: "TotalIva",
+      label: "Total IVA",
+      sortable: true,
+      align: "right",
+      render: (value) => `$${formatNumber(value as number)}`,
+    },
+    {
+      key: "Ingresos",
+      label: "Total Ingresos",
+      sortable: true,
+      align: "right",
+      render: (value) => (
+        <Typography variant="body2" color="success.main" fontWeight="medium">
+          ${formatNumber(value as number)}
+        </Typography>
+      ),
+    },
+    {
+      key: "UtilidadNeta",
+      label: "Utilidad Neta",
+      sortable: true,
+      align: "right",
+      render: (value) => {
+        const utilidad = value as number;
+        return (
+          <Typography
+            variant="body2"
+            color={utilidad >= 0 ? "success.main" : "error.main"}
+            fontWeight="bold"
+          >
+            ${formatNumber(utilidad)}
+          </Typography>
+        );
+      },
+    },
+  ];
 
   // Cálculos de resumen con useMemo
   const summaryTotals = useMemo(() => {
@@ -268,21 +298,6 @@ const TablaUtilidades: React.FC = () => {
       { totalIngresos: 0, totalGastos: 0, totalUtilidad: 0 }
     );
   }, [resumen]);
-
-  // Configuración de columnas
-  const columns = useMemo(
-    () => [
-      { key: "mes" as const, label: "Mes" },
-      { key: "GastosProyectos" as const, label: "Gastos Proyectos" },
-      { key: "GastosEmpresa" as const, label: "Gastos Empresa" },
-      { key: "TotalGastos" as const, label: "Total Gastos" },
-      { key: "TotalRetencion" as const, label: "Total Retención" },
-      { key: "TotalIva" as const, label: "Total IVA" },
-      { key: "Ingresos" as const, label: "Total Ingresos" },
-      { key: "UtilidadNeta" as const, label: "Utilidad Neta" },
-    ],
-    []
-  );
 
   if (error) {
     return (
@@ -318,7 +333,6 @@ const TablaUtilidades: React.FC = () => {
           >
             Resumen Financiero
           </Typography>
-
           <Grid2 container spacing={2} sx={{ mb: 3 }}>
             <Grid2 size={{ xs: 12, md: 4 }}>
               <Card>
@@ -365,93 +379,15 @@ const TablaUtilidades: React.FC = () => {
             </Grid2>
           </Grid2>
         </Box>
-
-        {/* Tabla principal */}
-        <TableContainer
-          component={Paper}
-          sx={{ borderRadius: 2, boxShadow: 2 }}
-        >
-          <Table stickyHeader>
-            <TableHead>
-              <TableRow>
-                {columns.map((column) => (
-                  <TableCell
-                    key={column.key}
-                    sx={{
-                      fontWeight: "bold",
-                      backgroundColor: "grey.50",
-                      borderBottom: 2,
-                      borderColor: "primary.light",
-                    }}
-                  >
-                    <TableSortLabel
-                      active={sortConfig.key === column.key}
-                      direction={
-                        sortConfig.key === column.key
-                          ? sortConfig.direction
-                          : "asc"
-                      }
-                      onClick={() => handleSort(column.key)}
-                    >
-                      {column.label}
-                    </TableSortLabel>
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-
-            <TableBody>
-              {paginatedData.map((item, index) => (
-                <TableRow key={`${item.mes}-${index}`} hover>
-                  <TableCell sx={{ fontWeight: 500 }}>{item.mes}</TableCell>
-                  <TableCell>${formatNumber(item.GastosProyectos)}</TableCell>
-                  <TableCell>${formatNumber(item.GastosEmpresa)}</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>
-                    ${formatNumber(item.TotalGastos)}
-                  </TableCell>
-                  <TableCell>${formatNumber(item.TotalRetencion)}</TableCell>
-                  <TableCell>${formatNumber(item.TotalIva)}</TableCell>
-                  <TableCell sx={{ color: "success.main", fontWeight: 500 }}>
-                    ${formatNumber(item.Ingresos)}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      color:
-                        item.UtilidadNeta >= 0 ? "success.main" : "error.main",
-                      fontWeight: 600,
-                    }}
-                  >
-                    ${formatNumber(item.UtilidadNeta)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        {/* Footer con paginación */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mt: 3,
-            px: 2,
-          }}
-        >
-          <Typography variant="body2" color="text.secondary">
-            Mostrando {paginatedData.length} de {resumen.length} registros
-          </Typography>
-          <Pagination
-            count={Math.ceil(resumen.length / rowsPerPage)}
-            page={currentPage}
-            onChange={(_, page) => setCurrentPage(page)}
-            color="primary"
-            size="large"
-            showFirstButton
-            showLastButton
-          />
-        </Box>
+        {/* Tabla de utilidades */}{" "}
+        <DataTable
+          data={resumen}
+          columns={columns}
+          keyField="mes"
+          loading={loading}
+          title="Resumen Financiero Mensual"
+          emptyMessage="No hay datos financieros disponibles"
+        />
       </Box>
     </LoadingOverlay>
   );

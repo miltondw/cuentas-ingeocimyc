@@ -712,7 +712,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
               }
               variant="outlined"
               size="small"
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
             />
           );
 

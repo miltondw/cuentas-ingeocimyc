@@ -17,19 +17,20 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  IconButton,
+  Tooltip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  IconButton,
-  Tooltip,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  Grid2,
 } from "@mui/material";
-import Grid2 from "@mui/material/Grid2";
+import { DataTable, ColumnConfig } from "@/components/common/DataTable";
 import {
   PersonOutline,
   BusinessOutlined,
@@ -41,7 +42,6 @@ import {
   CheckCircleOutlined,
   EditOutlined,
   ExpandMoreOutlined,
-  InfoOutlined,
   ArrowBackOutlined,
   AssignmentOutlined,
   FingerprintOutlined,
@@ -104,6 +104,75 @@ export const ReviewAndConfirmForm: React.FC<ReviewAndConfirmFormProps> = ({
       return acc;
     }, {} as Record<string, typeof data.selectedServices>);
   }, [data]);
+
+  // Configuración de columnas para DataTable de servicios
+  const serviceColumns: ColumnConfig[] = [
+    {
+      key: "serviceName",
+      label: "Servicio",
+      sortable: true,
+      render: (value, row: unknown) => {
+        const service = row as { serviceDescription?: string };
+        return (
+          <Box>
+            <Typography variant="body2" fontWeight="medium">
+              {String(value)}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {service.serviceDescription}
+            </Typography>
+          </Box>
+        );
+      },
+    },
+    {
+      key: "totalQuantity",
+      label: "Cantidad",
+      align: "center",
+      render: (value) => (
+        <Chip
+          label={String(value)}
+          size="small"
+          color="primary"
+          variant="outlined"
+        />
+      ),
+    },
+    {
+      key: "instances",
+      label: "Instancias",
+      align: "center",
+      render: (value: unknown) => {
+        const instances = value as Array<unknown>;
+        return (
+          <Chip
+            label={instances?.length || 0}
+            size="small"
+            color="secondary"
+            variant="outlined"
+          />
+        );
+      },
+    },
+    {
+      key: "instances",
+      label: "Info. Adicional",
+      align: "center",
+      render: (value: unknown) => {
+        const instances = value as Array<{ additionalData?: Array<unknown> }>;
+        const hasAdditionalData = instances?.some(
+          (inst) => (inst.additionalData?.length || 0) > 0
+        );
+        return (
+          <Chip
+            label={hasAdditionalData ? "Sí" : "No"}
+            size="small"
+            color={hasAdditionalData ? "success" : "default"}
+          />
+        );
+      },
+    },
+  ];
 
   return (
     <Box>
@@ -253,7 +322,7 @@ export const ReviewAndConfirmForm: React.FC<ReviewAndConfirmFormProps> = ({
                     <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
                       Empresa:
                     </Typography>
-                  </Box>{" "}
+                  </Box>
                   <Typography variant="body2" sx={{ pl: 3 }}>
                     {data.empresa || "No especificado"}
                   </Typography>
@@ -368,96 +437,14 @@ export const ReviewAndConfirmForm: React.FC<ReviewAndConfirmFormProps> = ({
                             {services.length > 1 ? "s" : ""})
                           </Typography>
                         </AccordionSummary>
-
-                        <AccordionDetails sx={{ p: 0 }}>
-                          <TableContainer>
-                            <Table size="small">
-                              <TableHead>
-                                <TableRow>
-                                  <TableCell sx={{ fontWeight: "bold" }}>
-                                    Servicio
-                                  </TableCell>
-                                  <TableCell
-                                    align="center"
-                                    sx={{ fontWeight: "bold" }}
-                                  >
-                                    Cantidad
-                                  </TableCell>
-                                  <TableCell
-                                    align="center"
-                                    sx={{ fontWeight: "bold" }}
-                                  >
-                                    Instancias
-                                  </TableCell>
-                                  <TableCell
-                                    align="center"
-                                    sx={{ fontWeight: "bold" }}
-                                  >
-                                    Info. Adicional
-                                  </TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {services.map((service) => (
-                                  <TableRow key={service.serviceId} hover>
-                                    <TableCell>
-                                      <Typography
-                                        variant="body2"
-                                        sx={{ fontWeight: "medium" }}
-                                      >
-                                        {service.serviceName}
-                                      </Typography>
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                      >
-                                        {service.serviceDescription}
-                                      </Typography>
-                                    </TableCell>
-
-                                    <TableCell align="center">
-                                      <Chip
-                                        label={service.totalQuantity}
-                                        size="small"
-                                        color="primary"
-                                        variant="outlined"
-                                      />
-                                    </TableCell>
-
-                                    <TableCell align="center">
-                                      <Chip
-                                        label={service.instances.length}
-                                        size="small"
-                                        color="secondary"
-                                        variant="outlined"
-                                      />
-                                    </TableCell>
-
-                                    <TableCell align="center">
-                                      {service.instances.some(
-                                        (inst) =>
-                                          (inst.additionalData?.length || 0) > 0
-                                      ) ? (
-                                        <Tooltip title="Este servicio tiene información adicional configurada">
-                                          <InfoOutlined
-                                            color="primary"
-                                            fontSize="small"
-                                          />
-                                        </Tooltip>
-                                      ) : (
-                                        <Typography
-                                          variant="caption"
-                                          color="text.secondary"
-                                        >
-                                          No
-                                        </Typography>
-                                      )}
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </TableContainer>
+                        <AccordionDetails sx={{ p: 2 }}>
+                          {" "}
+                          <DataTable
+                            data={services}
+                            columns={serviceColumns}
+                            keyField="serviceName"
+                            emptyMessage="No hay servicios seleccionados"
+                          />
                           {/* Detalles de instancias con información adicional */}
                           {services.some((s) =>
                             s.instances.some(

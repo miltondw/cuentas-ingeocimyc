@@ -3,24 +3,12 @@ import {
   Container,
   Typography,
   Box,
-  Button,
   Card,
   CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   IconButton,
   Chip,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
 } from "@mui/material";
 import {
-  Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   MiscellaneousServices as ServicesIcon,
@@ -34,12 +22,30 @@ import {
   useDeleteService,
 } from "@/api/hooks/useAdminServices";
 import type { Service } from "@/types/admin";
+import {
+  DataTable,
+  ColumnConfig,
+  RowAction,
+} from "@/components/common/DataTable";
+import {
+  SearchAndFilter,
+  FilterField,
+} from "@/components/common/SearchAndFilter";
+import DataTablePagination from "@/components/common/DataTablePagination";
+import { usePagination } from "@/hooks/usePagination";
 import ConfirmDeleteDialog from "../components/ConfirmDeleteDialog";
+import { useUrlFilters } from "@/hooks/useUrlFilters";
+import type { FilterValue } from "@/types/labFilters";
 
 const ServicesManagementPage: React.FC = () => {
   const navigate = useNavigate();
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [deletingService, setDeletingService] = useState<Service | null>(null);
+  const [searchValue, setSearchValue] = useState("");
+
+  // Filtros con URL persistence
+  const { filters, updateFilter } = useUrlFilters({
+    defaultFilters: { category: "all" },
+  });
 
   // Hooks de datos
   const { data: servicesResponse, isLoading } = useAdminServices();
@@ -49,13 +55,40 @@ const ServicesManagementPage: React.FC = () => {
   const services = servicesResponse?.data || [];
   const categories = categoriesResponse?.data || [];
 
-  // Filtrar servicios por categoría
-  const filteredServices =
-    categoryFilter === "all"
-      ? services
-      : services.filter(
-          (service) => service.categoryId.toString() === categoryFilter
-        );
+  // Filtrar servicios por categoría y búsqueda
+  const filteredServices = services.filter((service) => {
+    const matchesCategory =
+      filters.category === "all" ||
+      service.categoryId.toString() === filters.category;
+    const matchesSearch =
+      !searchValue ||
+      service.name.toLowerCase().includes(searchValue.toLowerCase()) ||
+      service.code.toLowerCase().includes(searchValue.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  // Estado de paginación - usando hook personalizado
+  const {
+    paginatedData,
+    paginationData,
+    setPage,
+    setItemsPerPage,
+    goToFirstPage,
+  } = usePagination({
+    data: filteredServices,
+    initialPage: 1,
+    initialItemsPerPage: 10,
+  });
+  // Handlers para resetear página cuando cambien filtros
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value);
+    goToFirstPage();
+  };
+
+  const handleFilterChange = (key: string, value: unknown) => {
+    updateFilter(key as keyof typeof filters, value as FilterValue);
+    goToFirstPage();
+  };
 
   const handleDeleteService = async () => {
     if (!deletingService) return;
@@ -91,6 +124,95 @@ const ServicesManagementPage: React.FC = () => {
     ] as const;
     return colors[categoryId % colors.length];
   };
+  // Configuración de columnas para DataTable
+  const columns: ColumnConfig[] = [
+    {
+      key: "code",
+      label: "Código",
+      sortable: true,
+      render: (value) => (
+        <Typography variant="body2" fontWeight="medium">
+          {String(value)}
+        </Typography>
+      ),
+    },
+    {
+      key: "name",
+      label: "Nombre",
+      sortable: true,
+    },
+    {
+      key: "categoryId",
+      label: "Categoría",
+      render: (value) => (
+        <Chip
+          label={getCategoryName(value as number)}
+          size="small"
+          color={getCategoryColor(value as number)}
+          variant="outlined"
+        />
+      ),
+    },
+    {
+      key: "additionalFields",
+      label: "Campos Adicionales",
+      render: (value) => {
+        const fields = value as Service["additionalFields"];
+        return (
+          <Chip
+            label={`${fields?.length || 0} campos`}
+            size="small"
+            color={fields?.length ? "success" : "default"}
+          />
+        );
+      },
+    },
+    {
+      key: "created_at",
+      label: "Fecha de Creación",
+      sortable: true,
+      render: (value) => formatDate(value as string),
+    },
+  ]; // Configuración de acciones por fila
+  const rowActions: RowAction[] = [
+    {
+      key: "view",
+      label: "Ver detalles",
+      icon: <ViewIcon />,
+      action: (service) =>
+        navigate(`/admin/services/${(service as Service).id}`),
+    },
+    {
+      key: "edit",
+      label: "Editar",
+      icon: <EditIcon />,
+      action: (service) =>
+        navigate(`/admin/services/${(service as Service).id}/edit`),
+    },
+    {
+      key: "delete",
+      label: "Eliminar",
+      icon: <DeleteIcon />,
+      color: "error",
+      action: (service) => setDeletingService(service as Service),
+    },
+  ];
+
+  // Configuración de filtros
+  const filterFields: FilterField[] = [
+    {
+      key: "category",
+      label: "Categoría",
+      type: "select",
+      options: [
+        { value: "all", label: "Todas las categorías" },
+        ...categories.map((cat) => ({
+          value: cat.id.toString(),
+          label: cat.name,
+        })),
+      ],
+    },
+  ];
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -108,146 +230,49 @@ const ServicesManagementPage: React.FC = () => {
         <Typography variant="body1" color="text.secondary">
           Administra todos los servicios disponibles en el sistema
         </Typography>
+      </Box>{" "}
+      {/* Search and Filters */}
+      <Box sx={{ mb: 3 }}>
+        <SearchAndFilter
+          searchValue={searchValue}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder="Buscar servicios por nombre o código..."
+          filters={filterFields}
+          filterValues={filters}
+          onFilterChange={handleFilterChange}
+          showFilterCount
+          collapsible={false}
+        />
       </Box>
-      {/* Filters and Actions */}
-      <Box
-        sx={{
-          mb: 3,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 2,
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <Chip
-            label={`${filteredServices.length} servicios`}
-            color="primary"
-            variant="outlined"
-          />
-          <FormControl size="small" sx={{ minWidth: 200 }}>
-            <InputLabel>Filtrar por categoría</InputLabel>
-            <Select
-              value={categoryFilter}
-              label="Filtrar por categoría"
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <MenuItem value="all">Todas las categorías</MenuItem>
-              {categories.map((category) => (
-                <MenuItem key={category.id} value={category.id.toString()}>
-                  {category.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate("/admin/services/new")}
-        >
-          Nuevo Servicio
-        </Button>
-      </Box>
-      {/* Table */}
-      <Card>
-        <CardContent sx={{ p: 0 }}>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Código</TableCell>
-                  <TableCell>Nombre</TableCell>
-                  <TableCell>Categoría</TableCell>
-                  <TableCell>Campos Adicionales</TableCell>
-                  <TableCell>Fecha de Creación</TableCell>
-                  <TableCell align="center">Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} align="center">
-                      Cargando servicios...
-                    </TableCell>
-                  </TableRow>
-                ) : filteredServices.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} align="center">
-                      {categoryFilter === "all"
-                        ? "No hay servicios registrados"
-                        : "No hay servicios en esta categoría"}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredServices.map((service) => (
-                    <TableRow key={service.id} hover>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight="medium">
-                          {service.code}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">{service.name}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={getCategoryName(service.categoryId)}
-                          size="small"
-                          color={getCategoryColor(service.categoryId)}
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={`${
-                            service.additionalFields?.length || 0
-                          } campos`}
-                          size="small"
-                          color={
-                            service.additionalFields?.length
-                              ? "success"
-                              : "default"
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>{formatDate(service.created_at)}</TableCell>
-                      <TableCell align="center">
-                        <IconButton
-                          size="small"
-                          onClick={() =>
-                            navigate(`/admin/services/${service.id}`)
-                          }
-                          title="Ver detalles"
-                        >
-                          <ViewIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() =>
-                            navigate(`/admin/services/${service.id}/edit`)
-                          }
-                          title="Editar"
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => setDeletingService(service)}
-                          title="Eliminar"
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
+      {/* Data Table */}{" "}
+      <DataTable
+        data={paginatedData as Service[]}
+        columns={columns}
+        keyField="id"
+        rowActions={rowActions}
+        loading={isLoading}
+        title="Lista de Servicios"
+        emptyMessage={
+          filters.category === "all"
+            ? "No hay servicios registrados"
+            : "No hay servicios en esta categoría"
+        }
+        onRowClick={(service) =>
+          navigate(`/admin/services/${(service as Service).id}`)
+        }
+      />
+      {/* Paginación */}
+      {paginationData.totalItems > 0 && (
+        <DataTablePagination
+          paginationData={paginationData}
+          onPageChange={setPage}
+          onRowsPerPageChange={setItemsPerPage}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          labelRowsPerPage="Servicios por página:"
+          showFirstLastButtons={true}
+          showRowsPerPage={true}
+        />
+      )}
       {/* Quick Stats */}
       <Box sx={{ mt: 3, display: "flex", gap: 2, flexWrap: "wrap" }}>
         <Card sx={{ flex: 1, minWidth: 200 }}>
@@ -263,6 +288,16 @@ const ServicesManagementPage: React.FC = () => {
         <Card sx={{ flex: 1, minWidth: 200 }}>
           <CardContent>
             <Typography variant="h6" color="secondary">
+              {filteredServices.length}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Servicios filtrados
+            </Typography>
+          </CardContent>
+        </Card>
+        <Card sx={{ flex: 1, minWidth: 200 }}>
+          <CardContent>
+            <Typography variant="h6" color="info.main">
               {categories.length}
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -282,8 +317,8 @@ const ServicesManagementPage: React.FC = () => {
               Campos adicionales
             </Typography>
           </CardContent>
-        </Card>{" "}
-      </Box>{" "}
+        </Card>
+      </Box>
       {/* Diálogo de confirmación para eliminar */}
       <ConfirmDeleteDialog
         open={!!deletingService}

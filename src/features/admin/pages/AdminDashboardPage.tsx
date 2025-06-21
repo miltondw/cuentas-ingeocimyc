@@ -140,7 +140,6 @@ const AdminDashboardPage: React.FC = () => {
             Acciones Rápidas
           </Typography>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mt: 2 }}>
-            {" "}
             <Button
               variant="outlined"
               startIcon={<CategoryIcon />}
@@ -173,7 +172,6 @@ const AdminDashboardPage: React.FC = () => {
             Resumen del Sistema
           </Typography>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2 }}>
-            {" "}
             <Chip
               label={`${categories?.data?.length || 0} Categorías activas`}
               color="primary"

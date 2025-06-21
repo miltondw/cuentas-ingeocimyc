@@ -4,15 +4,6 @@ import {
   Typography,
   Box,
   Button,
-  Card,
-  CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
   Chip,
   Dialog,
   DialogTitle,
@@ -20,6 +11,7 @@ import {
   DialogActions,
   TextField,
   Alert,
+  IconButton,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -39,6 +31,13 @@ import {
   useDeleteCategory,
 } from "@/api/hooks/useAdminServices";
 import type { ServiceCategory, CategoryFormData } from "@/types/admin";
+import {
+  DataTable,
+  ColumnConfig,
+  RowAction,
+} from "@/components/common/DataTable";
+import DataTablePagination from "@/components/common/DataTablePagination";
+import { usePagination } from "@/hooks/usePagination";
 
 const CategoriesManagementPage: React.FC = () => {
   const navigate = useNavigate();
@@ -55,6 +54,14 @@ const CategoriesManagementPage: React.FC = () => {
   const deleteMutation = useDeleteCategory();
 
   const categories = categoriesResponse?.data || [];
+
+  // Paginación
+  const { paginatedData, paginationData, setPage, setItemsPerPage } =
+    usePagination({
+      data: categories,
+      initialPage: 1,
+      initialItemsPerPage: 10,
+    });
 
   // Form handling
   const {
@@ -113,7 +120,6 @@ const CategoriesManagementPage: React.FC = () => {
       // El error ya se maneja en el hook
     }
   };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("es-ES", {
       year: "numeric",
@@ -121,6 +127,66 @@ const CategoriesManagementPage: React.FC = () => {
       day: "numeric",
     });
   };
+
+  // Configuración de columnas para DataTable
+  const columns: ColumnConfig[] = [
+    {
+      key: "code",
+      label: "Código",
+      sortable: true,
+      render: (value) => (
+        <Typography variant="body2" fontWeight="medium">
+          {String(value)}
+        </Typography>
+      ),
+    },
+    {
+      key: "name",
+      label: "Nombre",
+      sortable: true,
+    },
+    {
+      key: "services",
+      label: "Servicios",
+      render: (value) => {
+        const services = value as ServiceCategory["services"];
+        return (
+          <Chip
+            label={`${services?.length || 0} servicios`}
+            size="small"
+            color={services?.length ? "success" : "default"}
+          />
+        );
+      },
+    },
+    {
+      key: "created_at",
+      label: "Fecha de Creación",
+      sortable: true,
+      render: (value) => formatDate(value as string),
+    },
+  ];
+  // Configuración de acciones por fila
+  const rowActions: RowAction[] = [
+    {
+      key: "edit",
+      label: "Editar",
+      icon: <EditIcon />,
+      action: (category) => handleOpenEditDialog(category as ServiceCategory),
+    },
+    {
+      key: "delete",
+      label: "Eliminar",
+      icon: <DeleteIcon />,
+      color: "error",
+      action: (category) => {
+        const cat = category as ServiceCategory;
+        if (!cat.services?.length) {
+          setDeletingCategory(cat);
+        }
+      },
+    },
+  ];
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -139,7 +205,6 @@ const CategoriesManagementPage: React.FC = () => {
           Administra las categorías de servicios disponibles en el sistema
         </Typography>
       </Box>
-
       {/* Actions */}
       <Box sx={{ mb: 3, display: "flex", justifyContent: "space-between" }}>
         <Box>
@@ -156,78 +221,29 @@ const CategoriesManagementPage: React.FC = () => {
         >
           Nueva Categoría
         </Button>
-      </Box>
-
-      {/* Table */}
-      <Card>
-        <CardContent sx={{ p: 0 }}>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Código</TableCell>
-                  <TableCell>Nombre</TableCell>
-                  <TableCell>Servicios</TableCell>
-                  <TableCell>Fecha de Creación</TableCell>
-                  <TableCell align="center">Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center">
-                      Cargando categorías...
-                    </TableCell>
-                  </TableRow>
-                ) : categories.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center">
-                      No hay categorías registradas
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  categories.map((category) => (
-                    <TableRow key={category.id} hover>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight="medium">
-                          {category.code}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>{category.name}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={`${category.services?.length || 0} servicios`}
-                          size="small"
-                          color={
-                            category.services?.length ? "success" : "default"
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>{formatDate(category.created_at)}</TableCell>
-                      <TableCell align="center">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleOpenEditDialog(category)}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => setDeletingCategory(category)}
-                          disabled={!!category.services?.length}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
-
+      </Box>{" "}
+      {/* Data Table */}
+      <DataTable
+        data={paginatedData as ServiceCategory[]}
+        columns={columns}
+        keyField="id"
+        rowActions={rowActions}
+        loading={isLoading}
+        title="Lista de Categorías"
+        emptyMessage="No hay categorías registradas"
+      />
+      {/* Paginación */}
+      {paginationData.totalItems > 0 && (
+        <DataTablePagination
+          paginationData={paginationData}
+          onPageChange={setPage}
+          onRowsPerPageChange={setItemsPerPage}
+          rowsPerPageOptions={[5, 10, 25]}
+          labelRowsPerPage="Categorías por página:"
+          showFirstLastButtons={true}
+          showRowsPerPage={true}
+        />
+      )}
       {/* Create/Edit Dialog */}
       <Dialog
         open={dialogOpen}
@@ -274,7 +290,6 @@ const CategoriesManagementPage: React.FC = () => {
           </DialogActions>
         </form>
       </Dialog>
-
       {/* Delete Confirmation Dialog */}
       <Dialog
         open={!!deletingCategory}
@@ -286,7 +301,7 @@ const CategoriesManagementPage: React.FC = () => {
         <DialogContent>
           {deletingCategory?.services?.length ? (
             <Alert severity="warning" sx={{ mb: 2 }}>
-              No se puede eliminar esta categoría porque tiene{" "}
+              No se puede eliminar esta categoría porque tiene
               {deletingCategory.services.length} servicio(s) asociado(s).
               Primero debe eliminar o reasignar los servicios.
             </Alert>

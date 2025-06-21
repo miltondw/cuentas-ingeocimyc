@@ -367,7 +367,7 @@ const ApiquesDeSuelos = () => {
                     onChange={handleChange}
                     fullWidth
                     required
-                    InputLabelProps={{ shrink: true }}
+                    slotProps={{ inputLabel: { shrink: true } }}
                   />
                 </Grid2>
                 <Grid2 size={{ xs: 12, sm: 6 }}>

@@ -13,18 +13,10 @@ import {
   MenuItem,
   Button,
   Grid2,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
   Chip,
   Stack,
   IconButton,
   Tooltip,
-  TableSortLabel,
   Collapse,
 } from "@mui/material";
 import {
@@ -38,85 +30,215 @@ import {
   Science as ScienceIcon,
 } from "@mui/icons-material";
 
-import {
-  labService,
-  type LabProject,
-  type LabProjectsResponse,
-} from "@/services/api/labService";
+import { labService, type LabProject } from "@/services/api/labService";
 import { type LabProjectFilters } from "@/types/labFilters";
+import { DataTable, type ColumnConfig } from "@/components/common/DataTable";
+import DataTablePagination from "@/components/common/DataTablePagination";
+import { useServerPagination } from "@/hooks/useServerPagination";
+import { useQuery } from "@tanstack/react-query";
+
+// Arrays para opciones de filtros - reduce repetición de componentes
+const ESTADO_OPTIONS = [
+  { value: "todos", label: "Todos" },
+  { value: "activo", label: "Activo" },
+  { value: "completado", label: "Completado" },
+  { value: "pausado", label: "Pausado" },
+  { value: "cancelado", label: "Cancelado" },
+];
+
+const BOOLEAN_FILTER_OPTIONS = [
+  { value: "", label: "Todos" },
+  { value: "true", label: "Con" },
+  { value: "false", label: "Sin" },
+];
+
+// Configuración de campos numéricos para evitar repetición
+const NUMERIC_FILTER_FIELDS = [
+  { key: "minApiques", label: "Mín. Apiques" },
+  { key: "maxApiques", label: "Máx. Apiques" },
+  { key: "minProfiles", label: "Mín. Perfiles" },
+  { key: "maxProfiles", label: "Máx. Perfiles" },
+] as const;
 
 const ProjectsDashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [projectsData, setProjectsData] = useState<LabProjectsResponse | null>(
-    null
-  );
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-
   // Estados locales para los campos de búsqueda (para mejor UX)
   const [localSearchInputs, setLocalSearchInputs] = useState({
+    search: "", // Búsqueda global
     nombreProyecto: "",
     solicitante: "",
     obrero: "",
   });
 
-  // Funciones auxiliares para trabajar con search params
-  const getFilterFromParams = useCallback(
-    (key: string, defaultValue?: string) => {
-      return searchParams.get(key) || defaultValue;
+  // Crear handlers para acciones de navegación
+  const createNavigationHandler = useCallback(
+    (basePath: string) => (projectId: number) => {
+      navigate(`/lab/proyectos/${projectId}${basePath}`);
     },
-    [searchParams]
+    [navigate]
+  );
+  const handleCreateApique = createNavigationHandler("/apique/nuevo");
+  const handleViewApiques = createNavigationHandler("/apiques");
+  const handleCreateProfile = createNavigationHandler("/perfil/nuevo");
+  const handleViewProfiles = createNavigationHandler("/perfiles");
+
+  // Función para renderizar celdas de acciones - necesita estar dentro del componente para acceder a los handlers
+  const renderActionCell = useCallback(
+    (proyecto: LabProject, type: "apiques" | "perfiles") => {
+      const count =
+        type === "apiques" ? proyecto.total_apiques : proyecto.total_profiles;
+      const icon = type === "apiques" ? <TerrainIcon /> : <ScienceIcon />;
+      const createHandler =
+        type === "apiques" ? handleCreateApique : handleCreateProfile;
+      const viewHandler =
+        type === "apiques" ? handleViewApiques : handleViewProfiles;
+      const createTitle = type === "apiques" ? "Crear apique" : "Crear perfil";
+      const viewTitle = type === "apiques" ? "Ver apiques" : "Ver perfiles";
+
+      return (
+        <Stack
+          direction="row"
+          spacing={1}
+          justifyContent="center"
+          alignItems="center"
+        >
+          <Chip icon={icon} label={count} size="small" variant="outlined" />
+          <Stack direction="row" spacing={0.5}>
+            <Tooltip title={createTitle}>
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={() => createHandler(proyecto.proyecto_id)}
+              >
+                <AddIcon />
+              </IconButton>
+            </Tooltip>
+            {count > 0 && (
+              <Tooltip title={viewTitle}>
+                <IconButton
+                  size="small"
+                  color="info"
+                  onClick={() => viewHandler(proyecto.proyecto_id)}
+                >
+                  <VisibilityIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Stack>
+        </Stack>
+      );
+    },
+    [
+      handleCreateApique,
+      handleViewApiques,
+      handleCreateProfile,
+      handleViewProfiles,
+    ]
+  );
+  // Configuración de columnas para DataTable
+  const tableColumns: ColumnConfig[] = useMemo(
+    () => [
+      {
+        key: "proyecto_id",
+        label: "ID",
+        width: 80,
+        align: "center",
+      },
+      {
+        key: "nombre_proyecto",
+        label: "Proyecto",
+        render: (value) => (
+          <Typography
+            variant="body2"
+            sx={{ maxWidth: 250, wordWrap: "break-word" }}
+          >
+            {String(value)}
+          </Typography>
+        ),
+      },
+      {
+        key: "solicitante",
+        label: "Solicitante",
+      },
+      {
+        key: "fecha",
+        label: "Fecha",
+        render: (value) => new Date(String(value)).toLocaleDateString(),
+      },
+      {
+        key: "estado",
+        label: "Estado",
+        render: (value) => (
+          <Chip
+            label={String(value)}
+            color={value === "activo" ? "success" : "default"}
+            size="small"
+          />
+        ),
+      },
+      {
+        key: "total_apiques",
+        label: "Apiques",
+        align: "center",
+        render: (_, row) => renderActionCell(row as LabProject, "apiques"),
+      },
+      {
+        key: "total_profiles",
+        label: "Perfiles",
+        align: "center",
+        render: (_, row) => renderActionCell(row as LabProject, "perfiles"),
+      },
+    ],
+    [renderActionCell]
   );
 
-  const getBooleanFilterFromParams = useCallback(
-    (key: string) => {
+  // Función auxiliar para crear getters de filtros
+  const createFilterGetters = useCallback((searchParams: URLSearchParams) => {
+    const getFilter = (key: string, defaultValue?: string) =>
+      searchParams.get(key) || defaultValue;
+
+    const getBooleanFilter = (key: string) => {
       const value = searchParams.get(key);
       return value === "true" ? true : value === "false" ? false : undefined;
-    },
-    [searchParams]
-  );
+    };
 
-  const getNumberFilterFromParams = useCallback(
-    (key: string) => {
+    const getNumberFilter = (key: string) => {
       const value = searchParams.get(key);
       return value ? parseInt(value) : undefined;
-    },
-    [searchParams]
-  );
+    };
 
+    return { getFilter, getBooleanFilter, getNumberFilter };
+  }, []);
   // Crear objeto de filtros desde los search params
-  const filtersFromParams = useMemo(
-    (): LabProjectFilters => ({
-      page: getNumberFilterFromParams("page") || 1,
-      limit: getNumberFilterFromParams("limit") || 10,
-      sortBy: getFilterFromParams(
-        "sortBy",
-        "fecha"
-      ) as LabProjectFilters["sortBy"],
-      sortOrder: getFilterFromParams(
+  const filtersFromParams = useMemo((): LabProjectFilters => {
+    const { getFilter, getBooleanFilter, getNumberFilter } =
+      createFilterGetters(searchParams);
+
+    return {
+      page: getNumberFilter("page") || 1,
+      limit: getNumberFilter("limit") || 10,
+      sortBy: getFilter("sortBy", "fecha") as LabProjectFilters["sortBy"],
+      sortOrder: getFilter(
         "sortOrder",
         "DESC"
       ) as LabProjectFilters["sortOrder"],
-      estado: getFilterFromParams(
-        "estado",
-        "todos"
-      ) as LabProjectFilters["estado"],
-      nombreProyecto: getFilterFromParams("nombreProyecto"),
-      solicitante: getFilterFromParams("solicitante"),
-      obrero: getFilterFromParams("obrero"),
-      hasApiques: getBooleanFilterFromParams("hasApiques"),
-      hasProfiles: getBooleanFilterFromParams("hasProfiles"),
-      startDate: getFilterFromParams("startDate"),
-      endDate: getFilterFromParams("endDate"),
-      minApiques: getNumberFilterFromParams("minApiques"),
-      maxApiques: getNumberFilterFromParams("maxApiques"),
-      minProfiles: getNumberFilterFromParams("minProfiles"),
-      maxProfiles: getNumberFilterFromParams("maxProfiles"),
-    }),
-    [getFilterFromParams, getBooleanFilterFromParams, getNumberFilterFromParams]
-  );
+      estado: getFilter("estado", "todos") as LabProjectFilters["estado"],
+      search: getFilter("search"), // Búsqueda global
+      nombreProyecto: getFilter("nombreProyecto"),
+      solicitante: getFilter("solicitante"),
+      obrero: getFilter("obrero"),
+      hasApiques: getBooleanFilter("hasApiques"),
+      hasProfiles: getBooleanFilter("hasProfiles"),
+      startDate: getFilter("startDate"),
+      endDate: getFilter("endDate"),
+      minApiques: getNumberFilter("minApiques"),
+      maxApiques: getNumberFilter("maxApiques"),
+      minProfiles: getNumberFilter("minProfiles"),
+      maxProfiles: getNumberFilter("maxProfiles"),
+    };
+  }, [searchParams, createFilterGetters]);
 
   // Función para actualizar los filtros en la URL
   const updateUrlFilters = useCallback(
@@ -157,268 +279,157 @@ const ProjectsDashboard = () => {
   const clearFilters = useCallback(() => {
     setSearchParams(new URLSearchParams());
     setLocalSearchInputs({
+      search: "",
       nombreProyecto: "",
       solicitante: "",
       obrero: "",
     });
     setShowAdvancedFilters(false);
   }, [setSearchParams]);
-
+  // Calcular filtros activos
   const hasActiveFilters = useMemo(() => {
     const params = Object.fromEntries(searchParams.entries());
     const activeParams = Object.keys(params).filter(
       (key) => !["page", "limit", "sortBy", "sortOrder"].includes(key)
     );
     return activeParams.length > 0;
-  }, [searchParams]); // Filtrar datos localmente (la API podría no soportar todos los filtros)
-  const filteredData = useMemo(() => {
-    if (!projectsData?.data) return [];
+  }, [searchParams]);
 
-    let filtered = [...projectsData.data];
+  // Función para fetch de proyectos con formato de servidor
+  const fetchLabProjects = async (filters: LabProjectFilters) => {
+    console.info(
+      "🚀 Iniciando petición al endpoint de proyectos con filtros:",
+      filters
+    );
 
-    // Aplicar filtros de búsqueda local
-    if (filters.nombreProyecto) {
-      filtered = filtered.filter((proyecto) =>
-        proyecto.nombre_proyecto
-          .toLowerCase()
-          .includes(filters.nombreProyecto?.toLowerCase() || "")
-      );
-    }
+    const result = await labService.getProjects(filters);
 
-    if (filters.solicitante) {
-      filtered = filtered.filter((proyecto) =>
-        proyecto.solicitante
-          .toLowerCase()
-          .includes(filters.solicitante?.toLowerCase() || "")
-      );
-    }
+    console.info("📊 Datos de proyectos obtenidos:", result);
 
-    if (filters.obrero) {
-      filtered = filtered.filter((proyecto) =>
-        proyecto.obrero
-          .toLowerCase()
-          .includes(filters.obrero?.toLowerCase() || "")
-      );
-    }
+    // La API ya retorna en el formato correcto: { data, total, page, limit }
+    return {
+      data: result.data || [],
+      total: result.total || 0,
+      page: result.page || filters.page || 1,
+      limit: result.limit || filters.limit || 10,
+    };
+  };
 
-    if (filters.estado && filters.estado !== "todos") {
-      filtered = filtered.filter(
-        (proyecto) => proyecto.estado === filters.estado
-      );
-    }
+  // Hook personalizado para proyectos con paginación de servidor
+  const useLabProjectsWithPagination = (
+    filters: LabProjectFilters,
+    enabled = true
+  ) => {
+    const queryResult = useQuery({
+      queryKey: ["lab-projects", filters],
+      queryFn: () => fetchLabProjects(filters),
+      enabled,
+      staleTime: 2 * 60 * 1000, // 2 minutos
+      gcTime: 5 * 60 * 1000, // 5 minutos
+      retry: (failureCount, error) => {
+        // Retry logic para errores de red
+        const axiosError = error as {
+          code?: string;
+          response?: { status: number };
+          message?: string;
+        };
 
-    // Filtros de conteo
-    if (filters.hasApiques !== undefined) {
-      filtered = filtered.filter((proyecto) =>
-        filters.hasApiques
-          ? proyecto.total_apiques > 0
-          : proyecto.total_apiques === 0
-      );
-    }
-
-    if (filters.hasProfiles !== undefined) {
-      filtered = filtered.filter((proyecto) => {
-        const profilesCount = proyecto.total_profiles || 0;
-        return filters.hasProfiles ? profilesCount > 0 : profilesCount === 0;
-      });
-    }
-
-    if (filters.minApiques !== undefined) {
-      filtered = filtered.filter(
-        (proyecto) => proyecto.total_apiques >= (filters.minApiques || 0)
-      );
-    }
-    if (filters.maxApiques !== undefined) {
-      filtered = filtered.filter(
-        (proyecto) => proyecto.total_apiques <= (filters.maxApiques || 999)
-      );
-    }
-
-    if (filters.minProfiles !== undefined) {
-      filtered = filtered.filter(
-        (proyecto) =>
-          (proyecto.total_profiles || 0) >= (filters.minProfiles || 0)
-      );
-    }
-
-    if (filters.maxProfiles !== undefined) {
-      filtered = filtered.filter(
-        (proyecto) =>
-          (proyecto.total_profiles || 0) <= (filters.maxProfiles || 999)
-      );
-    }
-
-    // Ordenamiento
-    if (filters.sortBy) {
-      filtered.sort((a, b) => {
-        let aValue: unknown = a[filters.sortBy as keyof LabProject];
-        let bValue: unknown = b[filters.sortBy as keyof LabProject];
-
-        // Manejar casos especiales
-        if (filters.sortBy === "fecha") {
-          aValue = new Date(a.fecha).getTime();
-          bValue = new Date(b.fecha).getTime();
+        if (
+          failureCount < 2 &&
+          (axiosError?.code === "NETWORK_ERROR" ||
+            (axiosError?.response?.status &&
+              axiosError.response.status >= 500) ||
+            axiosError?.message?.includes("fetch"))
+        ) {
+          return true;
         }
+        return false;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    });
 
-        if (typeof aValue === "string" && typeof bValue === "string") {
-          const comparison = aValue.localeCompare(bValue);
-          return filters.sortOrder === "ASC" ? comparison : -comparison;
-        }
+    return useServerPagination<LabProject>({
+      apiResponse: queryResult.data,
+      isLoading: queryResult.isLoading,
+      error: queryResult.error,
+    });
+  }; // Paginación de servidor con hook reutilizable
+  const {
+    data: projects,
+    isLoading: dataLoading,
+    paginationData,
+    error: dataError,
+  } = useLabProjectsWithPagination(filters, !filtersLoading);
 
-        if (typeof aValue === "number" && typeof bValue === "number") {
-          return filters.sortOrder === "ASC"
-            ? aValue - bValue
-            : bValue - aValue;
-        }
+  // También necesitamos obtener el resumen total (sin filtros) para las estadísticas
+  const { data: summaryData } = useQuery({
+    queryKey: ["lab-projects-summary"],
+    queryFn: () => labService.getProjects({ page: 1, limit: 1 }), // Solo para obtener el summary
+    staleTime: 5 * 60 * 1000, // 5 minutos para summary
+  });
 
-        return 0;
-      });
-    }
+  // Combinar estados de loading
+  const loading = dataLoading || filtersLoading;
+  const error = dataError?.message || null;
 
-    return filtered;
-  }, [projectsData, filters]);
-
-  // Paginación local
-  const paginatedData = useMemo(() => {
-    const page = filters.page || 1;
-    const limit = filters.limit || 10;
-    const startIndex = (page - 1) * limit;
-    return filteredData.slice(startIndex, startIndex + limit);
-  }, [filteredData, filters.page, filters.limit]);
-
-  // Funciones de manejo
+  // Handlers para sincronizar con URL
   const handlePageChange = useCallback(
-    (_: unknown, newPage: number) => {
-      updateFilter("page", newPage + 1); // MUI usa 0-indexed, nosotros 1-indexed
+    (page: number) => {
+      updateFilter("page", page);
     },
     [updateFilter]
   );
 
   const handleRowsPerPageChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      updateFilters({
-        limit: parseInt(event.target.value, 10),
-        page: 1,
-      });
+    (newLimit: number) => {
+      updateFilters({ limit: newLimit, page: 1 });
     },
     [updateFilters]
-  );
-
-  const handleSort = useCallback(
-    (field: string) => {
-      const isCurrentField = filters.sortBy === field;
-      const newOrder =
-        isCurrentField && filters.sortOrder === "DESC" ? "ASC" : "DESC";
-      updateFilters({
-        sortBy: field as LabProjectFilters["sortBy"],
-        sortOrder: newOrder,
-        page: 1,
-      });
-    },
-    [filters.sortBy, filters.sortOrder, updateFilters]
   );
   const handleClearFilters = useCallback(() => {
     clearFilters();
     setLocalSearchInputs({
+      search: "",
       nombreProyecto: "",
       solicitante: "",
       obrero: "",
     });
     setShowAdvancedFilters(false);
   }, [clearFilters]);
-
-  // Funciones para acciones
-  const handleCreateApique = useCallback(
-    (projectId: number) => {
-      console.info(`🔧 Crear apique para proyecto ${projectId}`);
-      navigate(`/lab/proyectos/${projectId}/apique/nuevo`);
-    },
-    [navigate]
-  );
-  const handleViewApiques = useCallback(
-    (projectId: number) => {
-      console.info(`👁️ Ver apiques del proyecto ${projectId}`);
-      navigate(`/lab/proyectos/${projectId}/apiques`);
-    },
-    [navigate]
-  );
-
-  const handleCreateProfile = useCallback(
-    (projectId: number) => {
-      console.info(`🔧 Crear perfil para proyecto ${projectId}`);
-      navigate(`/lab/proyectos/${projectId}/perfil/nuevo`);
-    },
-    [navigate]
-  );
-
-  const handleViewProfiles = useCallback(
-    (projectId: number) => {
-      console.info(`👁️ Ver perfiles del proyecto ${projectId}`);
-      navigate(`/lab/proyectos/${projectId}/perfiles`);
-    },
-    [navigate]
-  ); // Cargar datos
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        console.info(
-          "🚀 Iniciando petición al endpoint de proyectos con filtros:",
-          filters
-        );
-
-        console.info("🔍 Propiedades completas del objeto filters:", {
-          keys: Object.keys(filters),
-          entries: Object.entries(filters),
-          hasApiques: filters.hasApiques,
-          hasProfiles: filters.hasProfiles,
-        });
-
-        // Llamar al nuevo servicio directamente con los filtros
-        const result = await labService.getProjects(filters);
-
-        console.info("📊 Datos de proyectos obtenidos:", result);
-        setProjectsData(result);
-      } catch (err) {
-        console.error("❌ Error general:", err);
-        setError("Error al cargar los datos de laboratorio");
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (!filtersLoading) {
-      fetchData();
-    }
-  }, [filters, filtersLoading]);
-
   // Sincronizar estados locales con filtros al cargar
   useEffect(() => {
     setLocalSearchInputs({
+      search: filters.search || "",
       nombreProyecto: filters.nombreProyecto || "",
       solicitante: filters.solicitante || "",
       obrero: filters.obrero || "",
     });
-  }, [filters.nombreProyecto, filters.solicitante, filters.obrero]); // Función para aplicar los filtros de búsqueda
+  }, [
+    filters.search,
+    filters.nombreProyecto,
+    filters.solicitante,
+    filters.obrero,
+  ]); // Función para aplicar los filtros de búsqueda
   const applySearchFilters = useCallback(() => {
     console.info("🔍 Aplicando filtros de búsqueda:", {
+      search: localSearchInputs.search || undefined,
       nombreProyecto: localSearchInputs.nombreProyecto || undefined,
       solicitante: localSearchInputs.solicitante || undefined,
       obrero: localSearchInputs.obrero || undefined,
     });
 
     updateFilters({
+      search: localSearchInputs.search || undefined,
       nombreProyecto: localSearchInputs.nombreProyecto || undefined,
       solicitante: localSearchInputs.solicitante || undefined,
       obrero: localSearchInputs.obrero || undefined,
       page: 1, // Reset a la primera página cuando se busca
     });
   }, [localSearchInputs, updateFilters]);
-
   // Debounce personalizado para campos de búsqueda
   useEffect(() => {
     const searchFiltersChanged =
+      localSearchInputs.search !== (filters.search || "") ||
       localSearchInputs.nombreProyecto !== (filters.nombreProyecto || "") ||
       localSearchInputs.solicitante !== (filters.solicitante || "") ||
       localSearchInputs.obrero !== (filters.obrero || "");
@@ -432,6 +443,7 @@ const ProjectsDashboard = () => {
     }
   }, [
     localSearchInputs,
+    filters.search,
     filters.nombreProyecto,
     filters.solicitante,
     filters.obrero,
@@ -487,45 +499,43 @@ const ProjectsDashboard = () => {
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
-        )}
+        )}{" "}
         {/* Estadísticas rápidas */}
         <Box sx={{ mb: 3, display: "flex", gap: 2, flexWrap: "wrap" }}>
           <Chip
             icon={<TerrainIcon />}
-            label={`${projectsData?.total || 0} Proyectos`}
+            label={`${summaryData?.total || 0} Proyectos`}
             color="primary"
             variant="outlined"
-          />
-
+          />{" "}
           <Chip
-            label={`${filteredData.length} Filtrados`}
+            label={`${paginationData.totalItems} Filtrados`}
             color={hasActiveFilters ? "success" : "default"}
             variant={hasActiveFilters ? "filled" : "outlined"}
           />
-
-          {projectsData?.summary && (
+          {summaryData?.summary && (
             <>
               <Chip
-                label={`${projectsData.summary.activeProjects} Activos`}
+                label={`${summaryData.summary.activeProjects} Activos`}
                 color="success"
                 variant="outlined"
               />
               <Chip
-                label={`${projectsData.summary.totalApiques} Apiques`}
+                label={`${summaryData.summary.totalApiques} Apiques`}
                 color="info"
                 variant="outlined"
               />
               <Chip
-                label={`${projectsData.summary.totalProfiles} Perfiles`}
+                label={`${summaryData.summary.totalProfiles} Perfiles`}
                 color="secondary"
                 variant="outlined"
               />
             </>
-          )}
-
+          )}{" "}
           {/* Indicador de búsqueda pendiente */}
-          {(localSearchInputs.nombreProyecto !==
-            (filters.nombreProyecto || "") ||
+          {(localSearchInputs.search !== (filters.search || "") ||
+            localSearchInputs.nombreProyecto !==
+              (filters.nombreProyecto || "") ||
             localSearchInputs.solicitante !== (filters.solicitante || "") ||
             localSearchInputs.obrero !== (filters.obrero || "")) && (
             <Chip
@@ -536,7 +546,6 @@ const ProjectsDashboard = () => {
               icon={<CircularProgress size={16} sx={{ color: "inherit" }} />}
             />
           )}
-
           {filtersLoading && (
             <Chip
               label="Cargando..."
@@ -546,68 +555,41 @@ const ProjectsDashboard = () => {
               icon={<CircularProgress size={16} sx={{ color: "inherit" }} />}
             />
           )}
-        </Box>
+        </Box>{" "}
         {/* Filtros principales */}
         <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
           <Grid2 container spacing={2} alignItems="center">
-            <Grid2 size={{ xs: 12, md: 3 }}>
+            {/* Búsqueda global prominente */}
+            <Grid2 size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
-                label="Buscar proyecto"
+                label="Búsqueda global"
                 variant="outlined"
                 size="small"
-                value={localSearchInputs.nombreProyecto}
+                value={localSearchInputs.search}
                 onChange={(e) =>
-                  handleSearchInputChange("nombreProyecto", e.target.value)
+                  handleSearchInputChange("search", e.target.value)
                 }
                 onKeyDown={handleSearchKeyPress}
-                placeholder="Escriba el nombre del proyecto..."
-                InputProps={{
-                  startAdornment: (
-                    <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />
-                  ),
-                  endAdornment:
-                    filtersLoading && localSearchInputs.nombreProyecto ? (
-                      <CircularProgress size={20} sx={{ mr: 1 }} />
-                    ) : null,
+                placeholder="Buscar en proyectos, solicitantes y obreros..."
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />
+                    ),
+                    endAdornment:
+                      filtersLoading && localSearchInputs.search ? (
+                        <CircularProgress size={20} sx={{ mr: 1 }} />
+                      ) : null,
+                  },
                 }}
                 helperText={
-                  localSearchInputs.nombreProyecto && filtersLoading
+                  localSearchInputs.search && filtersLoading
                     ? "Buscando..."
-                    : localSearchInputs.nombreProyecto &&
-                      localSearchInputs.nombreProyecto !==
-                        (filters.nombreProyecto || "")
+                    : localSearchInputs.search &&
+                      localSearchInputs.search !== (filters.search || "")
                     ? "Escribiendo... (Enter para buscar)"
-                    : ""
-                }
-              />
-            </Grid2>
-            <Grid2 size={{ xs: 12, md: 2 }}>
-              <TextField
-                fullWidth
-                label="Solicitante"
-                variant="outlined"
-                size="small"
-                value={localSearchInputs.solicitante}
-                onChange={(e) =>
-                  handleSearchInputChange("solicitante", e.target.value)
-                }
-                onKeyDown={handleSearchKeyPress}
-                placeholder="Nombre del solicitante..."
-                InputProps={{
-                  endAdornment:
-                    filtersLoading && localSearchInputs.solicitante ? (
-                      <CircularProgress size={20} sx={{ mr: 1 }} />
-                    ) : null,
-                }}
-                helperText={
-                  localSearchInputs.solicitante && filtersLoading
-                    ? "Buscando..."
-                    : localSearchInputs.solicitante &&
-                      localSearchInputs.solicitante !==
-                        (filters.solicitante || "")
-                    ? "Escribiendo... (Enter para buscar)"
-                    : ""
+                    : "Busca en nombre del proyecto, solicitante y obrero"
                 }
               />
             </Grid2>
@@ -619,11 +601,11 @@ const ProjectsDashboard = () => {
                   label="Estado"
                   onChange={(e) => updateFilter("estado", e.target.value)}
                 >
-                  <MenuItem value="todos">Todos</MenuItem>
-                  <MenuItem value="activo">Activo</MenuItem>
-                  <MenuItem value="completado">Completado</MenuItem>
-                  <MenuItem value="pausado">Pausado</MenuItem>
-                  <MenuItem value="cancelado">Cancelado</MenuItem>
+                  {ESTADO_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid2>
@@ -639,11 +621,12 @@ const ProjectsDashboard = () => {
                 Más Filtros
               </Button>
             </Grid2>
-            <Grid2 size={{ xs: 12, md: 3 }}>
+            <Grid2 size={{ xs: 12, md: 4 }}>
               <Stack direction="row" spacing={1}>
                 {/* Botón de buscar inmediato si hay cambios pendientes */}
-                {(localSearchInputs.nombreProyecto !==
-                  (filters.nombreProyecto || "") ||
+                {(localSearchInputs.search !== (filters.search || "") ||
+                  localSearchInputs.nombreProyecto !==
+                    (filters.nombreProyecto || "") ||
                   localSearchInputs.solicitante !==
                     (filters.solicitante || "") ||
                   localSearchInputs.obrero !== (filters.obrero || "")) && (
@@ -672,20 +655,89 @@ const ProjectsDashboard = () => {
                   color="text.secondary"
                   sx={{ alignSelf: "center" }}
                 >
-                  {filteredData.length} resultado(s)
+                  {paginationData.totalItems} resultado(s)
                 </Typography>
               </Stack>
             </Grid2>
-          </Grid2>
-
+          </Grid2>{" "}
           {/* Filtros avanzados */}
           <Collapse in={showAdvancedFilters}>
             <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: "divider" }}>
+              <Typography
+                variant="subtitle2"
+                gutterBottom
+                color="text.secondary"
+              >
+                Filtros específicos (alternativos a la búsqueda global)
+              </Typography>
               <Grid2 container spacing={2}>
+                {/* Filtros específicos de búsqueda */}
                 <Grid2 size={{ xs: 12, md: 3 }}>
                   <TextField
                     fullWidth
-                    label="Obrero"
+                    label="Buscar proyecto específico"
+                    variant="outlined"
+                    size="small"
+                    value={localSearchInputs.nombreProyecto}
+                    onChange={(e) =>
+                      handleSearchInputChange("nombreProyecto", e.target.value)
+                    }
+                    onKeyDown={handleSearchKeyPress}
+                    placeholder="Nombre exacto del proyecto..."
+                    slotProps={{
+                      input: {
+                        endAdornment:
+                          filtersLoading && localSearchInputs.nombreProyecto ? (
+                            <CircularProgress size={20} sx={{ mr: 1 }} />
+                          ) : null,
+                      },
+                    }}
+                    helperText={
+                      localSearchInputs.nombreProyecto && filtersLoading
+                        ? "Buscando..."
+                        : localSearchInputs.nombreProyecto &&
+                          localSearchInputs.nombreProyecto !==
+                            (filters.nombreProyecto || "")
+                        ? "Escribiendo... (Enter para buscar)"
+                        : "Solo nombre del proyecto"
+                    }
+                  />
+                </Grid2>
+                <Grid2 size={{ xs: 12, md: 3 }}>
+                  <TextField
+                    fullWidth
+                    label="Solicitante específico"
+                    variant="outlined"
+                    size="small"
+                    value={localSearchInputs.solicitante}
+                    onChange={(e) =>
+                      handleSearchInputChange("solicitante", e.target.value)
+                    }
+                    onKeyDown={handleSearchKeyPress}
+                    placeholder="Nombre exacto del solicitante..."
+                    slotProps={{
+                      input: {
+                        endAdornment:
+                          filtersLoading && localSearchInputs.solicitante ? (
+                            <CircularProgress size={20} sx={{ mr: 1 }} />
+                          ) : null,
+                      },
+                    }}
+                    helperText={
+                      localSearchInputs.solicitante && filtersLoading
+                        ? "Buscando..."
+                        : localSearchInputs.solicitante &&
+                          localSearchInputs.solicitante !==
+                            (filters.solicitante || "")
+                        ? "Escribiendo... (Enter para buscar)"
+                        : "Solo solicitante"
+                    }
+                  />
+                </Grid2>
+                <Grid2 size={{ xs: 12, md: 3 }}>
+                  <TextField
+                    fullWidth
+                    label="Obrero específico"
                     variant="outlined"
                     size="small"
                     value={localSearchInputs.obrero}
@@ -693,12 +745,14 @@ const ProjectsDashboard = () => {
                       handleSearchInputChange("obrero", e.target.value)
                     }
                     onKeyDown={handleSearchKeyPress}
-                    placeholder="Nombre del obrero..."
-                    InputProps={{
-                      endAdornment:
-                        filtersLoading && localSearchInputs.obrero ? (
-                          <CircularProgress size={20} sx={{ mr: 1 }} />
-                        ) : null,
+                    placeholder="Nombre exacto del obrero..."
+                    slotProps={{
+                      input: {
+                        endAdornment:
+                          filtersLoading && localSearchInputs.obrero ? (
+                            <CircularProgress size={20} sx={{ mr: 1 }} />
+                          ) : null,
+                      },
                     }}
                     helperText={
                       localSearchInputs.obrero && filtersLoading
@@ -706,9 +760,23 @@ const ProjectsDashboard = () => {
                         : localSearchInputs.obrero &&
                           localSearchInputs.obrero !== (filters.obrero || "")
                         ? "Escribiendo... (Enter para buscar)"
-                        : ""
+                        : "Solo obrero"
                     }
                   />
+                </Grid2>
+                <Grid2 size={{ xs: 12, md: 3 }}>
+                  {/* Espacio vacío para alineación */}
+                </Grid2>
+                {/* Separador visual */}
+                <Grid2 size={12}>
+                  <Typography
+                    variant="subtitle2"
+                    gutterBottom
+                    color="text.secondary"
+                    sx={{ mt: 2 }}
+                  >
+                    Filtros por fecha y contadores
+                  </Typography>
                 </Grid2>
                 <Grid2 size={{ xs: 12, md: 3 }}>
                   <TextField
@@ -719,7 +787,7 @@ const ProjectsDashboard = () => {
                     size="small"
                     value={filters.startDate || ""}
                     onChange={(e) => updateFilter("startDate", e.target.value)}
-                    InputLabelProps={{ shrink: true }}
+                    slotProps={{ inputLabel: { shrink: true } }}
                   />
                 </Grid2>
                 <Grid2 size={{ xs: 12, md: 3 }}>
@@ -731,7 +799,7 @@ const ProjectsDashboard = () => {
                     size="small"
                     value={filters.endDate || ""}
                     onChange={(e) => updateFilter("endDate", e.target.value)}
-                    InputLabelProps={{ shrink: true }}
+                    slotProps={{ inputLabel: { shrink: true } }}
                   />
                 </Grid2>
                 <Grid2 size={{ xs: 12, md: 3 }}>
@@ -753,9 +821,13 @@ const ProjectsDashboard = () => {
                         )
                       }
                     >
-                      <MenuItem value="">Todos</MenuItem>
-                      <MenuItem value="true">Con Apiques</MenuItem>
-                      <MenuItem value="false">Sin Apiques</MenuItem>
+                      {BOOLEAN_FILTER_OPTIONS.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.value === ""
+                            ? option.label
+                            : `${option.label} Apiques`}
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </Grid2>
@@ -778,290 +850,60 @@ const ProjectsDashboard = () => {
                         )
                       }
                     >
-                      <MenuItem value="">Todos</MenuItem>
-                      <MenuItem value="true">Con Perfiles</MenuItem>
-                      <MenuItem value="false">Sin Perfiles</MenuItem>
+                      {BOOLEAN_FILTER_OPTIONS.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.value === ""
+                            ? option.label
+                            : `${option.label} Perfiles`}
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </Grid2>
-                <Grid2 size={{ xs: 12, md: 3 }}>
-                  <TextField
-                    fullWidth
-                    label="Mín. Apiques"
-                    type="number"
-                    variant="outlined"
-                    size="small"
-                    value={filters.minApiques || ""}
-                    onChange={(e) =>
-                      updateFilter(
-                        "minApiques",
-                        e.target.value
-                          ? parseInt(e.target.value, 10)
-                          : undefined
-                      )
-                    }
-                  />
-                </Grid2>
-                <Grid2 size={{ xs: 12, md: 3 }}>
-                  <TextField
-                    fullWidth
-                    label="Máx. Apiques"
-                    type="number"
-                    variant="outlined"
-                    size="small"
-                    value={filters.maxApiques || ""}
-                    onChange={(e) =>
-                      updateFilter(
-                        "maxApiques",
-                        e.target.value
-                          ? parseInt(e.target.value, 10)
-                          : undefined
-                      )
-                    }
-                  />
-                </Grid2>
-                <Grid2 size={{ xs: 12, md: 3 }}>
-                  <TextField
-                    fullWidth
-                    label="Mín. Perfiles"
-                    type="number"
-                    variant="outlined"
-                    size="small"
-                    value={filters.minProfiles || ""}
-                    onChange={(e) =>
-                      updateFilter(
-                        "minProfiles",
-                        e.target.value
-                          ? parseInt(e.target.value, 10)
-                          : undefined
-                      )
-                    }
-                  />
-                </Grid2>
-                <Grid2 size={{ xs: 12, md: 3 }}>
-                  <TextField
-                    fullWidth
-                    label="Máx. Perfiles"
-                    type="number"
-                    variant="outlined"
-                    size="small"
-                    value={filters.maxProfiles || ""}
-                    onChange={(e) =>
-                      updateFilter(
-                        "maxProfiles",
-                        e.target.value
-                          ? parseInt(e.target.value, 10)
-                          : undefined
-                      )
-                    }
-                  />
-                </Grid2>
+                {NUMERIC_FILTER_FIELDS.map((field) => (
+                  <Grid2 key={field.key} size={{ xs: 12, md: 3 }}>
+                    <TextField
+                      fullWidth
+                      label={field.label}
+                      type="number"
+                      variant="outlined"
+                      size="small"
+                      value={filters[field.key] || ""}
+                      onChange={(e) =>
+                        updateFilter(
+                          field.key,
+                          e.target.value
+                            ? parseInt(e.target.value, 10)
+                            : undefined
+                        )
+                      }
+                    />
+                  </Grid2>
+                ))}
               </Grid2>
             </Box>
           </Collapse>
-        </Paper>
-        {/* Tabla de proyectos */}
-        <TableContainer
-          component={Paper}
-          variant="outlined"
-          sx={{ maxHeight: 600 }}
-        >
-          <Table stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell>
-                  <TableSortLabel
-                    active={filters.sortBy === "proyecto_id"}
-                    direction={
-                      filters.sortBy === "proyecto_id"
-                        ? filters.sortOrder === "ASC"
-                          ? "asc"
-                          : "desc"
-                        : "desc"
-                    }
-                    onClick={() => handleSort("proyecto_id")}
-                  >
-                    ID
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell>
-                  <TableSortLabel
-                    active={filters.sortBy === "nombre_proyecto"}
-                    direction={
-                      filters.sortBy === "nombre_proyecto"
-                        ? filters.sortOrder === "ASC"
-                          ? "asc"
-                          : "desc"
-                        : "desc"
-                    }
-                    onClick={() => handleSort("nombre_proyecto")}
-                  >
-                    Proyecto
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell>
-                  <TableSortLabel
-                    active={filters.sortBy === "solicitante"}
-                    direction={
-                      filters.sortBy === "solicitante"
-                        ? filters.sortOrder === "ASC"
-                          ? "asc"
-                          : "desc"
-                        : "desc"
-                    }
-                    onClick={() => handleSort("solicitante")}
-                  >
-                    Solicitante
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell>
-                  <TableSortLabel
-                    active={filters.sortBy === "fecha"}
-                    direction={
-                      filters.sortBy === "fecha"
-                        ? filters.sortOrder === "ASC"
-                          ? "asc"
-                          : "desc"
-                        : "desc"
-                    }
-                    onClick={() => handleSort("fecha")}
-                  >
-                    Fecha
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell>Estado</TableCell>
-                <TableCell align="center">Apiques</TableCell>
-                <TableCell align="center">Perfiles</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {paginatedData.map((proyecto) => {
-                return (
-                  <TableRow key={proyecto.proyecto_id} hover>
-                    <TableCell>{proyecto.proyecto_id}</TableCell>
-                    <TableCell>
-                      <Typography
-                        variant="body2"
-                        sx={{ maxWidth: 250, wordWrap: "break-word" }}
-                      >
-                        {proyecto.nombre_proyecto}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{proyecto.solicitante}</TableCell>
-                    <TableCell>
-                      {new Date(proyecto.fecha).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={proyecto.estado}
-                        color={
-                          proyecto.estado === "activo" ? "success" : "default"
-                        }
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell align="center">
-                      <Stack
-                        direction="row"
-                        spacing={1}
-                        justifyContent="center"
-                        alignItems="center"
-                      >
-                        <Chip
-                          icon={<TerrainIcon />}
-                          label={proyecto.total_apiques}
-                          size="small"
-                          variant="outlined"
-                        />
-                        <Stack direction="row" spacing={0.5}>
-                          <Tooltip title="Crear apique">
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() =>
-                                handleCreateApique(proyecto.proyecto_id)
-                              }
-                            >
-                              <AddIcon />
-                            </IconButton>
-                          </Tooltip>
-                          {proyecto.total_apiques > 0 && (
-                            <Tooltip title="Ver apiques">
-                              <IconButton
-                                size="small"
-                                color="info"
-                                onClick={() =>
-                                  handleViewApiques(proyecto.proyecto_id)
-                                }
-                              >
-                                <VisibilityIcon />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                        </Stack>
-                      </Stack>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Stack
-                        direction="row"
-                        spacing={1}
-                        justifyContent="center"
-                        alignItems="center"
-                      >
-                        <Chip
-                          icon={<ScienceIcon />}
-                          label={proyecto.total_profiles}
-                          size="small"
-                          variant="outlined"
-                        />
-                        <Stack direction="row" spacing={0.5}>
-                          <Tooltip title="Crear perfil">
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() =>
-                                handleCreateProfile(proyecto.proyecto_id)
-                              }
-                            >
-                              <AddIcon />
-                            </IconButton>
-                          </Tooltip>
-                          {proyecto.total_profiles > 0 && (
-                            <Tooltip title="Ver perfiles">
-                              <IconButton
-                                size="small"
-                                color="info"
-                                onClick={() =>
-                                  handleViewProfiles(proyecto.proyecto_id)
-                                }
-                              >
-                                <VisibilityIcon />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                        </Stack>
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        {/* Paginación */}
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25, 50]}
-          component="div"
-          count={filteredData.length}
-          rowsPerPage={filters.limit || 10}
-          page={(filters.page || 1) - 1} // Convertir de 1-indexed a 0-indexed para MUI
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
-          labelRowsPerPage="Filas por página:"
-          labelDisplayedRows={({ from, to, count }) =>
-            `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
-          }
+        </Paper>{" "}
+        {/* Tabla de proyectos con DataTable */}
+        <DataTable
+          data={projects}
+          columns={tableColumns}
+          keyField="proyecto_id"
+          loading={loading}
+          emptyMessage="No se encontraron proyectos"
         />
+        {/* Paginación */}
+        {paginationData.totalItems > 0 && (
+          <DataTablePagination
+            paginationData={paginationData}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+            labelRowsPerPage="Proyectos por página:"
+            showFirstLastButtons={true}
+            showRowsPerPage={true}
+          />
+        )}
       </Paper>
     </Box>
   );

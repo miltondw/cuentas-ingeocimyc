@@ -556,7 +556,7 @@ const ServiceFormPage: React.FC = () => {
             onClick={() => navigate("/admin/services")}
           >
             Cancelar
-          </Button>{" "}
+          </Button>
           <Button
             type="submit"
             variant="contained"
