@@ -73,9 +73,7 @@ export class AdminServiceRequestsService {
   async regeneratePDF(id: number): Promise<{ message: string }> {
     const response = await api.post(`/pdf/service-request/${id}/regenerate`);
     return response.data;
-  }
-
-  /**
+  }  /**
    * Obtener estadísticas de solicitudes de servicio
    */
   async getServiceRequestStats(): Promise<{
@@ -84,8 +82,75 @@ export class AdminServiceRequestsService {
     byMonth: Array<{ month: string; count: number }>;
     byCategory: Array<{ category: string; count: number }>;
   }> {
-    const response = await api.get("/service-requests/stats");
-    return response.data;
+    try {
+      // Primero obtenemos todas las solicitudes
+      const response = await api.get("/service-requests", {
+        params: {
+          limit: 1000, // Obtener un límite alto para calcular estadísticas
+        },
+      });
+      
+      const serviceRequests = response.data.data || [];
+      const total = response.data.total || serviceRequests.length;
+      
+      // Calcular estadísticas por estado
+      const byStatus: Record<string, number> = {};
+      serviceRequests.forEach((request: AdminServiceRequest) => {
+        const status = request.status || 'sin_estado';
+        byStatus[status] = (byStatus[status] || 0) + 1;
+      });
+      
+      // Calcular estadísticas por mes
+      const byMonth: Array<{ month: string; count: number }> = [];
+      const monthCounts: Record<string, number> = {};
+      
+      serviceRequests.forEach((request: AdminServiceRequest) => {
+        if (request.created_at) {
+          const date = new Date(request.created_at);
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          monthCounts[monthKey] = (monthCounts[monthKey] || 0) + 1;
+        }
+      });
+      
+      Object.entries(monthCounts).forEach(([month, count]) => {
+        byMonth.push({ month, count });
+      });
+      
+      // Calcular estadísticas por categoría
+      const byCategory: Array<{ category: string; count: number }> = [];
+      const categoryCounts: Record<string, number> = {};
+      
+      serviceRequests.forEach((request: AdminServiceRequest) => {
+        if (request.selectedServices && Array.isArray(request.selectedServices)) {
+          request.selectedServices.forEach((selectedService) => {
+            if (selectedService.service?.category?.name) {
+              const categoryName = selectedService.service.category.name;
+              categoryCounts[categoryName] = (categoryCounts[categoryName] || 0) + 1;
+            }
+          });
+        }
+      });
+      
+      Object.entries(categoryCounts).forEach(([category, count]) => {
+        byCategory.push({ category, count });
+      });
+      
+      return {
+        total,
+        byStatus,
+        byMonth: byMonth.sort((a, b) => a.month.localeCompare(b.month)),
+        byCategory: byCategory.sort((a, b) => b.count - a.count),
+      };
+    } catch (error) {
+      console.error('Error al obtener estadísticas:', error);
+      // Fallback en caso de error
+      return {
+        total: 0,
+        byStatus: {},
+        byMonth: [],
+        byCategory: [],
+      };
+    }
   }
 }
 

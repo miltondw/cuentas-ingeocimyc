@@ -11,11 +11,10 @@ const AuthLayout = () => {
       sx={{
         display: "flex",
         flexDirection: "column",
-        minHeight: "100vh",
-        alignItems: "center",
-        justifyContent: "center",
+        height: "90vh",
         padding: 2,
-        backgroundColor: "#f5f5f5",
+        placeContent: "center",
+        placeItems: "center",
       }}
     >
       <Container maxWidth="sm">

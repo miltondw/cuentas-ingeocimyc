@@ -14,7 +14,10 @@ interface CardLayoutProps {
 const CardLayout = ({ title, description, children }: CardLayoutProps) => {
   return (
     <Container maxWidth="md" sx={{ my: 4 }}>
-      <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+      <Paper
+        elevation={2}
+        sx={{ p: 3, borderRadius: 2, backgroundColor: "yellow" }}
+      >
         <Box sx={{ mb: 3 }}>
           <Typography variant="h5" component="h1" gutterBottom>
             {title}

@@ -1,5 +1,5 @@
 /**
- * Página de gestión de solicitudes de servicio
+ * Página de gestión de solicitudes de servicio - Rediseño minimalista
  * @file ServiceRequestsManagementPage.tsx
  */
 
@@ -10,12 +10,6 @@ import {
   Box,
   Card,
   CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   IconButton,
   Chip,
   MenuItem,
@@ -31,10 +25,11 @@ import {
   DialogContent,
   DialogActions,
   Paper,
-  TablePagination,
   Stack,
-  Checkbox,
   Alert,
+  Fade,
+  useTheme,
+  alpha,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
@@ -46,7 +41,12 @@ import {
   RequestQuote as RequestIcon,
   FilterList as FilterListIcon,
   Clear as ClearIcon,
+  TrendingUp as TrendingUpIcon,
+  Assessment as AssessmentIcon,  Schedule as ScheduleIcon,
+  CheckCircle as CheckCircleIcon,
+  Search as SearchIcon,
 } from "@mui/icons-material";
+import DataTable from "@/components/common/DataTable";
 import { useNavigate } from "react-router-dom";
 import { formatDate } from "@/utils/formatters/dateFormatter";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -67,7 +67,6 @@ import type {
   APIServiceAdditionalField,
 } from "@/types/serviceRequests";
 import ConfirmDeleteDialog from "../components/ConfirmDeleteDialog";
-import TableLoading from "../components/TableLoading";
 
 // Estados disponibles para las solicitudes
 const SERVICE_REQUEST_STATUSES: Array<{
@@ -212,27 +211,7 @@ const ServiceRequestsManagementPage: React.FC = () => {
       // Error handling is done in the hook
     }
   };
-
   // Handlers para selección múltiple
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      const allIds = new Set(requests.map((request) => request.id));
-      setSelectedIds(allIds);
-    } else {
-      setSelectedIds(new Set());
-    }
-  };
-
-  const handleSelectOne = (id: number, checked: boolean) => {
-    const newSelected = new Set(selectedIds);
-    if (checked) {
-      newSelected.add(id);
-    } else {
-      newSelected.delete(id);
-    }
-    setSelectedIds(newSelected);
-  };
-
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
 
@@ -247,11 +226,6 @@ const ServiceRequestsManagementPage: React.FC = () => {
       // Error handling is done in the hook
     }
   };
-
-  const isAllSelected =
-    requests.length > 0 && selectedIds.size === requests.length;
-  const isIndeterminate =
-    selectedIds.size > 0 && selectedIds.size < requests.length;
 
   const getStatusInfo = (status: ServiceRequestStatus) => {
     return (
@@ -343,497 +317,1022 @@ const ServiceRequestsManagementPage: React.FC = () => {
 
     return instances;
   };
-
+  const theme = useTheme();
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-          <IconButton onClick={() => navigate("/admin")} size="large">
-            <ArrowBackIcon />
-          </IconButton>
-          <RequestIcon color="primary" sx={{ fontSize: 32 }} />
-          <Typography variant="h4" component="h1">
-            Gestión de Solicitudes de Servicio
-          </Typography>
-        </Box>
-
-        {/* Estadísticas rápidas */}
+    <Container 
+      maxWidth="xl" 
+      sx={{ 
+        py: { xs: 2, sm: 3 },
+        px: { xs: 1, sm: 2, md: 3 },
+      }}    >{/* Header responsivo y moderno */}
+      <Box sx={{ mb: { xs: 3, sm: 4 } }}>
+        <Box 
+          sx={{ 
+            display: "flex", 
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'flex-start', sm: 'center' }, 
+            gap: { xs: 2, sm: 2, md: 3 },            mb: { xs: 2, sm: 3 },
+            p: { xs: 2, sm: 2.5, md: 3 },
+            borderRadius: { xs: 2, md: 3 },
+            background: `linear-gradient(135deg, ${theme.palette.primary.main}15, ${theme.palette.secondary.main}15)`,
+            border: { xs: '1px solid', sm: 'none' },
+            borderColor: { xs: alpha(theme.palette.primary.main, 0.1), sm: 'transparent' },
+          }}
+        >
+          {/* Header superior - Botón de regreso y icono */}
+          <Box 
+            sx={{ 
+              display: 'flex',
+              alignItems: 'center',              gap: { xs: 1.5, sm: 2 },
+              width: { xs: '100%', sm: 'auto' },
+              justifyContent: { xs: 'flex-start', sm: 'flex-start' },
+            }}
+          >            <IconButton 
+              onClick={() => navigate("/admin")} 
+              size="large"              sx={{ 
+                bgcolor: 'white',
+                boxShadow: { xs: 2, sm: 1 },
+                flexShrink: 0,
+                width: { xs: 44, sm: 48 },
+                height: { xs: 44, sm: 48 },
+                '&:hover': { 
+                  bgcolor: 'grey.50',
+                  transform: 'translateY(-1px)',
+                  boxShadow: { xs: 3, sm: 2 },
+                },
+                transition: 'all 0.2s ease-in-out',
+              }}
+            >
+              <ArrowBackIcon sx={{ fontSize: { xs: 22, sm: 24 } }} />
+            </IconButton>
+              {/* Icono principal - más pequeño en móvil */}            <RequestIcon 
+              sx={{ 
+                fontSize: { xs: 30, sm: 36, md: 40 }, 
+                color: theme.palette.primary.main,
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                ml: { xs: 0.5, sm: 0 },
+              }} 
+            />
+          </Box>          {/* Contenido del título */}
+          <Box sx={{ 
+            flex: 1, 
+            minWidth: 0,
+            mt: { xs: 1, sm: 0 },
+          }}>
+            <Typography 
+              variant="h4"
+              component="h1"              sx={{ 
+                fontWeight: { xs: 600, sm: 700 },
+                color: theme.palette.text.primary,
+                letterSpacing: '-0.02em',
+                lineHeight: { xs: 1.3, sm: 1.1 },
+                wordBreak: 'break-word',
+                fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' }, // h6 en xs, h5 en sm, h4 en md+
+              }}
+            >
+              Gestión de Solicitudes
+            </Typography>
+            <Typography 
+              variant="body2"
+              color="text.secondary"              sx={{ 
+                mt: { xs: 0.5, sm: 0.5 },
+                display: { xs: 'block', sm: 'block' },
+                lineHeight: 1.4,
+                fontSize: { xs: '0.75rem', sm: '0.875rem' }, // caption en xs, body2 en sm+
+                maxWidth: { xs: '100%', sm: '400px', md: 'none' },
+              }}
+            >
+              Administra y da seguimiento a todas las solicitudes de servicio
+            </Typography>
+          </Box>
+        </Box>        {/* Estadísticas responsivas con diseño moderno */}
         {stats && (
-          <Grid2 container spacing={2} sx={{ mb: 3 }}>
-            <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
-              <Card>
-                <CardContent sx={{ textAlign: "center" }}>
-                  <Typography variant="h4" color="primary">
+          <Grid2 container spacing={{ xs: 2, sm: 2, md: 3 }} sx={{ mb: 4 }}>
+            <Grid2 size={{ xs: 12, sm: 6, lg: 3 }}>
+              <Card 
+                sx={{ 
+                  position: 'relative',
+                  overflow: 'hidden',
+                  borderRadius: { xs: 2, sm: 3 },
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${alpha(theme.palette.primary.main, 0.8)})`,
+                  color: 'white',
+                  boxShadow: '0 8px 32px rgba(10, 149, 165, 0.3)',
+                  transition: 'transform 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 40px rgba(10, 149, 165, 0.4)',
+                  }
+                }}
+              >
+                <CardContent sx={{ textAlign: "center", py: { xs: 2.5, sm: 3 } }}>
+                  <AssessmentIcon sx={{ fontSize: { xs: 40, sm: 48 }, mb: 1, opacity: 0.9 }} />                  <Typography 
+                    variant="h3" 
+                    sx={{ 
+                      fontWeight: 700, 
+                      mb: 1, 
+                      lineHeight: 1,
+                      fontSize: { xs: '2rem', sm: '3rem' }, // h4 en xs, h3 en sm+
+                    }}
+                  >
                     {stats.total}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      opacity: 0.9, 
+                      fontSize: { xs: '0.875rem', sm: '1rem' }, // body2 en xs, body1 en sm+
+                    }}
+                  >
                     Total Solicitudes
+                  </Typography>
+                </CardContent>
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: { xs: -15, sm: -20 },
+                    right: { xs: -15, sm: -20 },
+                    width: { xs: 60, sm: 80 },
+                    height: { xs: 60, sm: 80 },
+                    borderRadius: '50%',
+                    bgcolor: 'rgba(255,255,255,0.1)',
+                  }}
+                />
+              </Card>
+            </Grid2>
+            
+            <Grid2 size={{ xs: 12, sm: 6, lg: 3 }}>
+              <Card 
+                sx={{ 
+                  borderRadius: { xs: 2, sm: 3 },
+                  background: 'linear-gradient(135deg, #ff9800, #f57c00)',
+                  color: 'white',
+                  boxShadow: '0 8px 32px rgba(255, 152, 0, 0.3)',
+                  transition: 'transform 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 40px rgba(255, 152, 0, 0.4)',
+                  }
+                }}
+              >
+                <CardContent sx={{ textAlign: "center", py: { xs: 2.5, sm: 3 } }}>
+                  <ScheduleIcon sx={{ fontSize: { xs: 40, sm: 48 }, mb: 1, opacity: 0.9 }} />                  <Typography 
+                    variant="h3" 
+                    sx={{ 
+                      fontWeight: 700, 
+                      mb: 1, 
+                      lineHeight: 1,
+                      fontSize: { xs: '2rem', sm: '3rem' }, // h4 en xs, h3 en sm+
+                    }}
+                  >
+                    {statusStats["pendiente"] || 0}
+                  </Typography>
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      opacity: 0.9, 
+                      fontSize: { xs: '0.875rem', sm: '1rem' }, // body2 en xs, body1 en sm+
+                    }}
+                  >
+                    Pendientes
                   </Typography>
                 </CardContent>
               </Card>
             </Grid2>
-            {SERVICE_REQUEST_STATUSES.map((status) => (
-              <Grid2 size={{ xs: 12, sm: 6, md: 3 }} key={status.value}>
-                <Card>
-                  <CardContent sx={{ textAlign: "center" }}>
-                    <Typography variant="h4" color={`${status.color}.main`}>
-                      {statusStats[status.value] || 0}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {status.label}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid2>
-            ))}
+
+            <Grid2 size={{ xs: 12, sm: 6, lg: 3 }}>
+              <Card 
+                sx={{ 
+                  borderRadius: { xs: 2, sm: 3 },
+                  background: 'linear-gradient(135deg, #2196f3, #1976d2)',
+                  color: 'white',
+                  boxShadow: '0 8px 32px rgba(33, 150, 243, 0.3)',
+                  transition: 'transform 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 40px rgba(33, 150, 243, 0.4)',
+                  }
+                }}
+              >
+                <CardContent sx={{ textAlign: "center", py: { xs: 2.5, sm: 3 } }}>
+                  <TrendingUpIcon sx={{ fontSize: { xs: 40, sm: 48 }, mb: 1, opacity: 0.9 }} />                  <Typography 
+                    variant="h3" 
+                    sx={{ 
+                      fontWeight: 700, 
+                      mb: 1, 
+                      lineHeight: 1,
+                      fontSize: { xs: '2rem', sm: '3rem' }, // h4 en xs, h3 en sm+
+                    }}
+                  >
+                    {statusStats["en proceso"] || 0}
+                  </Typography>
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      opacity: 0.9, 
+                      fontSize: { xs: '0.875rem', sm: '1rem' }, // body2 en xs, body1 en sm+
+                    }}
+                  >
+                    En Proceso
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid2>
+
+            <Grid2 size={{ xs: 12, sm: 6, lg: 3 }}>
+              <Card 
+                sx={{ 
+                  borderRadius: { xs: 2, sm: 3 },
+                  background: 'linear-gradient(135deg, #4caf50, #388e3c)',
+                  color: 'white',
+                  boxShadow: '0 8px 32px rgba(76, 175, 80, 0.3)',
+                  transition: 'transform 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 40px rgba(76, 175, 80, 0.4)',
+                  }
+                }}
+              >
+                <CardContent sx={{ textAlign: "center", py: { xs: 2.5, sm: 3 } }}>
+                  <CheckCircleIcon sx={{ fontSize: { xs: 40, sm: 48 }, mb: 1, opacity: 0.9 }} />                  <Typography 
+                    variant="h3" 
+                    sx={{ 
+                      fontWeight: 700, 
+                      mb: 1, 
+                      lineHeight: 1,
+                      fontSize: { xs: '2rem', sm: '3rem' }, // h4 en xs, h3 en sm+
+                    }}
+                  >
+                    {statusStats["completado"] || 0}
+                  </Typography>
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      opacity: 0.9, 
+                      fontSize: { xs: '0.875rem', sm: '1rem' }, // body2 en xs, body1 en sm+
+                    }}
+                  >
+                    Completadas
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid2>
           </Grid2>
         )}
-      </Box>
-      {/* Filtros y búsqueda */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+      </Box>      {/* Sección de filtros responsiva y moderna */}
+      <Card 
+        sx={{ 
+          mb: 4, 
+          borderRadius: { xs: 2, sm: 3 },
+          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+          overflow: 'hidden',
+        }}
+      >
+        <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+          {/* Barra de búsqueda principal */}
+          <Box sx={{ 
+            display: "flex", 
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'stretch', sm: 'center' }, 
+            gap: { xs: 2, sm: 2 }, 
+            mb: { xs: 2, sm: 3 } 
+          }}>
             <TextField
               placeholder="Buscar por nombre del cliente..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              sx={{ flexGrow: 1 }}
-              size="small"
+              sx={{ 
+                flexGrow: 1,
+                order: { xs: 1, sm: 1 },
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  bgcolor: 'grey.50',
+                  '&:hover': {
+                    bgcolor: 'grey.100',
+                  },
+                  '&.Mui-focused': {
+                    bgcolor: 'white',
+                  }
+                }
+              }}
+              InputProps={{
+                startAdornment: (
+                  <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
+                ),
+              }}
+              size="medium"
             />
-            <Button
-              variant="outlined"
-              startIcon={<FilterListIcon />}
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              Filtros
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<ClearIcon />}
-              onClick={handleClearFilters}
-            >
-              Limpiar
-            </Button>
-            {selectedIds.size > 0 && (
+            
+            {/* Botones de acción - responsive */}
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: { xs: 1.5, sm: 2 },
+              order: { xs: 2, sm: 2 },
+              width: { xs: '100%', sm: 'auto' },
+            }}>
               <Button
-                variant="contained"
-                color="error"
-                startIcon={<DeleteIcon />}
-                onClick={() => setShowBulkDeleteConfirm(true)}
-                disabled={deleteMutation.isPending}
+                variant={showFilters ? "contained" : "outlined"}
+                startIcon={<FilterListIcon />}
+                onClick={() => setShowFilters(!showFilters)}
+                sx={{ 
+                  borderRadius: 2,
+                  px: { xs: 2, sm: 3 },
+                  py: { xs: 1.25, sm: 1.5 },
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  minWidth: { xs: 'auto', sm: 'auto' },
+                }}
               >
-                Eliminar ({selectedIds.size})
+                Filtros
               </Button>
-            )}
+              <Button
+                variant="outlined"
+                startIcon={<ClearIcon />}
+                onClick={handleClearFilters}
+                sx={{ 
+                  borderRadius: 2,
+                  px: { xs: 2, sm: 3 },
+                  py: { xs: 1.25, sm: 1.5 },
+                  textTransform: 'none',
+                  fontWeight: 600,
+                }}
+              >
+                Limpiar
+              </Button>
+              {selectedIds.size > 0 && (
+                <Button
+                  variant="contained"
+                  color="error"
+                  startIcon={<DeleteIcon />}
+                  onClick={() => setShowBulkDeleteConfirm(true)}
+                  disabled={deleteMutation.isPending}
+                  sx={{ 
+                    borderRadius: 2,
+                    px: { xs: 2, sm: 3 },
+                    py: { xs: 1.25, sm: 1.5 },
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    background: 'linear-gradient(135deg, #f44336, #d32f2f)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #d32f2f, #c62828)',
+                    }
+                  }}
+                >
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                    Eliminar ({selectedIds.size})
+                  </Box>
+                  <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                    ({selectedIds.size})
+                  </Box>
+                </Button>
+              )}
+            </Box>
           </Box>
-          {/* Filtros expandibles */}
-          {showFilters && (
-            <Grid2 container spacing={2}>
-              <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Estado</InputLabel>
-                  <Select
-                    value={filters.status || ""}
-                    label="Estado"
-                    onChange={(e) =>
-                      handleFilterChange("status", e.target.value || undefined)
-                    }
-                  >
-                    <MenuItem value="">Todos</MenuItem>
-                    {SERVICE_REQUEST_STATUSES.map((status) => (
-                      <MenuItem key={status.value} value={status.value}>
-                        {status.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid2>
 
-              <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Categoría</InputLabel>
-                  <Select
-                    value={filters.categoryId || ""}
-                    label="Categoría"
-                    onChange={(e) =>
-                      handleFilterChange(
-                        "categoryId",
-                        e.target.value || undefined
-                      )
-                    }
-                  >
-                    <MenuItem value="">Todas</MenuItem>
-                    {categories.map((category) => (
-                      <MenuItem key={category.id} value={category.id}>
-                        {category.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid2>
-
-              <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
-                <TextField
-                  label="Fecha desde"
-                  type="date"
-                  value={filters.startDate || ""}
-                  onChange={(e) =>
-                    handleFilterChange("startDate", e.target.value || undefined)
-                  }
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  fullWidth
-                  size="small"
-                />
-              </Grid2>
-
-              <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
-                <TextField
-                  label="Fecha hasta"
-                  type="date"
-                  value={filters.endDate || ""}
-                  onChange={(e) =>
-                    handleFilterChange("endDate", e.target.value || undefined)
-                  }
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  fullWidth
-                  size="small"
-                />
-              </Grid2>
-            </Grid2>
-          )}
-        </CardContent>
-      </Card>
-      {/* Tabla de solicitudes */}
-      <Card>
-        <CardContent sx={{ p: 0 }}>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      checked={isAllSelected}
-                      indeterminate={isIndeterminate}
-                      onChange={(e) => handleSelectAll(e.target.checked)}
-                    />
-                  </TableCell>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Cliente</TableCell>
-                  <TableCell>Proyecto</TableCell>
-                  <TableCell>Email</TableCell>
-                  <TableCell>Estado</TableCell>
-                  <TableCell>Servicios</TableCell>
-                  <TableCell>Fecha</TableCell>
-                  <TableCell align="center">Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {isLoading ? (
-                  <TableLoading colSpan={9} />
-                ) : requests.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                      No se encontraron solicitudes de servicio
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  requests.map((request) => {
-                    const statusInfo = getStatusInfo(request.status);
-                    const isSelected = selectedIds.has(request.id);
-
-                    return (
-                      <TableRow key={request.id} hover selected={isSelected}>
-                        <TableCell padding="checkbox">
-                          <Checkbox
-                            checked={isSelected}
-                            onChange={(e) =>
-                              handleSelectOne(request.id, e.target.checked)
-                            }
-                          />
-                        </TableCell>
-                        <TableCell>#{request.id}</TableCell>
-                        <TableCell>
-                          <Box>
-                            <Typography variant="body2" fontWeight="medium">
-                              {request.name}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {request.identification}
-                            </Typography>
+          {/* Filtros expandibles con animación */}
+          <Fade in={showFilters}>
+            <Box sx={{ display: showFilters ? 'block' : 'none' }}>
+              <Grid2 container spacing={{ xs: 2, sm: 3 }}>
+                <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Estado</InputLabel>
+                    <Select
+                      value={filters.status || ""}
+                      label="Estado"
+                      onChange={(e) =>
+                        handleFilterChange("status", e.target.value || undefined)
+                      }
+                      sx={{
+                        borderRadius: 2,
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'grey.300',
+                        }
+                      }}
+                    >
+                      <MenuItem value="">Todos</MenuItem>
+                      {SERVICE_REQUEST_STATUSES.map((status) => (
+                        <MenuItem key={status.value} value={status.value}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Chip 
+                              label={status.label} 
+                              color={status.color} 
+                              size="small" 
+                            />
                           </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            variant="body2"
-                            noWrap
-                            sx={{ maxWidth: 200 }}
-                          >
-                            {request.nameProject}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>{request.email}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={statusInfo.label}
-                            color={statusInfo.color}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {request.selectedServices?.length || 0} servicio(s)
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {formatDate(request.created_at)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Stack
-                            direction="row"
-                            spacing={1}
-                            justifyContent="center"
-                          >
-                            <Tooltip title="Ver detalles">
-                              <IconButton
-                                size="small"
-                                onClick={() => setSelectedRequest(request)}
-                              >
-                                <ViewIcon />
-                              </IconButton>
-                            </Tooltip>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid2>
 
-                            <Tooltip title="Cambiar estado">
-                              <IconButton
-                                size="small"
-                                onClick={() => {
-                                  setEditStatusRequest(request);
-                                  setNewStatus(request.status);
-                                }}
-                              >
-                                <EditIcon />
-                              </IconButton>
-                            </Tooltip>
+                <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Categoría</InputLabel>
+                    <Select
+                      value={filters.categoryId || ""}
+                      label="Categoría"
+                      onChange={(e) =>
+                        handleFilterChange(
+                          "categoryId",
+                          e.target.value || undefined
+                        )
+                      }
+                      sx={{
+                        borderRadius: 2,
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'grey.300',
+                        }
+                      }}
+                    >
+                      <MenuItem value="">Todas</MenuItem>
+                      {categories.map((category) => (
+                        <MenuItem key={category.id} value={category.id}>
+                          {category.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid2>
 
-                            <Tooltip title="Generar PDF">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleGeneratePDF(request.id)}
-                                disabled={generatePDFMutation.isPending}
-                              >
-                                <PdfIcon />
-                              </IconButton>
-                            </Tooltip>
+                <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+                  <TextField
+                    label="Fecha desde"
+                    type="date"
+                    value={filters.startDate || ""}
+                    onChange={(e) =>
+                      handleFilterChange("startDate", e.target.value || undefined)
+                    }
+                    slotProps={{ inputLabel: { shrink: true } }}
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                      }
+                    }}
+                  />
+                </Grid2>
 
-                            <Tooltip title="Regenerar PDF">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleRegeneratePDF(request.id)}
-                                disabled={regeneratePDFMutation.isPending}
-                              >
-                                <RefreshIcon />
-                              </IconButton>
-                            </Tooltip>
-
-                            <Tooltip title="Eliminar">
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => setDeletingRequest(request)}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </Stack>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          {/* Paginación */}
-          <TablePagination
-            component="div"
-            count={total}
-            page={filters.page ? filters.page - 1 : 0}
-            onPageChange={handlePageChange}
-            rowsPerPage={filters.limit || 10}
-            onRowsPerPageChange={handleRowsPerPageChange}
-            rowsPerPageOptions={[5, 10, 25, 50]}
-            labelRowsPerPage="Filas por página:"
-            labelDisplayedRows={({ from, to, count }) =>
-              `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
-            }
-          />
+                <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
+                  <TextField
+                    label="Fecha hasta"
+                    type="date"
+                    value={filters.endDate || ""}
+                    onChange={(e) =>
+                      handleFilterChange("endDate", e.target.value || undefined)
+                    }
+                    slotProps={{ inputLabel: { shrink: true } }}
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                      }
+                    }}
+                  />
+                </Grid2>
+              </Grid2>
+            </Box>
+          </Fade>
         </CardContent>
-      </Card>
-      {/* Modal de detalles */}
+      </Card>{/* Tabla mejorada con DataTable */}
+      <Card 
+        sx={{ 
+          borderRadius: 3,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+          overflow: 'hidden',
+        }}
+      >        <DataTable
+          data={requests}
+          columns={[
+            {
+              key: "id",
+              label: "ID",
+              render: (_, request) => (
+                <Typography variant="body2" fontWeight="medium">
+                  #{(request as AdminServiceRequest).id}
+                </Typography>
+              ),
+            },
+            {
+              key: "name",
+              label: "Cliente",
+              render: (_, request) => {
+                const req = request as AdminServiceRequest;
+                return (
+                  <Box>
+                    <Typography variant="body2" fontWeight="medium">
+                      {req.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {req.identification}
+                    </Typography>
+                  </Box>
+                );
+              },
+            },
+            {
+              key: "nameProject",
+              label: "Proyecto",
+              render: (_, request) => (
+                <Typography
+                  variant="body2"
+                  sx={{ 
+                    maxWidth: 200,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {(request as AdminServiceRequest).nameProject}
+                </Typography>
+              ),
+            },
+            {
+              key: "email",
+              label: "Email",
+              render: (_, request) => (
+                <Typography variant="body2" color="text.secondary">
+                  {(request as AdminServiceRequest).email}
+                </Typography>
+              ),
+            },
+            {
+              key: "status",
+              label: "Estado",
+              render: (_, request) => {
+                const req = request as AdminServiceRequest;
+                const statusInfo = getStatusInfo(req.status);
+                return (
+                  <Chip
+                    label={statusInfo.label}
+                    color={statusInfo.color}
+                    size="small"
+                    sx={{ 
+                      fontWeight: 600,
+                      borderRadius: 2,
+                    }}
+                  />
+                );
+              },
+            },
+            {
+              key: "services",
+              label: "Servicios",
+              render: (_, request) => (
+                <Typography variant="body2">
+                  {(request as AdminServiceRequest).selectedServices?.length || 0} servicio(s)
+                </Typography>
+              ),
+            },
+            {
+              key: "created_at",
+              label: "Fecha",
+              render: (_, request) => (
+                <Typography variant="body2">
+                  {formatDate((request as AdminServiceRequest).created_at)}
+                </Typography>
+              ),
+            },
+            {
+              key: "actions",
+              label: "Acciones",
+              render: (_, request) => {
+                const req = request as AdminServiceRequest;
+                return (
+                  <Stack direction="row" spacing={1}>
+                    <Tooltip title="Ver detalles">
+                      <IconButton
+                        size="small"
+                        onClick={() => setSelectedRequest(req)}
+                        sx={{
+                          color: theme.palette.primary.main,
+                          '&:hover': {
+                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                          }
+                        }}
+                      >
+                        <ViewIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Cambiar estado">
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setEditStatusRequest(req);
+                          setNewStatus(req.status);
+                        }}
+                        sx={{
+                          color: theme.palette.info.main,
+                          '&:hover': {
+                            bgcolor: alpha(theme.palette.info.main, 0.1),
+                          }
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Generar PDF">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleGeneratePDF(req.id)}
+                        disabled={generatePDFMutation.isPending}
+                        sx={{
+                          color: theme.palette.secondary.main,
+                          '&:hover': {
+                            bgcolor: alpha(theme.palette.secondary.main, 0.1),
+                          }
+                        }}
+                      >
+                        <PdfIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Regenerar PDF">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleRegeneratePDF(req.id)}
+                        disabled={regeneratePDFMutation.isPending}
+                        sx={{
+                          color: theme.palette.warning.main,
+                          '&:hover': {
+                            bgcolor: alpha(theme.palette.warning.main, 0.1),
+                          }
+                        }}
+                      >
+                        <RefreshIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Eliminar">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => setDeletingRequest(req)}
+                        sx={{
+                          '&:hover': {
+                            bgcolor: alpha(theme.palette.error.main, 0.1),
+                          }
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                );
+              },
+            },
+          ]}
+          loading={isLoading}          enablePagination={true}
+          paginationData={{
+            currentPage: filters.page ? filters.page - 1 : 0,
+            totalPages: Math.ceil(total / (filters.limit || 10)),
+            totalItems: total,
+            itemsPerPage: filters.limit || 10,
+            startItem: ((filters.page || 1) - 1) * (filters.limit || 10) + 1,
+            endItem: Math.min((filters.page || 1) * (filters.limit || 10), total),
+          }}
+          onPageChange={(page) => handlePageChange(null, page)}
+          onRowsPerPageChange={(rowsPerPage) => handleRowsPerPageChange({ target: { value: rowsPerPage.toString() } } as React.ChangeEvent<HTMLInputElement>)}
+          selectable={true}
+          selectedRows={selectedIds}
+          onSelectionChange={(selectedIds) => setSelectedIds(selectedIds as Set<number>)}
+          emptyMessage="No se encontraron solicitudes de servicio"
+          mobileViewMode="auto"
+        />
+      </Card>{/* Modal de detalles mejorado */}
       <Dialog
         open={!!selectedRequest}
         onClose={() => setSelectedRequest(null)}
         maxWidth="md"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
+          }
+        }}
       >
-        <DialogTitle>Detalles de Solicitud #{selectedRequest?.id}</DialogTitle>
-        <DialogContent>
+        <DialogTitle 
+          sx={{ 
+            bgcolor: `linear-gradient(135deg, ${theme.palette.primary.main}15, ${theme.palette.secondary.main}15)`,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            py: 3,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <RequestIcon color="primary" />
+            <Box>
+              <Typography variant="h6" fontWeight="700">
+                Detalles de Solicitud #{selectedRequest?.id}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Información completa de la solicitud
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 4 }}>
           {selectedRequest && (
-            <Box sx={{ mt: 2 }}>
-              <Grid2 container spacing={3}>
+            <Box sx={{ mt: 1 }}>
+              <Grid2 container spacing={4}>
                 <Grid2 size={{ xs: 12, md: 6 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Información del Cliente
-                  </Typography>
-                  <Typography>
-                    <strong>Nombre:</strong> {selectedRequest.name}
-                  </Typography>
-                  <Typography>
-                    <strong>Identificación:</strong>
-                    {selectedRequest.identification}
-                  </Typography>
-                  <Typography>
-                    <strong>Email:</strong> {selectedRequest.email}
-                  </Typography>
-                  <Typography>
-                    <strong>Teléfono:</strong> {selectedRequest.phone}
-                  </Typography>
+                  <Paper 
+                    variant="outlined" 
+                    sx={{ 
+                      p: 3, 
+                      borderRadius: 2,
+                      bgcolor: 'grey.50',
+                      border: '1px solid',
+                      borderColor: 'grey.200',
+                    }}
+                  >
+                    <Typography variant="h6" gutterBottom color="primary" fontWeight="600">
+                      Información del Cliente
+                    </Typography>
+                    <Stack spacing={1.5}>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" fontWeight="600">
+                          NOMBRE COMPLETO
+                        </Typography>
+                        <Typography variant="body1" fontWeight="500">
+                          {selectedRequest.name}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" fontWeight="600">
+                          IDENTIFICACIÓN
+                        </Typography>
+                        <Typography variant="body1">
+                          {selectedRequest.identification}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" fontWeight="600">
+                          EMAIL
+                        </Typography>
+                        <Typography variant="body1">
+                          {selectedRequest.email}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" fontWeight="600">
+                          TELÉFONO
+                        </Typography>
+                        <Typography variant="body1">
+                          {selectedRequest.phone}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Paper>
                 </Grid2>
 
                 <Grid2 size={{ xs: 12, md: 6 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Información del Proyecto
-                  </Typography>
-                  <Typography>
-                    <strong>Proyecto:</strong> {selectedRequest.nameProject}
-                  </Typography>
-                  <Typography>
-                    <strong>Ubicación:</strong> {selectedRequest.location}
-                  </Typography>
-                  <Typography>
-                    <strong>Estado:</strong>
-                    <Chip
-                      label={getStatusInfo(selectedRequest.status).label}
-                      color={getStatusInfo(selectedRequest.status).color}
-                      size="small"
-                      sx={{ ml: 1 }}
-                    />
-                  </Typography>
+                  <Paper 
+                    variant="outlined" 
+                    sx={{ 
+                      p: 3, 
+                      borderRadius: 2,
+                      bgcolor: 'grey.50',
+                      border: '1px solid',
+                      borderColor: 'grey.200',
+                    }}
+                  >
+                    <Typography variant="h6" gutterBottom color="primary" fontWeight="600">
+                      Información del Proyecto
+                    </Typography>
+                    <Stack spacing={1.5}>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" fontWeight="600">
+                          PROYECTO
+                        </Typography>
+                        <Typography variant="body1" fontWeight="500">
+                          {selectedRequest.nameProject}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" fontWeight="600">
+                          UBICACIÓN
+                        </Typography>
+                        <Typography variant="body1">
+                          {selectedRequest.location}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" fontWeight="600">
+                          ESTADO ACTUAL
+                        </Typography>
+                        <Chip
+                          label={getStatusInfo(selectedRequest.status).label}
+                          color={getStatusInfo(selectedRequest.status).color}
+                          size="small"
+                          sx={{ 
+                            mt: 0.5,
+                            fontWeight: 600,
+                            borderRadius: 2,
+                          }}
+                        />
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" fontWeight="600">
+                          FECHA DE SOLICITUD
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatDate(selectedRequest.created_at)}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Paper>
                 </Grid2>
 
                 <Grid2 size={{ xs: 12 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Descripción
-                  </Typography>
-                  <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="body2">
+                  <Paper 
+                    variant="outlined" 
+                    sx={{ 
+                      p: 3, 
+                      borderRadius: 2,
+                      bgcolor: alpha(theme.palette.info.main, 0.05),
+                      border: '1px solid',
+                      borderColor: alpha(theme.palette.info.main, 0.2),
+                    }}
+                  >
+                    <Typography variant="h6" gutterBottom color="info.main" fontWeight="600">
+                      Descripción del Proyecto
+                    </Typography>
+                    <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
                       {selectedRequest.description}
                     </Typography>
                   </Paper>
                 </Grid2>
 
                 <Grid2 size={{ xs: 12 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Servicios Solicitados (
-                    {selectedRequest.selectedServices?.length || 0})
+                  <Typography variant="h6" gutterBottom color="primary" fontWeight="600">
+                    Servicios Solicitados ({selectedRequest.selectedServices?.length || 0})
                   </Typography>
-                  {selectedRequest.selectedServices?.map((service) => (
-                    <Paper
-                      key={service.id}
-                      variant="outlined"
-                      sx={{ p: 2, mb: 2 }}
-                    >
-                      <Typography variant="subtitle1">
-                        {service.service.code} - {service.service.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Categoría: {service.service.category.name}
-                      </Typography>
-                      <Typography variant="body2">
-                        Cantidad: {service.quantity}
-                      </Typography>
-                      {service.additionalValues?.length > 0 && (
-                        <Box sx={{ mt: 1 }}>
-                          <Typography variant="body2" fontWeight="medium">
-                            Información adicional:
-                          </Typography>
-                          {(() => {
-                            const groupedValues =
-                              groupAdditionalValuesByInstance(
+                  <Stack spacing={2}>
+                    {selectedRequest.selectedServices?.map((service, index) => (
+                      <Paper
+                        key={service.id}
+                        variant="outlined"
+                        sx={{ 
+                          p: 3, 
+                          borderRadius: 2,
+                          bgcolor: 'white',
+                          border: '1px solid',
+                          borderColor: 'grey.200',
+                          '&:hover': {
+                            borderColor: theme.palette.primary.main,
+                            bgcolor: alpha(theme.palette.primary.main, 0.02),
+                          },
+                          transition: 'all 0.2s ease-in-out',
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
+                          <Box 
+                            sx={{ 
+                              minWidth: 40,
+                              height: 40,
+                              borderRadius: '50%',
+                              bgcolor: theme.palette.primary.main,
+                              color: 'white',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                            }}
+                          >
+                            {index + 1}
+                          </Box>
+                          <Box sx={{ flexGrow: 1 }}>
+                            <Typography variant="h6" fontWeight="600" gutterBottom>
+                              {service.service.code} - {service.service.name}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                              Categoría: {service.service.category.name}
+                            </Typography>
+                            <Typography variant="body1">
+                              Cantidad: <strong>{service.quantity}</strong>
+                            </Typography>
+                          </Box>
+                        </Box>
+                        
+                        {service.additionalValues?.length > 0 && (
+                          <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'grey.200' }}>
+                            <Typography variant="body2" fontWeight="600" gutterBottom>
+                              Información adicional:
+                            </Typography>
+                            {(() => {
+                              const groupedValues = groupAdditionalValuesByInstance(
                                 service.additionalValues,
                                 service.service.additionalFields
                               );
 
-                            return Array.from(groupedValues.entries()).map(
-                              ([instanceKey, values]) => (
-                                <Box key={instanceKey} sx={{ ml: 1, mt: 0.5 }}>
-                                  {groupedValues.size > 1 && (
-                                    <Typography
-                                      variant="caption"
-                                      fontWeight="medium"
-                                      color="primary"
-                                      display="block"
-                                    >
-                                      {instanceKey}:
-                                    </Typography>
-                                  )}
-                                  {values.map((formattedValue, idx) => (
-                                    <Typography
-                                      key={idx}
-                                      variant="caption"
-                                      display="block"
-                                      sx={{
-                                        ml: groupedValues.size > 1 ? 1 : 0,
-                                      }}
-                                    >
-                                      <strong>{formattedValue.label}:</strong>
-                                      {formattedValue.formattedValue}
-                                      {formattedValue.required && (
-                                        <Typography
-                                          component="span"
-                                          color="error"
-                                          sx={{ ml: 0.5 }}
+                              return Array.from(groupedValues.entries()).map(
+                                ([instanceKey, values]) => (
+                                  <Box key={instanceKey} sx={{ ml: 1, mt: 1 }}>
+                                    {groupedValues.size > 1 && (
+                                      <Typography
+                                        variant="caption"
+                                        fontWeight="600"
+                                        color="primary"
+                                        display="block"
+                                        sx={{ mb: 0.5 }}
+                                      >
+                                        {instanceKey}:
+                                      </Typography>
+                                    )}
+                                    <Stack spacing={0.5}>
+                                      {values.map((formattedValue, idx) => (
+                                        <Box
+                                          key={idx}
+                                          sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1,
+                                            ml: groupedValues.size > 1 ? 1 : 0,
+                                          }}
                                         >
-                                          *
-                                        </Typography>
-                                      )}
-                                    </Typography>
-                                  ))}
-                                </Box>
-                              )
-                            );
-                          })()}
-                        </Box>
-                      )}
-                    </Paper>
-                  ))}
+                                          <Typography variant="caption" fontWeight="600">
+                                            {formattedValue.label}:
+                                          </Typography>
+                                          <Typography variant="caption">
+                                            {formattedValue.formattedValue}
+                                          </Typography>
+                                          {formattedValue.required && (
+                                            <Typography
+                                              component="span"
+                                              color="error"
+                                              sx={{ fontSize: '0.75rem' }}
+                                            >
+                                              *
+                                            </Typography>
+                                          )}
+                                        </Box>
+                                      ))}
+                                    </Stack>
+                                  </Box>
+                                )
+                              );
+                            })()}
+                          </Box>
+                        )}
+                      </Paper>
+                    ))}
+                  </Stack>
                 </Grid2>
               </Grid2>
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSelectedRequest(null)}>Cerrar</Button>
+        <DialogActions sx={{ p: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Button 
+            onClick={() => setSelectedRequest(null)}
+            sx={{ 
+              borderRadius: 2,
+              px: 3,
+              textTransform: 'none',
+              fontWeight: 600,
+            }}
+          >
+            Cerrar
+          </Button>
         </DialogActions>
-      </Dialog>
-      {/* Modal de cambio de estado */}
+      </Dialog>      {/* Modal de cambio de estado mejorado */}
       <Dialog
         open={!!editStatusRequest}
         onClose={() => setEditStatusRequest(null)}
         maxWidth="xs"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
+          }
+        }}
       >
-        <DialogTitle>
-          Cambiar Estado - Solicitud #{editStatusRequest?.id}
+        <DialogTitle 
+          sx={{ 
+            bgcolor: alpha(theme.palette.info.main, 0.1),
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            py: 3,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <EditIcon color="info" />
+            <Box>
+              <Typography variant="h6" fontWeight="700">
+                Cambiar Estado
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Solicitud #{editStatusRequest?.id}
+              </Typography>
+            </Box>
+          </Box>
         </DialogTitle>
-        <DialogContent>
-          <FormControl fullWidth sx={{ mt: 2 }}>
+        <DialogContent sx={{ p: 4 }}>
+          <FormControl fullWidth sx={{ mt: 1 }}>
             <InputLabel>Estado</InputLabel>
             <Select
               value={newStatus}
@@ -841,23 +1340,56 @@ const ServiceRequestsManagementPage: React.FC = () => {
               onChange={(e) =>
                 setNewStatus(e.target.value as ServiceRequestStatus)
               }
+              sx={{
+                borderRadius: 2,
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'grey.300',
+                }
+              }}
             >
               {SERVICE_REQUEST_STATUSES.map((status) => (
                 <MenuItem key={status.value} value={status.value}>
-                  {status.label}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip 
+                      label={status.label} 
+                      color={status.color} 
+                      size="small"
+                      sx={{ borderRadius: 2 }}
+                    />
+                  </Box>
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditStatusRequest(null)}>Cancelar</Button>
+        <DialogActions sx={{ p: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Button 
+            onClick={() => setEditStatusRequest(null)}
+            sx={{ 
+              borderRadius: 2,
+              px: 3,
+              textTransform: 'none',
+              fontWeight: 600,
+            }}
+          >
+            Cancelar
+          </Button>
           <Button
             onClick={handleUpdateStatus}
             variant="contained"
             disabled={updateStatusMutation.isPending}
+            sx={{ 
+              borderRadius: 2,
+              px: 3,
+              textTransform: 'none',
+              fontWeight: 600,
+              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${alpha(theme.palette.primary.main, 0.8)})`,
+              '&:hover': {
+                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.9)}, ${alpha(theme.palette.primary.main, 0.7)})`,
+              }
+            }}
           >
-            Actualizar
+            {updateStatusMutation.isPending ? 'Actualizando...' : 'Actualizar'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -869,45 +1401,121 @@ const ServiceRequestsManagementPage: React.FC = () => {
         title="Eliminar Solicitud de Servicio"
         content={`¿Está seguro que desea eliminar la solicitud #${deletingRequest?.id} de ${deletingRequest?.name}? Esta acción no se puede deshacer.`}
         isLoading={deleteMutation.isPending}
-      />
-      {/* Modal de confirmación de eliminación masiva */}
+      />      {/* Modal de confirmación de eliminación masiva mejorado */}
       <Dialog
         open={showBulkDeleteConfirm}
         onClose={() => setShowBulkDeleteConfirm(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
+          }
+        }}
       >
-        <DialogTitle>Eliminar Múltiples Solicitudes</DialogTitle>
-        <DialogContent>
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            Esta acción no se puede deshacer
+        <DialogTitle 
+          sx={{ 
+            bgcolor: alpha(theme.palette.error.main, 0.1),
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            py: 3,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <DeleteIcon color="error" />
+            <Box>
+              <Typography variant="h6" fontWeight="700">
+                Eliminar Múltiples Solicitudes
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Esta acción no se puede deshacer
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 4 }}>
+          <Alert 
+            severity="warning" 
+            sx={{ 
+              mb: 3,
+              borderRadius: 2,
+              '& .MuiAlert-icon': {
+                fontSize: '1.5rem',
+              }
+            }}
+          >
+            <Typography fontWeight="600">
+              ¡Atención! Esta acción es irreversible
+            </Typography>
           </Alert>
-          <Typography>
-            ¿Está seguro que desea eliminar <strong>{selectedIds.size}</strong>
+          
+          <Typography variant="body1" gutterBottom>
+            ¿Está seguro que desea eliminar <strong>{selectedIds.size}</strong>{' '}
             solicitud{selectedIds.size !== 1 ? "es" : ""} de servicio
             seleccionada{selectedIds.size !== 1 ? "s" : ""}?
           </Typography>
+          
           {selectedIds.size > 0 && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body2" color="text.secondary">
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="body2" color="text.secondary" fontWeight="600" gutterBottom>
                 Solicitudes a eliminar:
               </Typography>
-              <Box sx={{ maxHeight: 200, overflow: "auto", mt: 1 }}>
-                {requests
-                  .filter((request) => selectedIds.has(request.id))
-                  .map((request) => (
-                    <Typography key={request.id} variant="body2" sx={{ ml: 1 }}>
-                      • #{request.id} - {request.name} ({request.nameProject})
-                    </Typography>
-                  ))}
-              </Box>
+              <Paper 
+                variant="outlined" 
+                sx={{ 
+                  maxHeight: 200, 
+                  overflow: "auto", 
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: 'grey.50',
+                }}
+              >
+                <Stack spacing={1}>
+                  {requests
+                    .filter((request) => selectedIds.has(request.id))
+                    .map((request) => (
+                      <Box
+                        key={request.id}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                          p: 1.5,
+                          borderRadius: 1,
+                          bgcolor: 'white',
+                          border: '1px solid',
+                          borderColor: 'grey.200',
+                        }}
+                      >
+                        <Typography variant="body2" fontWeight="600" color="error">
+                          #{request.id}
+                        </Typography>
+                        <Box>
+                          <Typography variant="body2" fontWeight="500">
+                            {request.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {request.nameProject}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    ))}
+                </Stack>
+              </Paper>
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: 3, borderTop: '1px solid', borderColor: 'divider' }}>
           <Button
             onClick={() => setShowBulkDeleteConfirm(false)}
             disabled={deleteMutation.isPending}
+            sx={{ 
+              borderRadius: 2,
+              px: 3,
+              textTransform: 'none',
+              fontWeight: 600,
+            }}
           >
             Cancelar
           </Button>
@@ -916,6 +1524,16 @@ const ServiceRequestsManagementPage: React.FC = () => {
             variant="contained"
             color="error"
             disabled={deleteMutation.isPending}
+            sx={{ 
+              borderRadius: 2,
+              px: 3,
+              textTransform: 'none',
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #f44336, #d32f2f)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #d32f2f, #c62828)',
+              }
+            }}
           >
             {deleteMutation.isPending
               ? "Eliminando..."

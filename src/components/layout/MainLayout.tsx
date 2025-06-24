@@ -89,7 +89,7 @@ const MainLayout = () => {
           position: "relative",
         }}
       >
-        {isLoading && <PageLoadingFallback />}
+        {isLoading && <PageLoadingFallback message="Cargando ..." />}
         <Outlet />
         <Snackbar
           open={notification.open}
