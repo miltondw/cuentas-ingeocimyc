@@ -35,7 +35,7 @@ export class ServiceRequestsService {
    */
   async getServiceRequest(id: number): Promise<ServiceRequest> {
     const response = await api.get(API_ENDPOINTS.SERVICE_REQUESTS.DETAIL(id));
-    return response.data;
+    return response.data.data;
   }
 
   /**
@@ -48,7 +48,7 @@ export class ServiceRequestsService {
       API_ENDPOINTS.SERVICE_REQUESTS.CREATE,
       data
     );
-    return response.data;
+    return response.data.data;
   }
 
   /**
@@ -62,7 +62,7 @@ export class ServiceRequestsService {
       API_ENDPOINTS.SERVICE_REQUESTS.UPDATE(id),
       data
     );
-    return response.data;
+    return response.data.data;
   }
 
   /**
@@ -77,14 +77,14 @@ export class ServiceRequestsService {
    */
   async getServiceTypes(): Promise<ServiceType[]> {
     const response = await api.get(API_ENDPOINTS.SERVICES.LIST);
-    return response.data;
+    return response.data.data;
   }
   /**
    * Obtener categorías de servicios con sus tipos
    */
   async getServiceCategories(): Promise<APIServiceCategory[]> {
     const response = await api.get(API_ENDPOINTS.SERVICES.CATEGORIES);
-    return response.data;
+    return response.data.data;
   }
 
   /**
@@ -92,7 +92,7 @@ export class ServiceRequestsService {
    */
   async getServices(): Promise<APIService[]> {
     const response = await api.get("/services");
-    return response.data;
+    return response.data.data;
   }
 
   /**
@@ -102,6 +102,7 @@ export class ServiceRequestsService {
     const response = await api.get(API_ENDPOINTS.PDF.SERVICE_REQUEST(id), {
       responseType: "blob",
     });
+    // console.log("PDF Download Response:", response.data.data, response.data);
     return response.data;
   }
 
@@ -118,7 +119,7 @@ export class ServiceRequestsService {
    */
   async regenerateServiceRequestPDF(id: number): Promise<ServiceRequest> {
     const response = await api.post(API_ENDPOINTS.PDF.REGENERATE(id));
-    return response.data;
+    return response.data.data;
   }
 }
 
