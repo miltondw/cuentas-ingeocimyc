@@ -25,7 +25,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import { authService } from "@/features/auth/services/authService";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { SessionInfo } from "@/types/api";
+import type { UserSession } from "@/types/auth";
 
 /**
  * Página de perfil de usuario
@@ -36,12 +36,10 @@ const ProfilePage = () => {
   const { showSuccess, showError } = useNotifications();
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState<{
-    firstName: string;
-    lastName: string;
+    name: string;
     email: string;
   }>({
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
+    name: user?.name || "",
     email: user?.email || "",
   });
   const queryClient = useQueryClient();
@@ -51,7 +49,7 @@ const ProfilePage = () => {
     queryKey: ["user-sessions"],
     queryFn: async () => {
       const response = await authService.getSessions();
-      return response.data.sessions;
+      return response.data.data;
     },
     enabled: !!user, // Solo ejecutar si hay un usuario autenticado
   });
@@ -71,8 +69,7 @@ const ProfilePage = () => {
   useEffect(() => {
     if (user) {
       setProfileData({
-        firstName: user.firstName || "",
-        lastName: user.lastName || "",
+        name: user.name || "",
         email: user.email,
       });
     }
@@ -83,8 +80,7 @@ const ProfilePage = () => {
 
     try {
       const result = await updateUserProfile({
-        firstName: profileData.firstName,
-        lastName: profileData.lastName,
+        name: profileData.name,
       });
 
       if (result.success) {
@@ -132,12 +128,10 @@ const ProfilePage = () => {
           <Avatar
             sx={{ width: 80, height: 80, bgcolor: "primary.main", mr: 2 }}
           >
-            {user.firstName?.[0] || user.email[0].toUpperCase()}
+            {user.name?.[0] || user.email[0].toUpperCase()}
           </Avatar>
           <Box>
-            <Typography variant="h5">
-              {user.firstName} {user.lastName}
-            </Typography>
+            <Typography variant="h5">{user.name}</Typography>
             <Typography variant="body2" color="textSecondary">
               {user.email}
             </Typography>
@@ -166,20 +160,12 @@ const ProfilePage = () => {
 
         {isEditing ? (
           <Grid2 container spacing={2}>
-            <Grid2 size={{ xs: 12, sm: 6 }}>
+            <Grid2 size={{ xs: 12 }}>
               <TextField
                 fullWidth
-                label="Nombre"
-                value={profileData.firstName}
-                onChange={(e) => handleChange("firstName", e.target.value)}
-              />
-            </Grid2>
-            <Grid2 size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Apellido"
-                value={profileData.lastName}
-                onChange={(e) => handleChange("lastName", e.target.value)}
+                label="Nombre completo"
+                value={profileData.name}
+                onChange={(e) => handleChange("name", e.target.value)}
               />
             </Grid2>
             <Grid2 size={{ xs: 12 }}>
@@ -204,18 +190,16 @@ const ProfilePage = () => {
         ) : (
           <Box>
             <Grid2 container spacing={2}>
-              <Grid2 size={{ xs: 12, sm: 6 }}>
+              <Grid2 size={{ xs: 12 }}>
                 <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                   <PersonIcon sx={{ mr: 1, color: "text.secondary" }} />
                   <Typography variant="body2" color="text.secondary">
                     Nombre completo
                   </Typography>
                 </Box>
-                <Typography variant="body1">
-                  {user.firstName} {user.lastName || ""}
-                </Typography>
+                <Typography variant="body1">{user.name}</Typography>
               </Grid2>
-              <Grid2 size={{ xs: 12, sm: 6 }}>
+              <Grid2 size={{ xs: 12 }}>
                 <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                   <EmailIcon sx={{ mr: 1, color: "text.secondary" }} />
                   <Typography variant="body2" color="text.secondary">
@@ -224,7 +208,7 @@ const ProfilePage = () => {
                 </Box>
                 <Typography variant="body1">{user.email}</Typography>
               </Grid2>
-              <Grid2 size={{ xs: 12, sm: 6 }}>
+              <Grid2 size={{ xs: 12 }}>
                 <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                   <CalendarTodayIcon sx={{ mr: 1, color: "text.secondary" }} />
                   <Typography variant="body2" color="text.secondary">
@@ -257,23 +241,22 @@ const ProfilePage = () => {
           </Box>
         ) : (
           <List>
-            {sessionsData?.map((session: SessionInfo) => (
+            {sessionsData?.map((session: UserSession) => (
               <ListItem
+                // key sólo una vez
                 key={session.id}
                 sx={{
-                  bgcolor: session.isCurrentSession
-                    ? "action.hover"
-                    : "inherit",
+                  bgcolor: session.isCurrent ? "action.hover" : "inherit",
                   borderRadius: 1,
                   mb: 1,
                 }}
                 secondaryAction={
-                  session.isCurrentSession ? (
+                  session.isCurrent ? (
                     <Chip label="Sesión actual" color="primary" size="small" />
                   ) : (
                     <IconButton
                       edge="end"
-                      onClick={() => handleRevokeSession(session.id)}
+                      onClick={() => handleRevokeSession(session.id.toString())}
                       disabled={revokeSessionMutation.isPending}
                     >
                       <DeleteIcon />
@@ -285,9 +268,13 @@ const ProfilePage = () => {
                   <DevicesIcon />
                 </ListItemIcon>
                 <ListItemText
-                  primary={`${session.deviceInfo.deviceName} (${session.deviceInfo.browser} en ${session.deviceInfo.os})`}
+                  primary={`${
+                    session.deviceInfo.deviceName || "Dispositivo"
+                  } (${session.deviceInfo.browser || "Navegador"} en ${
+                    session.deviceInfo.os || "SO"
+                  })`}
                   secondary={`Última actividad: ${new Date(
-                    session.lastUsedAt
+                    session.lastActivity
                   ).toLocaleString()}`}
                 />
               </ListItem>
