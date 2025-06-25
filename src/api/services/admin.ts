@@ -1,7 +1,5 @@
 import api from "@/api";
 import type {
-  ServiceCategory,
-  Service,
   ServiceAdditionalField,
   CreateCategoryRequest,
   UpdateCategoryRequest,
@@ -20,81 +18,135 @@ const ADMIN_BASE_URL = "/admin/services";
 // =============== SERVICIOS PARA CATEGORÍAS ===============
 export const adminCategoriesApi = {
   // Obtener todas las categorías
-  getAll: (params?: AdminQueryParams) =>
-    api.get<ServiceCategory[]>(`${ADMIN_BASE_URL}/categories`, { params }),
+  getAll: async (params?: AdminQueryParams) => {
+    const res = await api.get(`${ADMIN_BASE_URL}/categories`, { params });
+    // Soporta ambas estructuras: { data: [...] } y { data: { data: [...] } }
+    if (Array.isArray(res.data?.data)) {
+      return res.data.data;
+    } else if (res.data?.data?.data && Array.isArray(res.data.data.data)) {
+      return res.data.data.data;
+    } else {
+      return [];
+    }
+  },
 
   // Obtener categoría por ID
-  getById: (id: number) =>
-    api.get<ServiceCategory>(`${ADMIN_BASE_URL}/categories/${id}`),
+  getById: async (id: number) => {
+    const res = await api.get(`${ADMIN_BASE_URL}/categories/${id}`);
+    console.info(res, "res getById");
+    return res.data;
+  },
 
   // Crear nueva categoría
-  create: (data: CreateCategoryRequest) =>
-    api.post<ServiceCategory>(`${ADMIN_BASE_URL}/categories`, data),
+  create: async (data: CreateCategoryRequest) => {
+    const res = await api.post(`${ADMIN_BASE_URL}/categories`, data);
+    console.info(res, "res create");
+    return res.data;
+  },
 
   // Actualizar categoría
-  update: (id: number, data: UpdateCategoryRequest) =>
-    api.patch<ServiceCategory>(`${ADMIN_BASE_URL}/categories/${id}`, data),
+  update: async (id: number, data: UpdateCategoryRequest) => {
+    const res = await api.patch(`${ADMIN_BASE_URL}/categories/${id}`, data);
+    console.info(res, "res update");
+    return res.data;
+  },
 
   // Eliminar categoría
-  delete: (id: number) =>
-    api.delete<void>(`${ADMIN_BASE_URL}/categories/${id}`),
+  delete: async (id: number) => {
+    const res = await api.delete(`${ADMIN_BASE_URL}/categories/${id}`);
+    console.info(res, "res delete");
+    return res.data;
+  },
 };
 
 // =============== SERVICIOS PARA SERVICIOS ===============
 export const adminServicesApi = {
   // Obtener todos los servicios
-  getAll: (params?: AdminQueryParams) =>
-    api.get<Service[]>(`${ADMIN_BASE_URL}`, { params }),
+  getAll: async (params?: AdminQueryParams) => {
+    const res = await api.get(`${ADMIN_BASE_URL}`, { params });
+    // Soporta ambas estructuras: { data: [...] } y { data: { data: [...] } }
+    if (Array.isArray(res.data?.data)) {
+      return res.data.data;
+    } else if (res.data?.data?.data && Array.isArray(res.data.data.data)) {
+      return res.data.data.data;
+    } else {
+      return [];
+    }
+  },
 
   // Obtener servicio por ID
-  getById: (id: number) => api.get<Service>(`${ADMIN_BASE_URL}/${id}`),
+  getById: async (id: number) => {
+    const res = await api.get(`${ADMIN_BASE_URL}/${id}`);
+    return res.data;
+  },
 
   // Crear servicio básico
-  create: (data: CreateServiceRequest) =>
-    api.post<Service>(`${ADMIN_BASE_URL}`, data),
+  create: async (data: CreateServiceRequest) => {
+    const res = await api.post(`${ADMIN_BASE_URL}`, data);
+    return res.data;
+  },
 
   // Crear servicio completo con campos adicionales
-  createComplete: (data: CreateCompleteServiceRequest) =>
-    api.post<Service>(`${ADMIN_BASE_URL}/complete`, data),
+  createComplete: async (data: CreateCompleteServiceRequest) => {
+    const res = await api.post(`${ADMIN_BASE_URL}/complete`, data);
+    return res.data;
+  },
   // Actualizar servicio
-  update: (id: number, data: UpdateServiceRequest) =>
-    api.patch<Service>(`${ADMIN_BASE_URL}/${id}`, data),
+  update: async (id: number, data: UpdateServiceRequest) => {
+    const res = await api.patch(`${ADMIN_BASE_URL}/${id}`, data);
+    return res.data;
+  },
 
   // Actualizar servicio completo con campos adicionales
-  updateComplete: (id: number, data: UpdateCompleteServiceRequest) =>
-    api.put<Service>(`${ADMIN_BASE_URL}/${id}/complete`, data),
+  updateComplete: async (id: number, data: UpdateCompleteServiceRequest) => {
+    const res = await api.put(`${ADMIN_BASE_URL}/${id}/complete`, data);
+    return res.data;
+  },
 
   // Eliminar servicio
-  delete: (id: number) => api.delete<void>(`${ADMIN_BASE_URL}/${id}`),
+  delete: async (id: number) => {
+    const res = await api.delete(`${ADMIN_BASE_URL}/${id}`);
+    return res.data;
+  },
 };
 
 // =============== SERVICIOS PARA CAMPOS ADICIONALES ===============
 export const adminFieldsApi = {
   // Obtener campos de un servicio
-  getByServiceId: (serviceId: number) =>
-    api.get<ServiceAdditionalField[]>(`${ADMIN_BASE_URL}/${serviceId}/fields`),
+  getByServiceId: async (serviceId: number) => {
+    const res = await api.get(`${ADMIN_BASE_URL}/${serviceId}/fields`);
+    return res.data;
+  },
 
   // Obtener campo por ID
-  getById: (fieldId: number) =>
-    api.get<ServiceAdditionalField>(`${ADMIN_BASE_URL}/fields/${fieldId}`),
+  getById: async (fieldId: number) => {
+    const res = await api.get(`${ADMIN_BASE_URL}/fields/${fieldId}`);
+    return res.data;
+  },
 
   // Crear campo adicional
-  create: (serviceId: number, data: CreateServiceAdditionalFieldRequest) =>
-    api.post<ServiceAdditionalField>(
-      `${ADMIN_BASE_URL}/${serviceId}/fields`,
-      data
-    ),
+  create: async (
+    serviceId: number,
+    data: CreateServiceAdditionalFieldRequest
+  ) => {
+    const res = await api.post(`${ADMIN_BASE_URL}/${serviceId}/fields`, data);
+    return res.data;
+  },
 
   // Actualizar campo
-  update: (fieldId: number, data: UpdateServiceAdditionalFieldRequest) =>
-    api.patch<ServiceAdditionalField>(
-      `${ADMIN_BASE_URL}/fields/${fieldId}`,
-      data
-    ),
+  update: async (
+    fieldId: number,
+    data: UpdateServiceAdditionalFieldRequest
+  ) => {
+    const res = await api.patch(`${ADMIN_BASE_URL}/fields/${fieldId}`, data);
+    return res.data;
+  },
 
   // Eliminar campo
-  delete: (fieldId: number) =>
-    api.delete<void>(`${ADMIN_BASE_URL}/fields/${fieldId}`),
+  delete: async (fieldId: number) => {
+    const res = await api.delete(`${ADMIN_BASE_URL}/fields/${fieldId}`);
+    return res.data;
+  },
 };
 
 // =============== UTILIDADES ===============

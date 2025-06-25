@@ -52,10 +52,10 @@ export interface ApiqueData {
   location: string;
   depth: string;
   date: string;
-  cbr_unaltered: number;
+  cbr_unaltered: number | boolean; // <-- Puede ser booleano o número
   depth_tomo: string;
-  molde: number;
-  total_layers: number;
+  molde: number | null; // <-- Puede ser null
+  total_layers?: number; // <-- Opcional, algunos endpoints pueden no enviarlo
   layers: ApiqueLayer[];
 }
 
@@ -78,7 +78,7 @@ export interface ProfileProject {
   location: string | null;
   created_at: string;
   updatedAt: string;
-  project: {
+  project?: {
     id: number;
     fecha: string;
     solicitante: string;
@@ -160,9 +160,9 @@ export const labService = {
         url += `?${params.toString()}`;
       }
 
-      const response = await apiClient.get<ApiqueProject[]>(url);
+      const response = await apiClient.get<{ data: ApiqueProject[] }>(url);
       console.info("✅ Respuesta de /lab/apiques:", response.data);
-      return response.data;
+      return response.data.data; // <-- Solo la data anidada
     } catch (error) {
       console.error("❌ Error en /lab/apiques:", error);
       throw error;
@@ -172,7 +172,7 @@ export const labService = {
   /**
    * Obtener todos los profiles (con filtros completos)
    */
-  async getProfiles(filters?: ProfilesFilters): Promise<ProfilesResponse> {
+  async getProfiles(filters?: ProfilesFilters): Promise<ProfileProject[]> {
     console.info("🔄 Llamando a /lab/profiles con filtros:", filters);
     try {
       let url = "/lab/profiles";
@@ -184,7 +184,7 @@ export const labService = {
 
       const response = await apiClient.get<ProfilesResponse>(url);
       console.info("✅ Respuesta de /lab/profiles:", response.data);
-      return response.data;
+      return response.data.data; // <-- Solo la data anidada (array)
     } catch (error) {
       console.error("❌ Error en /lab/profiles:", error);
       throw error;
@@ -196,7 +196,7 @@ export const labService = {
    */
   async getLabProjects(filters?: LabProjectFilters): Promise<{
     projects: ApiqueProject[];
-    profiles: ProfilesResponse;
+    profiles: ProfileProject[];
     combinedData: Array<ApiqueProject & { profilesCount: number }>;
   }> {
     console.info(
@@ -225,13 +225,11 @@ export const labService = {
 
       const projects =
         apiquesResponse.status === "fulfilled" ? apiquesResponse.value : [];
-      const profiles =
-        profilesResponse.status === "fulfilled"
-          ? profilesResponse.value
-          : { data: [], total: 0, page: 1, limit: 10 };
+      const profilesArray =
+        profilesResponse.status === "fulfilled" ? profilesResponse.value : [];
 
       // Crear un mapa de profiles por proyecto para facilitar el acceso
-      const profilesByProject = profiles.data.reduce((acc, profile) => {
+      const profilesByProject = profilesArray.reduce((acc, profile) => {
         if (!acc[profile.projectId]) {
           acc[profile.projectId] = [];
         }
@@ -247,7 +245,7 @@ export const labService = {
 
       return {
         projects,
-        profiles,
+        profiles: profilesArray, // <-- Siempre un array
         combinedData,
       };
     } catch (error) {
@@ -261,11 +259,11 @@ export const labService = {
    */
   async getApique(apiqueId: number, projectId: number): Promise<ApiqueData> {
     try {
-      const response = await apiClient.get<ApiqueData>(
+      const response = await apiClient.get<{ data: ApiqueData }>(
         `/lab/apiques/${projectId}/${apiqueId}`
       );
       console.info("✅ Respuesta de getApique:", response.data);
-      return response.data;
+      return response.data.data; // <-- Solo la data anidada
     } catch (error) {
       console.error("❌ Error en getApique:", error);
       throw error;
@@ -373,32 +371,34 @@ export const labService = {
         }
       }
       const response = await apiClient.get<{
-        data: Array<{
-          apique_id: number;
-          proyecto_id: number;
-          apique: number;
-          location: string;
-          depth: string;
-          date: string;
-          molde: number | null;
-          cbr_unaltered?: boolean;
-          depth_tomo?: string;
-          layers: Array<{
-            id: number;
-            apiqueId: number;
-            layerNumber: number;
-            thickness: string;
-            sampleId: string | null;
-            observation: string | null;
+        data: {
+          data: Array<{
+            apique_id: number;
+            proyecto_id: number;
+            apique: number;
+            location: string;
+            depth: string;
+            date: string;
+            molde: number | null;
+            cbr_unaltered?: boolean;
+            depth_tomo?: string;
+            layers: Array<{
+              id: number;
+              apiqueId: number;
+              layerNumber: number;
+              thickness: string;
+              sampleId: string | null;
+              observation: string | null;
+            }>;
           }>;
-        }>;
-        total: number;
-        page: number;
-        limit: number;
+          total: number;
+          page: number;
+          limit: number;
+        };
       }>(url);
-
       console.info("✅ Respuesta de getProjectApiques:", response.data);
-      return response.data;
+      // Acceder a response.data.data para obtener el objeto paginado real
+      return response.data.data;
     } catch (error) {
       console.error("❌ Error en getProjectApiques:", error);
       throw error;
@@ -408,30 +408,14 @@ export const labService = {
   /**
    * Obtener un perfil específico por ID
    */
-  async getProfile(profileId: number): Promise<{
-    id: number;
-    projectId: number;
-    soundingNumber: string;
-    waterLevel: string;
-    profileDate: string;
-    samplesNumber: number;
-    location: string | null;
-    blows: Array<{
-      id: number;
-      profileId: number;
-      depth: string;
-      blows6: number;
-      blows12: number;
-      blows18: number;
-      n: number;
-      observation: string | null;
-    }>;
-  }> {
+  async getProfile(profileId: number): Promise<ProfileProject> {
     console.info(`🔄 Llamando a /lab/profiles/${profileId}...`);
     try {
-      const response = await apiClient.get(`/lab/profiles/${profileId}`);
+      const response = await apiClient.get<{ data: ProfileProject }>(
+        `/lab/profiles/${profileId}`
+      );
       console.info("✅ Respuesta de getProfile:", response.data);
-      return response.data;
+      return response.data.data; // <-- Solo la data anidada, tipado seguro
     } catch (error) {
       console.error("❌ Error en getProfile:", error);
       throw error;
@@ -593,20 +577,14 @@ export const labService = {
 
     try {
       let url = "/lab/projects";
-
       if (filters) {
         const params = buildQueryParams(filters);
         url += `?${params.toString()}`;
-        console.info("🌐 URL construida:", url);
-        console.info(
-          "📋 Parámetros de consulta:",
-          Object.fromEntries(params.entries())
-        );
       }
-
-      const response = await apiClient.get<LabProjectsResponse>(url);
+      const response = await apiClient.get<{ data: LabProjectsResponse }>(url);
       console.info("✅ Respuesta de /lab/projects:", response.data);
-      return response.data;
+      // La data real está en response.data.data
+      return response.data.data;
     } catch (error) {
       console.error("❌ Error en /lab/projects:", error);
       throw error;

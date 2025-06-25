@@ -6,31 +6,39 @@
  * Updated based on real API data verification
  */
 
+// =============== RESPONSE DTO ESTANDARIZADO ===============
+
+/**
+ * Estructura de respuesta estandarizada del backend
+ * Todos los endpoints devuelven esta estructura
+ */
+export interface ResponseDto<T> {
+  success: boolean;
+  data: T;
+  message: string;
+  timestamp?: string;
+  path?: string;
+}
+
 // =============== RE-EXPORTS DE MÓDULOS ESPECIALIZADOS ===============
 
 // Autenticación y usuarios
 export type {
   UserRole,
-  LoginRequest,
-  LoginResponse,
-  UserInfo,
-  SessionInfo,
-  RegisterRequest,
-  RegisterResponse,
-  User,
-  UserDetails,
-  UserProfile,
-  SessionStats,
+  AuthResponseDto,
+  LoginDto,
+  RegisterDto,
+  ChangePasswordDto,
+  UserDto,
   UserSession,
   DeviceInfo,
   LogoutRequest,
   LogoutResponse,
-  ChangePasswordRequest,
   ChangePasswordResponse,
+  UserProfile,
   AuthLog,
   FailedLoginAttempt,
   SecurityReport,
-  AuthResponse,
 } from "./auth";
 
 // Proyectos

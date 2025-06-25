@@ -11,8 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
-dev-dist/sw.js
-dev-dist/sw.js.map
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -25,5 +24,9 @@ dev-dist/sw.js.map
 *.sw?
 certs
 .env
+.env.*
 .env.local
 .env.development.local
+
+dev-dist/sw.js
+dev-dist/sw.js.map

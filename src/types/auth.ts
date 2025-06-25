@@ -2,113 +2,66 @@
  * Interfaces de Autenticación
  * @file auth.ts
  * @description Todas las interfaces relacionadas con autenticación, sesiones y usuarios
+ * Actualizado para coincidir con la API backend refactorizada
  */
 
 // =============== TIPOS BASE ===============
 export type UserRole = "admin" | "lab" | "client";
 
-// =============== LOGIN INTERFACES ===============
-export interface LoginRequest {
+// =============== USUARIO PRINCIPAL ===============
+export interface UserDto {
+  id: number;
+  email: string;
+  name: string;
+  role: UserRole;
+  lastLogin?: string;
+  loginCount?: number;
+  twoFactorEnabled?: boolean;
+  isActive?: boolean;
+}
+
+// =============== DEVICE INFO ===============
+export interface DeviceInfo {
+  deviceName?: string;
+  browser?: string;
+  os?: string;
+  ip?: string;
+}
+
+// =============== AUTENTICACIÓN - RESPUESTA ===============
+export interface AuthResponseDto {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  expiresIn: number;
+  user: UserDto;
+}
+
+// =============== LOGIN DTO ===============
+export interface LoginDto {
   email: string;
   password: string;
   rememberMe?: boolean;
+  deviceInfo?: DeviceInfo;
 }
 
-// DTO para login (alias para LoginRequest)
-export type LoginDto = LoginRequest;
-
-export interface LoginResponse {
-  accessToken: string;
-  user: UserInfo;
-  expiresIn: number;
-  refreshToken?: string;
-}
-
-export interface UserInfo {
-  email: string;
-  name: string;
-  role: UserRole;
-}
-
-export interface SessionInfo {
-  id: string;
-  createdAt: string;
-  expiresAt: string;
-  lastUsedAt: string;
-  deviceInfo: {
-    deviceName: string;
-    browser: string;
-    os: string;
-    ip: string;
-  };
-  isCurrentSession: boolean;
-}
-
-// =============== REGISTRO INTERFACES ===============
-export interface RegisterRequest {
+// =============== REGISTRO DTO ===============
+export interface RegisterDto {
   email: string;
   password: string;
   confirmPassword: string;
-  firstName?: string;
-  lastName?: string;
-  role?: UserRole;
-  acceptTerms: boolean;
-}
-
-// DTO para registro (alias para RegisterRequest)
-export type RegisterDto = RegisterRequest;
-
-export interface RegisterResponse {
-  message: string;
-  user: Omit<User, "password">;
-  requiresVerification?: boolean;
-}
-
-// =============== USUARIO INTERFACES ===============
-export interface User {
-  id: number;
-  email: string;
-  name?: string;
-  firstName?: string;
-  lastName?: string;
-  role: UserRole;
-  created_at: string;
-  updated_at: string;
-  lastLogin?: string;
-  isActive?: boolean;
-  lastDevice?: string;
-  lastIp?: string;
-  failedAttempts?: number;
-}
-
-export interface UserDetails {
-  id: number;
   name: string;
-  email: string;
-  role: string;
-  createdAt: string;
-  lastLogin: string;
-  lastLoginIp: string;
-  loginCount: number;
-  twoFactorEnabled: boolean;
-  isActive: boolean;
-  lastPasswordChange: string;
+  role?: "client" | "admin";
 }
 
-export interface UserProfile {
-  user: UserDetails;
-  sessionStats: SessionStats;
-  recentSessions: UserSession[];
+// =============== CAMBIO DE CONTRASEÑA DTO ===============
+export interface ChangePasswordDto {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
 }
 
-export interface SessionStats {
-  activeSessions: number;
-  totalSessions: number;
-  rememberMeSessions: number;
-  expiredSessions: number;
-}
-
-// =============== SESIONES INTERFACES ===============
+// =============== SESIONES ===============
 export interface UserSession {
   id: number;
   ipAddress: string;
@@ -121,16 +74,9 @@ export interface UserSession {
   isCurrent: boolean;
 }
 
-export interface DeviceInfo {
-  os: string;
-  device: string;
-  engine: string;
-  browser: string;
-}
-
+// =============== LOGOUT ===============
 export interface LogoutRequest {
-  logoutAll?: boolean;
-  reason?: string;
+  logoutAllDevices?: boolean;
 }
 
 export interface LogoutResponse {
@@ -138,79 +84,58 @@ export interface LogoutResponse {
   sessionsRevoked: number;
 }
 
-// =============== CAMBIO DE CONTRASEÑA ===============
-export interface ChangePasswordRequest {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
-
-// DTO para cambio de contraseña
-export type ChangePasswordDto = ChangePasswordRequest;
-
-export interface ResetPasswordRequest {
-  email: string;
-}
-
-export interface ResetPasswordResponse {
-  message: string;
-  resetToken?: string;
-}
-
+// =============== CAMBIO DE CONTRASEÑA RESPUESTA ===============
 export interface ChangePasswordResponse {
   message: string;
-  user: User;
+  sessionsRevoked: number;
 }
 
-// =============== SEGURIDAD INTERFACES ===============
+// =============== PERFIL DE USUARIO ===============
+export interface UserProfile {
+  user: UserDto;
+  sessionStats: {
+    activeSessions: number;
+    totalSessions: number;
+    lastLoginFromDifferentDevice?: string;
+  };
+  recentSessions: UserSession[];
+  securitySettings: {
+    twoFactorEnabled: boolean;
+    lastPasswordChange?: string;
+    lastSecurityEvent?: string;
+  };
+}
+
+// =============== LOGS Y SEGURIDAD ===============
 export interface AuthLog {
-  id: number;
-  userId: number;
-  eventType:
-    | "login"
-    | "logout"
-    | "failed_login"
-    | "password_change"
-    | "token_refresh";
-  success: boolean;
+  id: string;
+  userId: string;
+  action: "login" | "logout" | "register" | "password_change" | "failed_login";
+  timestamp: string;
   ipAddress: string;
-  userAgent: string;
-  deviceInfo?: string;
-  details?: string;
-  createdAt: string;
+  userAgent?: string;
+  success: boolean;
+  details?: Record<string, unknown>;
 }
 
 export interface FailedLoginAttempt {
-  id: number;
+  id: string;
   email: string;
   ipAddress: string;
-  attempts: number;
-  lastAttempt: string;
+  timestamp: string;
+  attemptCount: number;
   blocked: boolean;
-  blockedUntil?: string;
+  blockExpiresAt?: string;
 }
 
 export interface SecurityReport {
-  totalUsers: number;
-  activeSessions: number;
-  failedLoginAttempts: number;
-  blockedAccounts: number;
-  suspiciousActivities: number;
-  recentLogins: AuthLog[];
-}
-
-// =============== RESPUESTA AUTH ===============
-export interface AuthResponse {
-  user: User;
-  accessToken: string;
-  refreshToken?: string;
-  expiresIn?: number;
-  message?: string;
-  sessionId?: string;
-  deviceInfo?: {
-    deviceName: string;
-    browser: string;
-    os: string;
-    isNew: boolean;
-  };
+  failedLogins: FailedLoginAttempt[];
+  activeSessions: UserSession[];
+  recentActivity: AuthLog[];
+  securityAlerts: {
+    type: "suspicious_login" | "password_breach" | "multiple_devices";
+    message: string;
+    timestamp: string;
+    severity: "low" | "medium" | "high";
+  }[];
 }

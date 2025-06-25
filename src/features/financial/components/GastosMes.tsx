@@ -201,7 +201,8 @@ const TablaGastosEmpresa: React.FC = () => {
 
       const response = await api.get("/gastos-mes/expenses", { params });
 
-      const apiData: ApiResponse = response.data;
+      // Ajuste: acceder a la data anidada
+      const apiData: ApiResponse = response.data.data;
 
       setState((prev) => ({
         ...prev,

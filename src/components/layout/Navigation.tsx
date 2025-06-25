@@ -117,14 +117,29 @@ const Navigation: React.FC = () => {
       }}
     >
       <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
-        <Typography
-          variant="h6"
-          noWrap
-          component="div"
-          sx={{ fontWeight: 700 }}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            flexDirection: "column",
+            p: 2,
+          }}
         >
-          INGEOCIMYC
-        </Typography>
+          <img
+            src="/logo-ingeocimyc.svg"
+            alt="Logo Ingeocimyc"
+            width={80}
+            height={80}
+          />
+          <Typography
+            variant="h6"
+            noWrap
+            component="div"
+            sx={{ fontWeight: 700 }}
+          >
+            INGEOCIMYC
+          </Typography>
+        </Box>
         <IconButton onClick={toggleDrawer(false)}>
           <ChevronLeftIcon />
         </IconButton>
@@ -174,26 +189,33 @@ const Navigation: React.FC = () => {
 
   return (
     <>
-      <Fab
-        color="primary"
-        aria-label="open menu"
-        onClick={toggleDrawer(!drawerOpen)}
-        sx={{
-          position: "fixed",
-          top: 16,
-          left: 16,
-          zIndex: theme.zIndex.drawer + 2,
-        }}
-      >
-        {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
-      </Fab>
+      {/* FAB mejorado: esquina inferior izquierda, animación y oculto en desktop cuando el Drawer está abierto */}
+      {(!isDesktop || !drawerOpen) && (
+        <Fab
+          color="primary"
+          aria-label="open menu"
+          onClick={toggleDrawer(!drawerOpen)}
+          sx={{
+            position: "fixed",
+            top: { xs: "auto", md: 16 },
+            left: { xs: 24, md: 22 },
+            zIndex: theme.zIndex.drawer + 2,
+            boxShadow: 4,
+            transition: "all 0.4s cubic-bezier(.4,2,.6,1)",
+            "&:hover": {
+              boxShadow: 8,
+              transform: "scale(1.08)",
+              backgroundColor: "primary.dark",
+            },
+          }}
+        >
+          {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
+        </Fab>
+      )}
 
       <Drawer
         anchor="left"
-        // Recomendación: Mantener "temporary" para que el componente sea 100% autocontenido
-        // sin necesidad de modificar el layout padre.
-        variant={isDesktop ? "persistent" : "temporary"} // Si prefieres el efecto "push", y ajustas el layout padre
-        // variant="temporary" // Opción más simple y segura
+        variant={isDesktop ? "persistent" : "temporary"}
         open={drawerOpen}
         onClose={toggleDrawer(false)}
         sx={{

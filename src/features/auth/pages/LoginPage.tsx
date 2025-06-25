@@ -10,6 +10,8 @@ import {
   CircularProgress,
   InputAdornment,
   IconButton,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import {
   Email,
@@ -48,6 +50,7 @@ const LoginPage = () => {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -59,26 +62,40 @@ const LoginPage = () => {
   // Manejar envío del formulario
   const onSubmit = async (data: LoginFormData) => {
     setIsSubmitting(true);
-
     try {
+      // Construir deviceInfo opcional
+      const deviceInfo = {
+        browser: navigator.userAgent,
+        os: window.navigator.platform,
+        device: /Mobi|Android/i.test(navigator.userAgent)
+          ? "Mobile"
+          : "Desktop",
+      };
+      // Usar DTO alineado con backend
       const result = await login({
         email: data.email,
         password: data.password,
+        rememberMe: data.rememberMe,
+        deviceInfo, // Se envía solo si el backend lo acepta
       });
-
       if (result.success) {
-        // Redirigir según el rol (esta lógica ahora está en Auth Redirect)
         navigate("/");
       } else {
-        // Mostrar mensaje de error específico o genérico
-        showError(
+        // Mostrar feedback detallado según la nueva API
+        let msg =
           result.error?.message ||
-            "Error al iniciar sesión. Verifica tus credenciales."
-        );
+          "Error al iniciar sesión. Verifica tus credenciales.";
+        if (result.error?.waitMinutes) {
+          msg += ` (Intenta de nuevo en ${result.error.waitMinutes} minutos)`;
+        }
+        if (typeof result.error?.remainingAttempts === "number") {
+          msg += ` (Intentos restantes: ${result.error.remainingAttempts})`;
+        }
+        showError(msg);
       }
     } catch (error) {
-      console.error("Login error:", error);
       showError("Error inesperado. Inténtalo de nuevo más tarde.");
+      console.error("Error al iniciar sesión:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -89,7 +106,7 @@ const LoginPage = () => {
       {/* Header minimalista */}
       <Box sx={{ textAlign: "center" }}>
         <img
-          src="/public/logo-ingeocimyc.svg"
+          src="/logo-ingeocimyc.svg"
           alt="Logo Ingeocimyc"
           width={125}
           height={125}
@@ -188,7 +205,19 @@ const LoginPage = () => {
             flexDirection: { xs: "column", sm: "row" },
             gap: { xs: 2, sm: 0 },
           }}
-        ></Box>
+        >
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={!!watch("rememberMe")}
+                {...register("rememberMe")}
+                disabled={isSubmitting}
+                color="primary"
+              />
+            }
+            label="Recordarme"
+          />
+        </Box>
 
         <Button
           type="submit"

@@ -56,7 +56,11 @@ const ServiceFormPage: React.FC = () => {
   const createFieldMutation = useCreateServiceField();
   const updateFieldMutation = useUpdateServiceField();
   const deleteFieldMutation = useDeleteServiceField();
-  const categories = categoriesResponse?.data || [];
+  const categories = Array.isArray(categoriesResponse)
+    ? categoriesResponse
+    : Array.isArray(categoriesResponse?.data)
+    ? categoriesResponse.data
+    : [];
   const service = serviceResponse?.data;
 
   // Form handling
@@ -91,16 +95,31 @@ const ServiceFormPage: React.FC = () => {
         code: service.code,
         name: service.name,
         additionalFields:
-          service.additionalFields?.map((field, index) => ({
-            fieldName: field.fieldName,
-            type: field.type,
-            required: field.required,
-            options: field.options || [],
-            dependsOnField: field.dependsOnField || "",
-            dependsOnValue: field.dependsOnValue || "",
-            label: field.label || "",
-            displayOrder: field.displayOrder || index,
-          })) || [],
+          service.additionalFields?.map(
+            (
+              field: {
+                fieldName: string;
+                type: string;
+                required: boolean;
+                options?: string[];
+                dependsOnField?: string;
+                dependsOnValue?: string;
+                label?: string;
+                displayOrder?: number;
+                id?: number;
+              },
+              index: number
+            ) => ({
+              fieldName: field.fieldName,
+              type: field.type,
+              required: field.required,
+              options: field.options || [],
+              dependsOnField: field.dependsOnField || "",
+              dependsOnValue: field.dependsOnValue || "",
+              label: field.label || "",
+              displayOrder: field.displayOrder ?? index,
+            })
+          ) || [],
       });
     }
   }, [isEditing, service, reset]);
@@ -151,7 +170,9 @@ const ServiceFormPage: React.FC = () => {
         // Eliminar campos que ya no están en el formulario
         for (const currentField of currentFields) {
           const stillExists = newFields.find(
-            (newField) => newField.fieldName === currentField.fieldName
+            (newField) =>
+              newField.fieldName ===
+              (currentField as { fieldName: string }).fieldName
           );
           if (!stillExists && currentField.id) {
             await deleteFieldMutation.mutateAsync(currentField.id);
@@ -161,7 +182,8 @@ const ServiceFormPage: React.FC = () => {
         // Crear o actualizar campos
         for (const newField of newFields) {
           const existingField = currentFields.find(
-            (current) => current.fieldName === newField.fieldName
+            (current: { fieldName: string; id?: number }) =>
+              current.fieldName === newField.fieldName
           );
 
           if (existingField && existingField.id) {
@@ -271,11 +293,17 @@ const ServiceFormPage: React.FC = () => {
                       label="Categoría"
                       value={field.value || ""}
                     >
-                      {categories.map((category) => (
-                        <MenuItem key={category.id} value={category.id}>
-                          {category.name} ({category.code})
-                        </MenuItem>
-                      ))}
+                      {categories.map(
+                        (category: {
+                          id: number;
+                          name: string;
+                          code: string;
+                        }) => (
+                          <MenuItem key={category.id} value={category.id}>
+                            {category.name} ({category.code})
+                          </MenuItem>
+                        )
+                      )}
                     </Select>
                     {errors.categoryId && (
                       <Typography variant="caption" color="error">
@@ -292,7 +320,10 @@ const ServiceFormPage: React.FC = () => {
                 error={!!errors.code}
                 helperText={errors.code?.message}
                 fullWidth
-                inputProps={{ style: { textTransform: "uppercase" } }}
+                slotProps={{
+                  input: { style: { textTransform: "uppercase" } },
+                  inputLabel: { shrink: true },
+                }}
               />
               <TextField
                 {...register("name")}
@@ -300,6 +331,9 @@ const ServiceFormPage: React.FC = () => {
                 placeholder="ej: Ensayo de muestras de concreto"
                 error={!!errors.name}
                 helperText={errors.name?.message}
+                slotProps={{
+                  inputLabel: { shrink: true },
+                }}
                 fullWidth
                 multiline
                 rows={2}

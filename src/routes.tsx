@@ -48,6 +48,9 @@ const ServiceFormPage = lazy(
 const ServiceRequestsManagementPage = lazy(
   () => import("@/features/admin/pages/ServiceRequestsManagementPage")
 );
+const ServiceDetailPage = lazy(
+  () => import("@/features/admin/pages/ServiceDetailPage")
+);
 
 // Páginas de laboratorio
 const ProjectsDashboard = lazy(
@@ -217,6 +220,10 @@ const AppRoutes = () => {
             <Route
               path={ROUTES.ADMIN.SERVICE_REQUESTS}
               element={<ServiceRequestsManagementPage />}
+            />
+            <Route
+              path={ROUTES.ADMIN.SERVICE_DETAIL}
+              element={<ServiceDetailPage />}
             />
           </Route>
         </Route>

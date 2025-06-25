@@ -53,7 +53,11 @@ const CategoriesManagementPage: React.FC = () => {
   const updateMutation = useUpdateCategory();
   const deleteMutation = useDeleteCategory();
 
-  const categories = categoriesResponse?.data || [];
+  const categories = Array.isArray(categoriesResponse)
+    ? categoriesResponse
+    : Array.isArray(categoriesResponse?.data)
+    ? categoriesResponse.data
+    : [];
 
   // Paginación
   const { paginatedData, paginationData, setPage, setItemsPerPage } =

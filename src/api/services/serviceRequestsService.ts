@@ -26,7 +26,8 @@ export class ServiceRequestsService {
     const response = await api.get(API_ENDPOINTS.SERVICE_REQUESTS.LIST, {
       params: filters,
     });
-    return response.data;
+    // Retorna el objeto anidado correctamente
+    return response.data.data;
   }
 
   /**

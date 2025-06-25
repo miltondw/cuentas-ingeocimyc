@@ -24,6 +24,4 @@ export type {
   ServiceCategory,
   PaginatedResponse,
   ApiResponse,
-  User,
-  AuthResponse,
 } from "@/types/api";

@@ -1,15 +1,21 @@
 import apiClient from "@/lib/axios/apiClient";
+import type { ResponseDto } from "@/types/api";
 import type {
   LoginDto,
   RegisterDto,
-  AuthResponse,
-  User,
-  SessionInfo,
+  AuthResponseDto,
+  UserDto,
+  UserSession,
   ChangePasswordDto,
+  UserProfile,
+  LogoutRequest,
+  LogoutResponse,
+  ChangePasswordResponse,
 } from "@/types/auth";
 
 /**
  * Servicio para manejar las operaciones de autenticación y perfil de usuario
+ * Actualizado para usar la nueva estructura ResponseDto del backend
  */
 class AuthService {
   /**
@@ -17,7 +23,10 @@ class AuthService {
    * @param credentials Credenciales de inicio de sesión
    */
   async login(credentials: LoginDto) {
-    return apiClient.post<AuthResponse>("/auth/login", credentials);
+    return apiClient.post<ResponseDto<AuthResponseDto>>(
+      "/auth/login",
+      credentials
+    );
   }
 
   /**
@@ -25,14 +34,16 @@ class AuthService {
    * @param data Datos de registro
    */
   async register(data: RegisterDto) {
-    return apiClient.post<AuthResponse>("/auth/register", data);
+    return apiClient.post<ResponseDto<AuthResponseDto>>("/auth/register", data);
   }
 
   /**
-   * Cerrar sesión (invalidar token actual)
+   * Cerrar sesión
+   * @param logoutAllDevices Si cerrar sesión en todos los dispositivos
    */
-  async logout() {
-    return apiClient.post<{ success: boolean }>("/auth/logout");
+  async logout(logoutAllDevices?: boolean) {
+    const body: LogoutRequest = { logoutAllDevices };
+    return apiClient.post<ResponseDto<LogoutResponse>>("/auth/logout", body);
   }
 
   /**
@@ -40,18 +51,29 @@ class AuthService {
    * @param refreshToken Token de refresco
    */
   async refreshToken(refreshToken: string) {
-    return apiClient.post<AuthResponse>("/auth/refresh", { refreshToken });
+    return apiClient.post<ResponseDto<AuthResponseDto>>(
+      "/auth/refresh",
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${refreshToken}`,
+        },
+      }
+    );
   }
+
   /**
    * Validar el token actual usando el endpoint de perfil
    */
   async validateToken() {
     try {
-      const response = await apiClient.get<{ user: User }>("/auth/profile");
+      const response = await apiClient.get<ResponseDto<UserProfile>>(
+        "/auth/profile"
+      );
       return {
         data: {
           valid: true,
-          user: response.data.user,
+          user: response.data.data.user,
         },
       };
     } catch (_error) {
@@ -64,18 +86,21 @@ class AuthService {
   }
 
   /**
-   * Obtener perfil del usuario actual
+   * Obtener perfil completo del usuario actual
    */
   async getProfile() {
-    return apiClient.get<{ user: User }>("/auth/profile");
+    return apiClient.get<ResponseDto<UserProfile>>("/auth/profile");
   }
 
   /**
    * Actualizar perfil de usuario
    * @param data Datos a actualizar
    */
-  async updateProfile(data: Partial<User>) {
-    return apiClient.patch<{ user: User }>("/auth/profile", data);
+  async updateProfile(data: Partial<UserDto>) {
+    return apiClient.patch<ResponseDto<{ user: UserDto }>>(
+      "/auth/profile",
+      data
+    );
   }
 
   /**
@@ -83,14 +108,17 @@ class AuthService {
    * @param data Contraseña actual y nueva
    */
   async changePassword(data: ChangePasswordDto) {
-    return apiClient.post<{ success: boolean }>("/auth/change-password", data);
+    return apiClient.patch<ResponseDto<ChangePasswordResponse>>(
+      "/auth/change-password",
+      data
+    );
   }
 
   /**
    * Obtener todas las sesiones activas del usuario
    */
   async getSessions() {
-    return apiClient.get<{ sessions: SessionInfo[] }>("/auth/sessions");
+    return apiClient.get<ResponseDto<UserSession[]>>("/auth/sessions");
   }
 
   /**
@@ -98,7 +126,7 @@ class AuthService {
    * @param sessionId ID de la sesión a revocar
    */
   async revokeSession(sessionId: string) {
-    return apiClient.delete<{ success: boolean }>(
+    return apiClient.delete<ResponseDto<{ success: boolean }>>(
       `/auth/sessions/${sessionId}`
     );
   }
@@ -107,7 +135,7 @@ class AuthService {
    * Revocar todas las otras sesiones excepto la actual
    */
   async revokeAllOtherSessions() {
-    return apiClient.delete<{ success: boolean; count: number }>(
+    return apiClient.delete<ResponseDto<{ success: boolean; count: number }>>(
       "/auth/sessions/others"
     );
   }

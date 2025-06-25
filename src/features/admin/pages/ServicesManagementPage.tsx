@@ -68,11 +68,19 @@ const ServicesManagementPage: React.FC = () => {
   const { data: categoriesResponse } = useAdminCategories();
   const deleteMutation = useDeleteService();
 
-  const services = servicesResponse?.data || [];
-  const categories = categoriesResponse?.data || [];
+  const services = Array.isArray(servicesResponse)
+    ? servicesResponse
+    : Array.isArray(servicesResponse?.data)
+    ? servicesResponse.data
+    : [];
+  const categories = Array.isArray(categoriesResponse)
+    ? categoriesResponse
+    : Array.isArray(categoriesResponse?.data)
+    ? categoriesResponse.data
+    : [];
 
   // Filtrar servicios por categoría y búsqueda
-  const filteredServices = services.filter((service) => {
+  const filteredServices = services.filter((service: Service) => {
     // Filtro por categoría
     const matchesCategory =
       filters.category === "all" ||
@@ -180,7 +188,9 @@ const ServicesManagementPage: React.FC = () => {
   };
 
   const getCategoryName = (categoryId: number) => {
-    const category = categories.find((cat) => cat.id === categoryId);
+    const category = categories.find(
+      (cat: { id: number; name: string }) => cat.id === categoryId
+    );
     return category?.name || "Sin categoría";
   };
 
@@ -208,7 +218,7 @@ const ServicesManagementPage: React.FC = () => {
       key: "code",
       label: "Código",
       sortable: true,
-      render: (value) => (
+      render: (value: unknown, _row: unknown) => (
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Chip
             label={String(value)}
@@ -228,7 +238,7 @@ const ServicesManagementPage: React.FC = () => {
       key: "name",
       label: "Nombre",
       sortable: true,
-      render: (value) => (
+      render: (value: unknown, _row: unknown) => (
         <Box>
           <Typography variant="body2" fontWeight="medium" color="text.primary">
             {String(value)}
@@ -239,7 +249,7 @@ const ServicesManagementPage: React.FC = () => {
     {
       key: "categoryId",
       label: "Categoría",
-      render: (value) => (
+      render: (value: unknown, _row: unknown) => (
         <Chip
           label={getCategoryName(value as number)}
           size="small"
@@ -257,7 +267,7 @@ const ServicesManagementPage: React.FC = () => {
     {
       key: "additionalFields",
       label: "Campos Adicionales",
-      render: (value) => {
+      render: (value: unknown, _row: unknown) => {
         const fields = value as Service["additionalFields"];
         const count = fields?.length || 0;
         return (
@@ -289,7 +299,7 @@ const ServicesManagementPage: React.FC = () => {
       key: "created_at",
       label: "Fecha de Creación",
       sortable: true,
-      render: (value) => (
+      render: (value: unknown, _row: unknown) => (
         <Box>
           <Typography variant="body2" color="text.secondary">
             {formatDate(value as string)}
@@ -303,16 +313,16 @@ const ServicesManagementPage: React.FC = () => {
       key: "view",
       label: "Ver detalles",
       icon: <ViewIcon />,
-      action: (service) =>
-        navigate(`/admin/services/${(service as Service).id}`),
+      action: (row: unknown) =>
+        navigate(`/admin/services/${(row as Service).id}`),
       color: "secondary",
     },
     {
       key: "edit",
       label: "Editar servicio",
       icon: <EditIcon />,
-      action: (service) =>
-        navigate(`/admin/services/${(service as Service).id}/edit`),
+      action: (row: unknown) =>
+        navigate(`/admin/services/${(row as Service).id}/edit`),
       color: "primary",
     },
     {
@@ -320,7 +330,7 @@ const ServicesManagementPage: React.FC = () => {
       label: "Eliminar servicio",
       icon: <DeleteIcon />,
       color: "error",
-      action: (service) => setDeletingService(service as Service),
+      action: (row: unknown) => setDeletingService(row as Service),
     },
   ];
 
@@ -332,10 +342,11 @@ const ServicesManagementPage: React.FC = () => {
       type: "select",
       options: [
         { value: "all", label: "Todas las categorías" },
-        ...categories.map((cat) => ({
+        ...categories.map((cat: { id: number; name: string }) => ({
           value: cat.id.toString(),
           label: cat.name,
-          count: services.filter((s) => s.categoryId === cat.id).length,
+          count: services.filter((s: Service) => s.categoryId === cat.id)
+            .length,
         })),
       ],
     },
@@ -654,7 +665,7 @@ const ServicesManagementPage: React.FC = () => {
                     />
                   ) : (
                     services.reduce(
-                      (acc, service) =>
+                      (acc: number, service: Service) =>
                         acc + (service.additionalFields?.length || 0),
                       0
                     )
@@ -822,8 +833,8 @@ const ServicesManagementPage: React.FC = () => {
                   }`
                 : "No hay servicios registrados en el sistema. ¡Crea el primer servicio para comenzar!"
             }
-            onRowClick={(service) =>
-              navigate(`/admin/services/${(service as Service).id}`)
+            onRowClick={(row: unknown) =>
+              navigate(`/admin/services/${(row as Service).id}`)
             }
           />
         </Paper>

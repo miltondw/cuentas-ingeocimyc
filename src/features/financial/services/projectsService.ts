@@ -21,7 +21,7 @@ export const projectsService = {
   /**
    * Obtener todos los proyectos con filtros opcionales
    */
-  async getProjects(filters?: ProjectFilters): Promise<ApiResponse<Project[]>> {
+  async getProjects(filters?: ProjectFilters): Promise<Project[]> {
     const params = new URLSearchParams();
 
     if (filters) {
@@ -33,7 +33,8 @@ export const projectsService = {
     }
 
     const response = await apiClient.get(`${BASE_URL}?${params.toString()}`);
-    return response.data;
+    // Ajuste: la lista de proyectos está en response.data.data.data
+    return response.data.data.data;
   },
 
   /**

@@ -6,6 +6,8 @@ import axios, {
 import { saveRequest } from "@/utils/offlineStorage";
 import { tokenStorage } from "@/services/storage/tokenStorage";
 
+const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5051/api";
+
 // Definir interfaces para las respuestas de error
 export interface ErrorResponseData {
   waitMinutes?: number;
@@ -33,13 +35,13 @@ export interface PaginatedResponse<T> {
   };
 }
 
-// Interface para respuestas de la API
+// Interface para respuestas de la API - Actualizada para ResponseDto
 export interface ApiResponse<T = unknown> {
   success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
+  data: T;
+  message: string;
   timestamp?: string;
+  path?: string;
 }
 
 // Interface para filtros base
@@ -52,58 +54,91 @@ export interface BaseFilters {
 
 // Configuración del entorno
 const getBaseURL = (): string => {
-  // Si estamos en desarrollo, usar el servidor externo
-  if (import.meta.env.DEV) {
-    return "https://api-cuentas-zlut.onrender.com/api";
-  }
-  // En producción, usar la ruta relativa
-  return "/api";
+  return import.meta.env.VITE_API_URL || "http://localhost:5051/api";
+};
+
+// Variable para evitar múltiples intentos de refresh simultáneos
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value: unknown) => void;
+  reject: (reason?: unknown) => void;
+}> = [];
+
+const processQueue = (error: unknown, token: string | null = null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(token);
+    }
+  });
+
+  failedQueue = [];
 };
 
 // Crear la instancia de Axios con la configuración base
 export const apiClient = axios.create({
-  baseURL: getBaseURL(),
+  baseURL: apiBaseUrl,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
   },
-  withCredentials: true,
-  timeout: 30000, // Aumentar timeout a 30 segundos para conexiones lentas como Render
+  withCredentials: false, // Cambiar a false ya que usamos tokens en headers
+  timeout: 30000,
 });
 
 // Interceptor de request para agregar token de autenticación
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Debug logging
     console.info(
-      `🔌 Auth Request: ${config.method?.toUpperCase()} ${config.url}`
+      `🔌 API Request: ${config.method?.toUpperCase()} ${config.url}`
     );
 
     const token = tokenStorage.getAccessToken();
-    console.info(`🔑 Auth token present: ${!!token}`);
 
-    if (token) {
+    if (token && !tokenStorage.isTokenExpired()) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
-      console.info(`✅ Auth header set`);
+      console.info(`✅ Access token added to request`);
     }
 
     return config;
   },
   (error: AxiosError) => {
-    console.error("❌ Auth Request Error:", error);
+    console.error("❌ Request Error:", error);
     return Promise.reject(error);
   }
 );
 
-// Interceptor para manejo de respuestas y errores
+// Interceptor para manejo de respuestas, refresh tokens y errores
 apiClient.interceptors.response.use(
   (response) => {
     console.info(
-      `✅ Auth Response: ${
+      `✅ API Response: ${
         response.status
       } ${response.config.method?.toUpperCase()} ${response.config.url}`
     );
+
+    // Transformar la respuesta para mantener compatibilidad si no usa ResponseDto
+    if (response.data && typeof response.data === "object") {
+      // Si ya tiene la estructura ResponseDto, mantenerla
+      if (
+        "success" in response.data &&
+        "data" in response.data &&
+        "message" in response.data
+      ) {
+        return response;
+      }
+
+      // Si no tiene la estructura, envolver en ResponseDto para compatibilidad
+      response.data = {
+        success: true,
+        data: response.data,
+        message: "Success",
+        timestamp: new Date().toISOString(),
+      };
+    }
+
     return response;
   },
   async (error: AxiosError) => {
@@ -113,7 +148,7 @@ apiClient.interceptors.response.use(
     };
 
     console.error(
-      `❌ Auth Error: ${
+      `❌ API Error: ${
         error.response?.status || "NETWORK"
       } ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`,
       {
@@ -123,7 +158,79 @@ apiClient.interceptors.response.use(
       }
     );
 
-    // Manejar reintentos para errores de red/servidor antes que otros errores
+    // Manejo de error 401 (token expirado o inválido)
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry
+    ) {
+      originalRequest._retry = true;
+
+      if (isRefreshing) {
+        // Si ya estamos refrescando, agregar a la cola
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            return apiClient(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      isRefreshing = true;
+
+      try {
+        const refreshToken = tokenStorage.getRefreshToken();
+
+        if (!refreshToken) {
+          throw new Error("No refresh token available");
+        }
+
+        // Llamar al endpoint de refresh
+        const response = await axios.post(
+          `${getBaseURL()}/auth/refresh`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${refreshToken}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        const { data } = response.data; // ResponseDto<AuthResponseDto>
+        const { accessToken, refreshToken: newRefreshToken, expiresIn } = data;
+
+        // Actualizar tokens
+        tokenStorage.setTokens(accessToken, newRefreshToken, expiresIn);
+
+        // Procesar cola de requests pendientes
+        processQueue(null, accessToken);
+
+        // Reintentar request original
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        }
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        console.error("❌ Token refresh failed:", refreshError);
+        processQueue(refreshError, null);
+        tokenStorage.clearTokens();
+        if (!window.location.pathname.includes("/login")) {
+          window.location.href = "/login";
+        }
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    // Manejar reintentos para errores de red/servidor
     if (!originalRequest._retry && originalRequest) {
       const retryCount = originalRequest._retryCount || 0;
       const shouldRetry =
@@ -138,25 +245,21 @@ apiClient.interceptors.response.use(
         originalRequest._retryCount = retryCount + 1;
         originalRequest._retry = true;
 
-        console.info(`🔄 Reintentando login (${retryCount + 1}/3)...`);
+        console.info(`🔄 Reintentando request (${retryCount + 1}/3)...`);
 
         // Esperar antes del reintento (exponential backoff)
         await new Promise((resolve) =>
           setTimeout(resolve, 1000 * Math.pow(2, retryCount))
         );
 
-        // Reiniciar _retry para el siguiente intento
         originalRequest._retry = false;
-
         return apiClient(originalRequest);
       }
     }
 
-    // Manejar errores de red (guardar solicitud para sincronización)
+    // Manejar errores de red (guardar solicitud para sincronización offline)
     if (!error.response && originalRequest && !originalRequest._retry) {
-      // Si no hay conexión a internet, guardar la solicitud para sincronizarla después
       if (!navigator.onLine) {
-        // Convertir headers de Axios a Record<string, string>
         const convertedHeaders: Record<string, string> = {};
         if (originalRequest.headers) {
           Object.entries(originalRequest.headers).forEach(([key, value]) => {
@@ -177,7 +280,6 @@ apiClient.interceptors.response.use(
           priority: 1,
         });
 
-        // Devolver un error personalizado
         return Promise.reject({
           isOfflineError: true,
           message: "La solicitud se guardó y se enviará cuando haya conexión",
@@ -186,80 +288,8 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // Manejo de error 401 (no autorizado)
-    if (
-      error.response &&
-      error.response.status === 401 &&
-      !originalRequest?._retry
-    ) {
-      originalRequest._retry = true;
-
-      try {
-        // Intentar renovar token (esto requiere implementar la función refreshToken)
-        // const newToken = await refreshToken();
-        // Si se logra obtener un nuevo token, reintentar la solicitud
-        // tokenStorage.setAccessToken(newToken);
-        // return apiClient(originalRequest);
-      } catch (refreshError) {
-        // Si falla la renovación del token, cerrar sesión
-        tokenStorage.clearTokens();
-        window.location.href = "/login";
-        return Promise.reject(refreshError);
-      }
-    }
-
     return Promise.reject(error);
   }
 );
-
-// Función para "despertar" el servidor (pre-warm) en caso de que esté dormido
-const warmUpServer = async (): Promise<void> => {
-  try {
-    console.info("🔥 Intentando despertar servidor...");
-    const response = await fetch(
-      `https://api-cuentas-zlut.onrender.com/health`,
-      {
-        method: "GET",
-        mode: "cors",
-        headers: {
-          Accept: "application/json",
-        },
-      }
-    );
-    console.info(
-      "🔥 Server warm-up:",
-      response.status === 200 ? "Success ✅" : `Failed ❌ (${response.status})`
-    );
-  } catch (error) {
-    console.warn(
-      "⚠️ Server warm-up failed (server might be cold starting):",
-      (error as Error).message
-    );
-
-    // Intentar con el endpoint base como fallback
-    try {
-      const fallbackResponse = await fetch(getBaseURL(), {
-        method: "GET",
-        mode: "cors",
-      });
-      console.info(
-        "🔥 Fallback warm-up:",
-        fallbackResponse.status === 200
-          ? "Success ✅"
-          : `Status: ${fallbackResponse.status}`
-      );
-    } catch (fallbackError) {
-      console.warn(
-        "⚠️ Fallback warm-up also failed:",
-        (fallbackError as Error).message
-      );
-    }
-  }
-};
-
-// Hacer warm-up automático cuando se carga el módulo
-if (typeof window !== "undefined" && import.meta.env.DEV) {
-  warmUpServer();
-}
 
 export default apiClient;

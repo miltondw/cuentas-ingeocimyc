@@ -17,7 +17,6 @@ import {
 } from "@mui/material";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
-import type { UserRole } from "@/types/api";
 
 // Esquema de validación con Zod
 const registerSchema = z.object({
@@ -77,30 +76,27 @@ const RegisterPage = () => {
   // Manejar envío del formulario
   const onSubmit = async (data: RegisterFormData) => {
     setIsSubmitting(true);
-
     try {
+      // Usar DTO alineado con backend
       const result = await registerUser({
         email: data.email,
         password: data.password,
-        confirmPassword: data.password, // Usar la misma contraseña
-        firstName: data.firstName,
-        lastName: data.lastName,
-        role: data.role as UserRole,
-        acceptTerms: true, // Por defecto aceptar términos
-        // jwt2: isAdmin ? data.jwt2 : undefined, // Campo temporal comentado
+        confirmPassword: data.password, // Confirmación igual a password
+        name: `${data.firstName || ""} ${data.lastName || ""}`.trim(),
+        role: data.role as "client" | "admin",
+        // jwt2 eliminado porque no está en RegisterDto
       });
-
       if (result.success) {
         showSuccess("Usuario registrado exitosamente. Puede iniciar sesión.");
-        // Redirigir al login
         navigate("/login", { replace: true });
       } else {
-        // Mostrar mensaje de error específico o genérico
-        showError(result.error?.message || "Error al registrar usuario.");
+        // Mostrar feedback detallado según la nueva API
+        let msg = result.error?.message || "Error al registrar usuario.";
+        showError(msg);
       }
     } catch (error) {
-      console.error("Registration error:", error);
       showError("Error inesperado. Inténtalo de nuevo más tarde.");
+      console.error("Registration error:", error);
     } finally {
       setIsSubmitting(false);
     }

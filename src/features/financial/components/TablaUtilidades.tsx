@@ -195,13 +195,13 @@ const TablaUtilidades: React.FC = () => {
         api.get("/gastos-mes/expenses"), // Endpoint actualizado
       ]);
       const processedData = processData(
-        gastosMensualesResponse.data?.data || [],
-        proyectosResponse.data || []
+        gastosMensualesResponse.data?.data?.data || [],
+        proyectosResponse || []
       );
 
       console.info("Datos procesados:", {
-        gastosMensuales: gastosMensualesResponse.data?.data?.length || 0,
-        proyectos: proyectosResponse.data?.length || 0,
+        gastosMensuales: gastosMensualesResponse.data?.data?.data?.length || 0,
+        proyectos: proyectosResponse.length || 0,
         resumenMensual: processedData.length,
       });
 

@@ -1,9 +1,15 @@
 import { createContext } from "react";
-import type { User, AuthResponse, LoginDto, RegisterDto } from "@/types/auth";
+import type {
+  UserDto,
+  AuthResponseDto,
+  LoginDto,
+  RegisterDto,
+  ChangePasswordDto,
+} from "@/types/auth";
 
 interface AuthState {
   isAuthenticated: boolean;
-  user: User | null;
+  user: UserDto | null;
   loading: boolean;
 }
 
@@ -21,14 +27,17 @@ interface AuthContextType extends AuthState {
     success: boolean;
     error?: { message?: string };
     status?: number;
-    data?: AuthResponse;
+    data?: AuthResponseDto;
   }>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<boolean>;
   hasRole: (role: "admin" | "lab" | "client") => boolean;
   hasAnyRole: (roles: Array<"admin" | "lab" | "client">) => boolean;
   updateUserProfile: (
-    data: Partial<User>
+    data: Partial<UserDto>
+  ) => Promise<{ success: boolean; error?: string }>;
+  changePassword: (
+    data: ChangePasswordDto
   ) => Promise<{ success: boolean; error?: string }>;
 }
 

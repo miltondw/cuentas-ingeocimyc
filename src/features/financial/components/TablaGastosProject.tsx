@@ -491,9 +491,12 @@ const fetchProjects = async (filters: ProjectFilters) => {
 
   const response = await api.get("/projects", { params });
 
+  // Acceder correctamente a la estructura anidada
+  const paginated = response.data.data;
+
   // Procesar los datos para agregar campos calculados
   const processedData =
-    response.data.data?.map((p: Project) => ({
+    paginated.data?.map((p: Project) => ({
       ...p,
       valor_re: p.valorRetencion
         ? (Number(p.valorRetencion) / 100) * Number(p.costoServicio)
@@ -503,9 +506,9 @@ const fetchProjects = async (filters: ProjectFilters) => {
 
   return {
     data: processedData,
-    total: response.data.total || 0,
-    page: response.data.page || filters.page || 1,
-    limit: response.data.limit || filters.limit || 10,
+    total: paginated.total || 0,
+    page: paginated.page || filters.page || 1,
+    limit: paginated.limit || filters.limit || 10,
   };
 };
 

@@ -30,10 +30,14 @@ const AdminDashboardPage: React.FC = () => {
   const { data: services } = useAdminServices();
   const { data: serviceRequestStats } = useAdminServiceRequestStats();
 
+  // Ajustar acceso a la data: ahora categories y services son arrays planos
+  const categoriesCount = Array.isArray(categories) ? categories.length : 0;
+  const servicesCount = Array.isArray(services) ? services.length : 0;
+
   const statsCards = [
     {
       title: "Categorías de Servicios",
-      count: categories?.data?.length || 0,
+      count: categoriesCount,
       icon: <CategoryIcon sx={{ fontSize: 40, color: "primary.main" }} />,
       description: "Gestiona las categorías de servicios",
       action: () => navigate(ROUTES.ADMIN.CATEGORIES),
@@ -41,7 +45,7 @@ const AdminDashboardPage: React.FC = () => {
     },
     {
       title: "Servicios",
-      count: services?.data?.length || 0,
+      count: servicesCount,
       icon: <ServicesIcon sx={{ fontSize: 40, color: "secondary.main" }} />,
       description: "Administra todos los servicios disponibles",
       action: () => navigate(ROUTES.ADMIN.SERVICES),
@@ -173,12 +177,12 @@ const AdminDashboardPage: React.FC = () => {
           </Typography>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2 }}>
             <Chip
-              label={`${categories?.data?.length || 0} Categorías activas`}
+              label={`${categoriesCount} Categorías activas`}
               color="primary"
               variant="outlined"
             />
             <Chip
-              label={`${services?.data?.length || 0} Servicios disponibles`}
+              label={`${servicesCount} Servicios disponibles`}
               color="secondary"
               variant="outlined"
             />
