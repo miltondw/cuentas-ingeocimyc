@@ -30,6 +30,11 @@ import {
   Fade,
   useTheme,
   alpha,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
@@ -1383,60 +1388,59 @@ const ServiceRequestsManagementPage: React.FC = () => {
                               Información adicional:
                             </Typography>
                             {(() => {
-                              const groupedValues =
-                                groupAdditionalValuesByInstance(
-                                  service.additionalValues,
-                                  service.service.additionalFields
+                              const groupedValues = groupAdditionalValuesByInstance(
+                                service.additionalValues,
+                                service.service.additionalFields
+                              );
+                              // Obtener todos los nombres de campos adicionales en orden
+                              const additionalFieldNames = service.service.additionalFields.map(f => f.label);
+                              // Construir filas: cada grupo es una muestra
+                              const rows = Array.from(groupedValues.values()).map(values => {
+                                // Mapear los valores a un objeto {label: valor}
+                                const valueMap: Record<string, string> = {};
+                                values.forEach(v => {
+                                  valueMap[v.label] = v.formattedValue;
+                                });
+                                return valueMap;
+                              });
+                              if (rows.length === 0 || additionalFieldNames.length === 0) {
+                                return (
+                                  <Typography variant="body2" color="text.secondary">
+                                    No hay información adicional para mostrar.
+                                  </Typography>
                                 );
-
-                              return Array.from(groupedValues.entries()).map(
-                                ([instanceKey, values]) => (
-                                  <Box key={instanceKey} sx={{ ml: 1, mt: 1 }}>
-                                    {groupedValues.size > 1 && (
-                                      <Typography
-                                        variant="caption"
-                                        fontWeight="600"
-                                        color="primary"
-                                        display="block"
-                                        sx={{ mb: 0.5 }}
-                                      >
-                                        {instanceKey}:
-                                      </Typography>
-                                    )}
-                                    <Stack spacing={0.5}>
-                                      {values.map((formattedValue, idx) => (
-                                        <Box
-                                          key={idx}
-                                          sx={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: 1,
-                                            ml: groupedValues.size > 1 ? 1 : 0,
-                                          }}
-                                        >
-                                          <Typography
-                                            variant="caption"
-                                            fontWeight="600"
+                              }
+                              return (
+                                <Box sx={{ overflowX: 'auto', mt: 1 }}>
+                                  <Table size="small" sx={{ minWidth: 400, backgroundColor: 'white', borderRadius: 1 }}>
+                                    <TableHead>
+                                      <TableRow>
+                                        {additionalFieldNames.map((label) => (
+                                          <TableCell
+                                            key={label}
+                                            sx={{ fontWeight: 700, backgroundColor: 'grey.100', borderRight: '1px solid', borderColor: 'grey.200' }}
                                           >
-                                            {formattedValue.label}:
-                                          </Typography>
-                                          <Typography variant="caption">
-                                            {formattedValue.formattedValue}
-                                          </Typography>
-                                          {formattedValue.required && (
-                                            <Typography
-                                              component="span"
-                                              color="error"
-                                              sx={{ fontSize: "0.75rem" }}
+                                            {label}
+                                          </TableCell>
+                                        ))}
+                                      </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                      {rows.map((row, idx) => (
+                                        <TableRow key={idx}>
+                                          {additionalFieldNames.map(label => (
+                                            <TableCell
+                                              key={label}
+                                              sx={{ borderRight: '1px solid', borderColor: 'grey.200' }}
                                             >
-                                              *
-                                            </Typography>
-                                          )}
-                                        </Box>
+                                              {row[label] ?? '-'}
+                                            </TableCell>
+                                          ))}
+                                        </TableRow>
                                       ))}
-                                    </Stack>
-                                  </Box>
-                                )
+                                    </TableBody>
+                                  </Table>
+                                </Box>
                               );
                             })()}
                           </Box>

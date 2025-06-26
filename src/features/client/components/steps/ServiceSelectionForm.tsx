@@ -48,6 +48,7 @@ import {
   InfoOutlined,
 } from "@mui/icons-material";
 import { v4 as uuidv4 } from "uuid";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
 import { useServices } from "../../hooks/useServiceRequests";
 import type {
@@ -62,24 +63,6 @@ export interface ServiceSelectionFormProps {
   data: InternalServiceRequestData;
   errors: Partial<Record<keyof InternalServiceRequestData, string>>;
   onChange: (updates: Partial<InternalServiceRequestData>) => void;
-}
-
-// Interfaces locales para el formulario (para referencia futura)
-interface _ServiceField {
-  id: string;
-  label: string;
-  type: "text" | "textarea" | "number" | "select" | "checkbox" | "date";
-  placeholder?: string;
-  required?: boolean;
-  defaultValue?: string | number | boolean;
-  validation?: {
-    min?: number;
-    max?: number;
-  };
-  options?: string[];
-  dependsOnField?: string;
-  dependsOnValue?: string;
-  displayOrder?: number;
 }
 
 // Iconos por categoría (fallback si no viene de la API)
@@ -116,6 +99,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
     service: APIService;
     quantity: number;
     instanceIndex?: number;
+    selectedServiceId?: string;
   } | null>(null);
   const [configInstances, setConfigInstances] = useState<ServiceInstance[]>([]);
 
@@ -226,40 +210,6 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
       onChange({ selectedServices: updatedServices });
     },
     [data.selectedServices, onChange]
-  );
-
-  // Función para agregar una nueva instancia (muestra) para servicios con información adicional
-  const addInstance = useCallback(
-    (serviceId: string) => {
-      const service = categories
-        ?.flatMap((cat) => cat.services)
-        ?.find((s) => s.id === serviceId);
-
-      if (!service?.hasAdditionalFields) return;
-
-      const updatedServices =
-        data.selectedServices?.map((selectedService) => {
-          if (selectedService.serviceId === serviceId) {
-            const newInstance: ServiceInstance = {
-              instanceId: uuidv4(),
-              quantity: 1, // Para servicios con info adicional, cada instancia = 1 muestra
-              additionalData: [],
-              notes: "",
-            };
-
-            const newInstances = [...selectedService.instances, newInstance];
-            return {
-              ...selectedService,
-              instances: newInstances,
-              totalQuantity: newInstances.length, // Total = número de muestras/instancias
-            };
-          }
-          return selectedService;
-        }) || [];
-
-      onChange({ selectedServices: updatedServices });
-    },
-    [categories, data.selectedServices, onChange]
   );
 
   // Función para remover una instancia
@@ -383,7 +333,12 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
   );
   // Funciones del modal de configuración
   const openConfigModal = useCallback(
-    (service: APIService, quantity: number = 1, instanceIndex?: number) => {
+    (
+      service: APIService,
+      quantity: number = 1,
+      instanceIndex?: number,
+      selectedServiceId?: string // Nuevo parámetro opcional
+    ) => {
       // Encontrar el servicio original de la API para tener acceso a la estructura completa
       const originalService = servicesData?.find(
         (s) => s.id.toString() === service.id.toString()
@@ -401,6 +356,25 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
         if (selectedService && selectedService.instances[instanceIndex]) {
           const instance = selectedService.instances[instanceIndex];
           setConfigInstances([{ ...instance }]);
+        }
+      } else if (selectedServiceId) {
+        // Si es para editar todas las muestras de un servicio ya seleccionado
+        const selectedService = data.selectedServices?.find(
+          (s) => s.serviceId === selectedServiceId
+        );
+        if (selectedService) {
+          // Cargar todas las instancias existentes para editar
+          setConfigInstances(
+            selectedService.instances.map((inst) => ({ ...inst }))
+          );
+          setConfigService({
+            service: originalService,
+            quantity,
+            instanceIndex: undefined,
+            selectedServiceId,
+          });
+          setConfigModalOpen(true);
+          return;
         }
       } else {
         // Nueva configuración - para servicios con info adicional, cada instancia = 1 muestra
@@ -486,7 +460,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
   const saveConfiguredService = useCallback(() => {
     if (!configService || configInstances.length === 0) return;
 
-    const { service, instanceIndex } = configService;
+    const { service, instanceIndex, selectedServiceId } = configService;
 
     if (instanceIndex !== undefined) {
       // Editando una instancia existente
@@ -505,6 +479,24 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
           return selectedService;
         }) || [];
 
+      onChange({ selectedServices: updatedServices });
+    } else if (selectedServiceId) {
+      // Agregar una nueva muestra a un servicio ya seleccionado
+      const updatedServices =
+        data.selectedServices?.map((selectedService) => {
+          if (selectedService.serviceId === selectedServiceId) {
+            const newInstances = [
+              ...selectedService.instances,
+              ...configInstances,
+            ];
+            return {
+              ...selectedService,
+              instances: newInstances,
+              totalQuantity: newInstances.length,
+            };
+          }
+          return selectedService;
+        }) || [];
       onChange({ selectedServices: updatedServices });
     } else {
       // Agregando nuevo servicio
@@ -722,6 +714,21 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
     },
     [updateInstanceFieldInModal]
   );
+
+  // Definir la función duplicateInstanceInModal en el scope del componente
+  const duplicateInstanceInModal = useCallback((instanceId: string) => {
+    setConfigInstances((prev) => {
+      const instanceToCopy = prev.find(
+        (inst) => inst.instanceId === instanceId
+      );
+      if (!instanceToCopy) return prev;
+      const duplicated = {
+        ...instanceToCopy,
+        instanceId: uuidv4(),
+      };
+      return [...prev, duplicated];
+    });
+  }, []);
 
   if (isLoading) {
     return (
@@ -967,7 +974,12 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                             size="small"
                             startIcon={<AddOutlined />}
                             onClick={() =>
-                              addInstance(selectedService.serviceId)
+                              openConfigModal(
+                                service as unknown as APIService,
+                                1,
+                                undefined,
+                                selectedService.serviceId // Pasar el serviceId del seleccionado
+                              )
                             }
                             fullWidth
                           >
@@ -1185,15 +1197,48 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                                 )}
 
                                 {isServiceSelected(service.id) && (
-                                  <Chip
-                                    label="✓ Seleccionado"
-                                    color="success"
-                                    size="small"
-                                    sx={{
-                                      fontSize: { xs: "0.7rem", md: "0.75rem" },
-                                      height: { xs: 24, md: 32 },
-                                    }}
-                                  />
+                                  <>
+                                    <Chip
+                                      label="✓ Seleccionado"
+                                      color="success"
+                                      size="small"
+                                      sx={{
+                                        fontSize: {
+                                          xs: "0.7rem",
+                                          md: "0.75rem",
+                                        },
+                                        height: { xs: 24, md: 32 },
+                                        mb: service.hasAdditionalFields ? 1 : 0,
+                                      }}
+                                    />
+                                    {/* Botón para editar muestras, solo si tiene información adicional */}
+                                    {service.hasAdditionalFields && (
+                                      <Button
+                                        variant="contained"
+                                        size="small"
+                                        onClick={() =>
+                                          openConfigModal(
+                                            service as unknown as APIService,
+                                            1,
+                                            undefined,
+                                            service.id // Pasar el serviceId para editar/agregar muestras
+                                          )
+                                        }
+                                        sx={{
+                                          mt: 1,
+                                          width: "100%",
+                                          color: "#fff",
+                                          borderColor: "#ccc",
+                                          backgroundColor: "primary.dark",
+                                          "&:hover": {
+                                            backgroundColor: "primary.main",
+                                          },
+                                        }}
+                                      >
+                                        Editar muestras
+                                      </Button>
+                                    )}
+                                  </>
                                 )}
                               </Box>
                             </Paper>
@@ -1303,17 +1348,32 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                         ? ` de ${configInstances.length}`
                         : ""}
                     </Typography>
-                    {configInstances.length > 1 && (
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() =>
-                          removeInstanceInModal(instance.instanceId)
-                        }
-                      >
-                        <DeleteOutlined />
-                      </IconButton>
-                    )}
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      {/* Botón duplicar muestra */}
+                      <Tooltip title="Duplicar muestra">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() =>
+                            duplicateInstanceInModal(instance.instanceId)
+                          }
+                        >
+                          <ContentCopyIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      {/* Botón eliminar muestra */}
+                      {configInstances.length > 1 && (
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() =>
+                            removeInstanceInModal(instance.instanceId)
+                          }
+                        >
+                          <DeleteOutlined />
+                        </IconButton>
+                      )}
+                    </Box>
                   </Box>
 
                   <Grid2 container spacing={{ xs: 1, md: 2 }}>
@@ -1360,19 +1420,32 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                       />
                     </Grid2>
                   </Grid2>
+                  <Button
+                    variant="outlined"
+                    startIcon={<AddOutlined />}
+                    onClick={() =>
+                      duplicateInstanceInModal(instance.instanceId)
+                    }
+                    size={isExtraSmallScreen ? "medium" : "large"}
+                    sx={{ margin: "1rem auto", display: "flex", gap: 1 }}
+                  >
+                    Duplicar Muestra
+                  </Button>
                 </Paper>
               ))}
 
               {configService.instanceIndex === undefined && (
-                <Button
-                  variant="outlined"
-                  startIcon={<AddOutlined />}
-                  onClick={addInstanceInModal}
-                  fullWidth
-                  size={isExtraSmallScreen ? "medium" : "large"}
-                >
-                  Agregar nueva muestra
-                </Button>
+                <>
+                  <Button
+                    variant="outlined"
+                    startIcon={<AddOutlined />}
+                    onClick={addInstanceInModal}
+                    fullWidth
+                    size={isExtraSmallScreen ? "medium" : "large"}
+                  >
+                    Agregar nueva muestra
+                  </Button>
+                </>
               )}
             </Stack>
           )}
