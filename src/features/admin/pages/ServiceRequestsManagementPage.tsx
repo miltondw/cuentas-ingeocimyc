@@ -73,6 +73,7 @@ import type {
   APIServiceAdditionalField,
 } from "@/types/serviceRequests";
 import ConfirmDeleteDialog from "../components/ConfirmDeleteDialog";
+import { ROUTES } from "@/utils/routes";
 
 // Estados disponibles para las solicitudes
 const SERVICE_REQUEST_STATUSES: Array<{
@@ -1388,37 +1389,61 @@ const ServiceRequestsManagementPage: React.FC = () => {
                               Información adicional:
                             </Typography>
                             {(() => {
-                              const groupedValues = groupAdditionalValuesByInstance(
-                                service.additionalValues,
-                                service.service.additionalFields
-                              );
+                              const groupedValues =
+                                groupAdditionalValuesByInstance(
+                                  service.additionalValues,
+                                  service.service.additionalFields
+                                );
                               // Obtener todos los nombres de campos adicionales en orden
-                              const additionalFieldNames = service.service.additionalFields.map(f => f.label);
+                              const additionalFieldNames =
+                                service.service.additionalFields.map(
+                                  (f) => f.label
+                                );
                               // Construir filas: cada grupo es una muestra
-                              const rows = Array.from(groupedValues.values()).map(values => {
+                              const rows = Array.from(
+                                groupedValues.values()
+                              ).map((values) => {
                                 // Mapear los valores a un objeto {label: valor}
                                 const valueMap: Record<string, string> = {};
-                                values.forEach(v => {
+                                values.forEach((v) => {
                                   valueMap[v.label] = v.formattedValue;
                                 });
                                 return valueMap;
                               });
-                              if (rows.length === 0 || additionalFieldNames.length === 0) {
+                              if (
+                                rows.length === 0 ||
+                                additionalFieldNames.length === 0
+                              ) {
                                 return (
-                                  <Typography variant="body2" color="text.secondary">
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
                                     No hay información adicional para mostrar.
                                   </Typography>
                                 );
                               }
                               return (
-                                <Box sx={{ overflowX: 'auto', mt: 1 }}>
-                                  <Table size="small" sx={{ minWidth: 400, backgroundColor: 'white', borderRadius: 1 }}>
+                                <Box sx={{ overflowX: "auto", mt: 1 }}>
+                                  <Table
+                                    size="small"
+                                    sx={{
+                                      minWidth: 400,
+                                      backgroundColor: "white",
+                                      borderRadius: 1,
+                                    }}
+                                  >
                                     <TableHead>
                                       <TableRow>
                                         {additionalFieldNames.map((label) => (
                                           <TableCell
                                             key={label}
-                                            sx={{ fontWeight: 700, backgroundColor: 'grey.100', borderRight: '1px solid', borderColor: 'grey.200' }}
+                                            sx={{
+                                              fontWeight: 700,
+                                              backgroundColor: "grey.100",
+                                              borderRight: "1px solid",
+                                              borderColor: "grey.200",
+                                            }}
                                           >
                                             {label}
                                           </TableCell>
@@ -1428,12 +1453,15 @@ const ServiceRequestsManagementPage: React.FC = () => {
                                     <TableBody>
                                       {rows.map((row, idx) => (
                                         <TableRow key={idx}>
-                                          {additionalFieldNames.map(label => (
+                                          {additionalFieldNames.map((label) => (
                                             <TableCell
                                               key={label}
-                                              sx={{ borderRight: '1px solid', borderColor: 'grey.200' }}
+                                              sx={{
+                                                borderRight: "1px solid",
+                                                borderColor: "grey.200",
+                                              }}
                                             >
-                                              {row[label] ?? '-'}
+                                              {row[label] ?? "-"}
                                             </TableCell>
                                           ))}
                                         </TableRow>
@@ -1467,6 +1495,30 @@ const ServiceRequestsManagementPage: React.FC = () => {
           >
             Cerrar
           </Button>
+          {selectedRequest && (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => {
+                setSelectedRequest(null);
+                navigate(
+                  ROUTES.ADMIN.SERVICE_REQUEST_EDIT.replace(
+                    ":id",
+                    String(selectedRequest.id)
+                  )
+                );
+              }}
+              sx={{
+                borderRadius: 2,
+                px: 3,
+                textTransform: "none",
+                fontWeight: 600,
+                ml: 2,
+              }}
+            >
+              Editar
+            </Button>
+          )}
         </DialogActions>
       </Dialog>{" "}
       {/* Modal de cambio de estado mejorado */}

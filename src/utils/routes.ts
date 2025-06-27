@@ -46,6 +46,7 @@ export const ROUTES = {
     // Rutas para solicitudes de servicio
     SERVICE_REQUESTS: "/admin/service-requests",
     SERVICE_REQUEST_DETAIL: "/admin/service-requests/:id",
+    SERVICE_REQUEST_EDIT: "/admin/service-requests/:id/edit",
   },
   LAB: {
     PROJECTS: "/lab/proyectos",

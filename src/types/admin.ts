@@ -27,13 +27,23 @@ export interface UpdateCategoryRequest {
 // =============== SERVICIOS ===============
 export interface Service {
   id: number;
-  categoryId: number;
-  code: string;
   name: string;
-  category?: ServiceCategory;
-  additionalFields?: ServiceAdditionalField[];
+  code: string;
+  categoryId: number;
+  additionalFields?: unknown[];
   created_at: string;
   updated_at: string;
+}
+
+export interface ServiceRequest {
+  id: number;
+  name: string;
+  code: string;
+  categoryId: number;
+  status: string;
+  description?: string;
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface CreateServiceRequest {
