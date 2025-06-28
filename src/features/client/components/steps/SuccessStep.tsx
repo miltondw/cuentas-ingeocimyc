@@ -145,25 +145,17 @@ export const SuccessStep: React.FC<SuccessStepProps> = ({
                 </Typography>
                 <Typography variant="body1">
                   {serviceRequest?.created_at
-                    ? new Date(serviceRequest.created_at).toLocaleDateString(
-                        "es-ES",
+                    ? new Date(serviceRequest.created_at).toLocaleString(
+                        "es-CO",
                         {
                           year: "numeric",
                           month: "long",
                           day: "numeric",
                           hour: "2-digit",
                           minute: "2-digit",
-                        }
-                      )
-                    : serviceRequest?.created_at
-                    ? new Date(serviceRequest.created_at).toLocaleDateString(
-                        "es-ES",
-                        {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
+                          second: "2-digit",
+                          hour12: false,
+                          timeZone: "America/Bogota",
                         }
                       )
                     : "N/A"}

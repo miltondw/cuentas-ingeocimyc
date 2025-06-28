@@ -11,6 +11,7 @@ import type {
   UpdateServiceAdditionalFieldRequest,
   AdminQueryParams,
 } from "@/types/admin";
+import { AdminServiceRequestsService } from "./adminServiceRequestsService";
 
 // =============== BASE URLs ===============
 const ADMIN_BASE_URL = "/admin/services";
@@ -149,6 +150,9 @@ export const adminFieldsApi = {
   },
 };
 
+// =============== SERVICIOS PARA SOLICITUDES DE SERVICIO ===============
+export const adminServiceRequestsApi = new AdminServiceRequestsService();
+
 // =============== UTILIDADES ===============
 export const adminUtils = {
   // Validar código de categoría/servicio
@@ -192,5 +196,6 @@ export default {
   categories: adminCategoriesApi,
   services: adminServicesApi,
   fields: adminFieldsApi,
+  serviceRequests: adminServiceRequestsApi,
   utils: adminUtils,
 };

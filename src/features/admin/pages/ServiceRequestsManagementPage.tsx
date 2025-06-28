@@ -58,7 +58,6 @@ import { formatDate } from "@/utils/formatters/dateFormatter";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
   useAdminServiceRequests,
-  useUpdateServiceRequest,
   useDeleteServiceRequest,
   useGeneratePDF,
   useRegeneratePDF,
@@ -74,6 +73,7 @@ import type {
 } from "@/types/serviceRequests";
 import ConfirmDeleteDialog from "../components/ConfirmDeleteDialog";
 import { ROUTES } from "@/utils/routes";
+import { useUpdateServiceRequestStatus } from "@/api/hooks/useAdminServices";
 
 // Estados disponibles para las solicitudes
 const SERVICE_REQUEST_STATUSES: Array<{
@@ -130,7 +130,7 @@ const ServiceRequestsManagementPage: React.FC = () => {
   const { data: statsResponse } = useAdminServiceRequestStats();
 
   // Hooks de mutaciones
-  const updateStatusMutation = useUpdateServiceRequest();
+  const updateStatusMutation = useUpdateServiceRequestStatus();
   const deleteMutation = useDeleteServiceRequest();
   const generatePDFMutation = useGeneratePDF();
   const regeneratePDFMutation = useRegeneratePDF();
@@ -183,15 +183,14 @@ const ServiceRequestsManagementPage: React.FC = () => {
 
   const handleUpdateStatus = async () => {
     if (!editStatusRequest) return;
-
     try {
       await updateStatusMutation.mutateAsync({
         id: editStatusRequest.id,
-        data: { status: newStatus },
+        status: newStatus,
       });
       setEditStatusRequest(null);
     } catch (_error) {
-      // Error handling is done in the hook
+      // Error handling opcional
     }
   };
   const handleDeleteRequest = async () => {

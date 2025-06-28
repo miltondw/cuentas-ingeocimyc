@@ -57,7 +57,20 @@ export class AdminServiceRequestsService {
     return response.data.data;
   }
   /**
-   * Actualizar una solicitud de servicio (principalmente el estado)
+   * Actualizar solo el estado de una solicitud de servicio
+   */
+  async updateServiceRequestStatus(
+    id: number,
+    status: string
+  ): Promise<AdminServiceRequest> {
+    const response = await api.patch(`/service-requests/${id}/status`, {
+      status,
+    });
+    return response.data;
+  }
+
+  /**
+   * Actualizar una solicitud de servicio (PUT completo)
    */
   async updateServiceRequest(
     id: number,
@@ -91,7 +104,6 @@ export class AdminServiceRequestsService {
    */
   async previewPDF(id: number): Promise<string> {
     const response = await api.get(`/pdf/service-request/${id}/preview`);
-    console.info(response, "getServiceRequests response");
     return response.data;
   }
 

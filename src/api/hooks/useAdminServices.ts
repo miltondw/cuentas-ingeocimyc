@@ -451,3 +451,37 @@ export const useDeleteServiceField = () => {
     },
   });
 };
+
+// =============== HOOKS PARA SOLICITUDES DE SERVICIO ===============
+
+// Actualizar solo el estado de una solicitud de servicio
+export const useUpdateServiceRequestStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) =>
+      adminApi.serviceRequests.updateServiceRequestStatus(id, status),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.service(id) });
+      window.dispatchEvent(
+        new CustomEvent("app:notification", {
+          detail: {
+            message: "Estado de la solicitud actualizado exitosamente",
+            severity: "success",
+          },
+        })
+      );
+    },
+    onError: (error: ApiError) => {
+      const message =
+        error.response?.data?.message ||
+        "Error al actualizar el estado de la solicitud";
+      window.dispatchEvent(
+        new CustomEvent("app:notification", {
+          detail: { message, severity: "error" },
+        })
+      );
+    },
+  });
+};
