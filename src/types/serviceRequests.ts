@@ -85,9 +85,16 @@ export interface AdditionalValue {
 }
 
 // --- ServiceInstance solo acepta AdditionalValue[] ---
+// (Eliminado: definición anterior de ServiceInstance para evitar duplicados)
+
+// --- ServiceInstance extendido para UI avanzada ---
 export interface ServiceInstance {
   instanceId?: string;
-  additionalValues: AdditionalValue[];
+  quantity?: number;
+  notes?: string;
+  additionalData?: Array<{ fieldId: string; value: string | number | boolean }>;
+
+  additionalValues?: AdditionalValue[];
 }
 
 /**
@@ -509,4 +516,46 @@ export interface AdminServiceRequestFilters {
   // Paginación
   page?: number;
   limit?: number;
+}
+
+// Helper type for string or number
+export type StringOrNumber = string | number;
+
+// =============== INTERFACE PARA FORMULARIOS INTERNOS (COMPATIBILIDAD) ===============
+// Todos los campos opcionales excepto selectedServices para máxima flexibilidad
+export interface InternalServiceRequestData {
+  nombre?: string;
+  name?: string;
+  nameProject?: string;
+  ubicacionProyecto?: string;
+  location?: string;
+  identification?: string;
+  telefono?: string;
+  phone?: string;
+  email?: string;
+  empresa?: string;
+  description?: string;
+  descripcion?: string;
+  selectedServices: Array<InternalSelectedService>;
+}
+
+// Compatibilidad para servicios seleccionados en formularios (todos los campos opcionales)
+export interface InternalSelectedService {
+  id?: StringOrNumber;
+  serviceId?: StringOrNumber;
+  quantity?: number;
+  service?: ServiceInfo;
+  additionalValues?: AdditionalValue[];
+  serviceName?: string;
+  totalQuantity?: number;
+  instances?: InternalServiceInstance[];
+}
+
+// Instancias de servicio para compatibilidad con UI (todos los campos opcionales)
+export interface InternalServiceInstance {
+  instanceId?: string;
+  quantity?: number;
+  notes?: string;
+  additionalData?: Array<{ fieldId: string; value: string | number | boolean }>;
+  additionalValues?: AdditionalValue[];
 }

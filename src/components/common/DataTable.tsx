@@ -1358,9 +1358,9 @@ export const DataTable: React.FC<DataTableProps> = ({
                       </TableCell>
                     )}
 
-                    {columns.map((column) => (
+                    {columns.map((column, colIndex) => (
                       <TableCell
-                        key={String(column.key)}
+                        key={`${String(column.key)}-${colIndex}`}
                         align={column.align}
                         sx={{
                           width: column.width,
@@ -1509,9 +1509,13 @@ export const DataTable: React.FC<DataTableProps> = ({
                           </TableCell>
                         )}
 
-                        {columns.map((column) => (
+                        {columns.map((column, colIndex) => (
                           <TableCell
-                            key={String(column.key)}
+                            key={
+                              typeof column.key === "string"
+                                ? `${String(column.key)}-${colIndex}`
+                                : `col-${colIndex}`
+                            }
                             align={column.align}
                             sx={{
                               borderBottom: "1px solid",
