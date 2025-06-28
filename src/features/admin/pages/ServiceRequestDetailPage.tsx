@@ -15,7 +15,15 @@ import {
   useAdminServiceRequest,
   useUpdateServiceRequest,
 } from "@/api/hooks/useAdminServiceRequests";
-import { ServiceRequest } from "@/types/serviceRequests";
+import {
+  ServiceRequest,
+  AdditionalValue,
+  UISelectedService,
+  ServiceInstance,
+  AdditionalField,
+  EditableServiceRequest,
+  ServiceItemProps,
+} from "@/types/serviceRequests";
 import { useAdminServices } from "@/api/hooks/useAdminServices";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -25,67 +33,6 @@ import Stack from "@mui/material/Stack";
 import Autocomplete from "@mui/material/Autocomplete";
 
 // Tipos para campos adicionales
-interface AdditionalField {
-  id: number;
-  label: string;
-  fieldName: string;
-  type?: string;
-  options?: string[];
-  required?: boolean;
-  dependsOnField?: string | null;
-  dependsOnValue?: string | null;
-  displayOrder?: number;
-}
-interface AdditionalValue {
-  fieldName: string;
-  fieldValue: string;
-}
-interface ServiceInstance {
-  instanceId?: string; // opcional si no existe
-  additionalValues: AdditionalValue[];
-}
-interface SelectedService {
-  id: number;
-  quantity: number;
-  service?: {
-    id?: number; // <-- agregar id aquí
-    name?: string;
-    code?: string;
-    category?: { name?: string };
-    additionalFields?: AdditionalField[];
-  };
-  additionalValues?: AdditionalValue[];
-  serviceInstances?: ServiceInstance[];
-}
-
-// Tipo robusto para el estado de edición
-interface EditableServiceRequest extends ServiceRequest {
-  selectedServices: SelectedService[];
-  updatedAt?: string; // <-- agregar updatedAt aquí
-}
-
-// Componente memoizado para cada servicio solicitado
-interface ServiceItemProps {
-  sel: SelectedService;
-  idx: number;
-  onServiceChange: (
-    idx: number,
-    key: keyof SelectedService,
-    value: unknown
-  ) => void;
-  onAdditionalValueChange: (
-    idx: number,
-    instanceIdx: number,
-    fieldId: number,
-    value: string
-  ) => void;
-  onAddInstance: (serviceIdx: number) => void;
-  onRemoveInstance: (serviceIdx: number, instanceIdx: number) => void;
-  onDuplicateInstance: (serviceIdx: number, instanceIdx: number) => void;
-  onRemoveService: (serviceIdx: number) => void;
-}
-
-// eslint-disable-next-line react/prop-types
 const ServiceItem: React.FC<ServiceItemProps> = memo(
   ({
     sel,
@@ -96,22 +43,28 @@ const ServiceItem: React.FC<ServiceItemProps> = memo(
     onRemoveInstance,
     onDuplicateInstance,
     onRemoveService,
-  }) => {
+  }: ServiceItemProps) => {
     // Mostrar todas las instancias si existen, si no, reconstruirlas desde additionalValues
     const hasInstances =
       Array.isArray(sel.serviceInstances) && sel.serviceInstances.length > 0;
     let instances: ServiceInstance[];
     if (hasInstances) {
-      instances = sel.serviceInstances;
+      instances = sel.serviceInstances ?? [];
     } else if (
       Array.isArray(sel.additionalValues) &&
-      sel.additionalValues.some((v) => v.fieldName.startsWith("instance_")) &&
-      Array.isArray(sel.service?.additionalFields) &&
-      sel.service.additionalFields.length > 0
+      sel.additionalValues.some((v: AdditionalValue) =>
+        v.fieldName.startsWith("instance_")
+      ) &&
+      Array.isArray(
+        (sel.service as { additionalFields?: AdditionalField[] })
+          ?.additionalFields
+      ) &&
+      ((sel.service as { additionalFields?: AdditionalField[] })
+        .additionalFields?.length ?? 0) > 0
     ) {
       // Agrupar additionalValues por instance_N
       const instanceMap: { [instanceKey: string]: AdditionalValue[] } = {};
-      sel.additionalValues.forEach((v) => {
+      sel.additionalValues.forEach((v: AdditionalValue) => {
         const match = v.fieldName.match(/^instance_(\d+)_field_/);
         if (match) {
           const key = match[1];
@@ -121,9 +74,9 @@ const ServiceItem: React.FC<ServiceItemProps> = memo(
       });
       // Ordenar por número de instancia
       const sortedKeys = Object.keys(instanceMap).sort(
-        (a, b) => Number(a) - Number(b)
+        (a: string, b: string) => Number(a) - Number(b)
       );
-      instances = sortedKeys.map((key) => ({
+      instances = sortedKeys.map((key: string) => ({
         instanceId: key,
         additionalValues: instanceMap[key],
       }));
@@ -321,7 +274,7 @@ function shouldShowField(
 // Utilidad para renumerar los fieldName de todas las instancias
 function renumberInstanceFieldNames(
   instances: ServiceInstance[],
-  additionalFields: AdditionalField[]
+  _additionalFields: AdditionalField[]
 ) {
   return instances.map((inst, idx) => ({
     ...inst,
@@ -335,46 +288,6 @@ function renumberInstanceFieldNames(
       };
     }),
   }));
-}
-
-// Sanitiza los additionalValues y selectedServices para que solo tengan las propiedades necesarias
-function sanitizeSelectedServices(
-  services: SelectedService[]
-): SelectedService[] {
-  return services.map((sel) => {
-    // Limpiar additionalValues
-    let cleanedAdditionalValues: AdditionalValue[] = [];
-    if (Array.isArray(sel.additionalValues)) {
-      cleanedAdditionalValues = sel.additionalValues.map((v) => ({
-        fieldName: v.fieldName,
-        fieldValue: v.fieldValue,
-      }));
-    }
-    // Limpiar serviceInstances si existen
-    let cleanedInstances: ServiceInstance[] = [];
-    if (
-      Array.isArray(sel.serviceInstances) &&
-      sel.serviceInstances.length > 0
-    ) {
-      cleanedInstances = sel.serviceInstances.map((inst) => ({
-        instanceId: inst.instanceId,
-        additionalValues: Array.isArray(inst.additionalValues)
-          ? inst.additionalValues.map((v) => ({
-              fieldName: v.fieldName,
-              fieldValue: v.fieldValue,
-            }))
-          : [],
-      }));
-    }
-    // Limpiar el objeto del servicio seleccionado
-    return {
-      id: sel.id,
-      quantity: sel.quantity,
-      service: sel.service, // No tocamos el objeto service
-      additionalValues: cleanedAdditionalValues,
-      serviceInstances: cleanedInstances,
-    };
-  });
 }
 
 // Utilidad para renderizar campos adicionales tipo ServiceSelectionForm
@@ -461,14 +374,14 @@ function renderAdditionalField(
 
 // Memoizado para reconstruir instancias desde additionalValues al cargar del backend
 function buildServiceInstancesFromAdditionalValues(
-  sel: SelectedService
+  sel: UISelectedService
 ): ServiceInstance[] {
   if (!Array.isArray(sel.additionalValues) || sel.additionalValues.length === 0)
     return [];
   // Si los fieldName tienen el formato instance_N_field_X, agrupar por N
   const instanceMap: { [instanceKey: string]: AdditionalValue[] } = {};
   let hasInstanceFormat = false;
-  sel.additionalValues.forEach((v) => {
+  sel.additionalValues.forEach((v: AdditionalValue) => {
     const match = v.fieldName.match(/^instance_(\d+)_field_/);
     if (match) {
       hasInstanceFormat = true;
@@ -480,9 +393,9 @@ function buildServiceInstancesFromAdditionalValues(
   if (hasInstanceFormat && Object.keys(instanceMap).length > 0) {
     // Hay varias muestras
     const sortedKeys = Object.keys(instanceMap).sort(
-      (a, b) => Number(a) - Number(b)
+      (a: string, b: string) => Number(a) - Number(b)
     );
-    return sortedKeys.map((key) => ({
+    return sortedKeys.map((key: string) => ({
       instanceId: key,
       additionalValues: instanceMap[key],
     }));
@@ -497,6 +410,14 @@ function buildServiceInstancesFromAdditionalValues(
   }
 }
 
+// --- CORRECCIONES DE TIPADO Y ACCESO SEGURO ---
+
+// 1. Asegurar que el mapeo de servicios desde la API produce un UISelectedService válido
+// 2. Proteger el acceso a serviceToAdd.additionalFields
+// 3. Tipar correctamente los callbacks y evitar any
+// 4. Eliminar referencias a updated_at y funciones/utilidades no usadas
+// 5. Evitar non-null assertions
+
 const ServiceRequestDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -505,7 +426,10 @@ const ServiceRequestDetailPage: React.FC = () => {
   const updateMutation = useUpdateServiceRequest();
   const { data: allServices, isLoading: loadingServices } = useAdminServices();
   const [addServiceOpen, setAddServiceOpen] = useState(false);
-  const [serviceToAdd, setServiceToAdd] = useState<any>(null);
+  const [serviceToAdd, setServiceToAdd] = useState<
+    | (UISelectedService["service"] & { additionalFields?: AdditionalField[] })
+    | null
+  >(null);
   const [addQuantity, setAddQuantity] = useState(1);
   const [addInstances, setAddInstances] = useState<ServiceInstance[]>([]);
 
@@ -514,10 +438,10 @@ const ServiceRequestDetailPage: React.FC = () => {
     EditableServiceRequest,
     "selectedServices"
   > | null>(null);
-  const [selectedServices, setSelectedServices] = useState<SelectedService[]>(
+  const [selectedServices, setSelectedServices] = useState<UISelectedService[]>(
     []
   );
-  const selectedServicesRef = useRef<SelectedService[]>([]);
+  const selectedServicesRef = useRef<UISelectedService[]>([]);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -531,7 +455,8 @@ const ServiceRequestDetailPage: React.FC = () => {
           ? ss.map((sel) => {
               // Buscar el servicio completo en el catálogo para obtener los additionalFields
               const fullService = allServices.find(
-                (s: any) => s.id === (sel.service?.id || sel.serviceId)
+                (s: { id: number }) =>
+                  s.id === (sel.service?.id || sel.serviceId)
               );
               // Si el servicio tiene additionalValues, reconstruir serviceInstances
               let serviceInstances: ServiceInstance[] = [];
@@ -539,19 +464,32 @@ const ServiceRequestDetailPage: React.FC = () => {
                 Array.isArray(sel.additionalValues) &&
                 sel.additionalValues.length > 0
               ) {
-                serviceInstances =
-                  buildServiceInstancesFromAdditionalValues(sel);
+                serviceInstances = buildServiceInstancesFromAdditionalValues({
+                  ...sel,
+                  service: {
+                    ...sel.service,
+                    ...(fullService
+                      ? { additionalFields: fullService.additionalFields }
+                      : {}),
+                  },
+                } as UISelectedService);
               }
+              // Retornar un UISelectedService robusto
               return {
-                ...sel,
+                id: sel.id,
+                quantity: sel.quantity,
                 service: {
                   ...sel.service,
                   ...(fullService
                     ? { additionalFields: fullService.additionalFields }
                     : {}),
                 },
+                additionalValues: sel.additionalValues,
                 serviceInstances,
-              };
+                created_at: sel.created_at ?? "",
+                requestId: sel.requestId ?? 0,
+                serviceId: sel.serviceId ?? sel.service?.id ?? 0,
+              } as UISelectedService;
             })
           : []
       );
@@ -577,14 +515,23 @@ const ServiceRequestDetailPage: React.FC = () => {
   };
 
   // Cuando seleccionas un servicio en el modal
-  const handleSelectService = (service: any) => {
+  const handleSelectService = (
+    service:
+      | (UISelectedService["service"] & {
+          additionalFields?: AdditionalField[];
+        })
+      | null
+  ) => {
     setServiceToAdd(service);
-    if (service?.additionalFields?.length > 0) {
+    if (
+      service?.additionalFields?.length &&
+      service.additionalFields.length > 0
+    ) {
       // Inicializar una muestra vacía
       setAddInstances([
         {
           instanceId: `${Date.now()}_${Math.random()}`,
-          additionalValues: service.additionalFields.map((f: any) => ({
+          additionalValues: service.additionalFields.map((f) => ({
             fieldName: `instance_1_field_${f.id}`,
             fieldValue: "",
           })),
@@ -604,48 +551,58 @@ const ServiceRequestDetailPage: React.FC = () => {
       {
         id: Date.now(),
         quantity:
-          serviceToAdd.additionalFields?.length > 0
+          Array.isArray(serviceToAdd.additionalFields) &&
+          serviceToAdd.additionalFields.length > 0
             ? addInstances.length
             : addQuantity,
         service: serviceToAdd,
-        additionalValues: serviceToAdd.additionalFields?.length > 0 ? [] : [],
+        additionalValues:
+          Array.isArray(serviceToAdd.additionalFields) &&
+          serviceToAdd.additionalFields.length > 0
+            ? []
+            : [],
         serviceInstances:
-          serviceToAdd.additionalFields?.length > 0 ? addInstances : [],
-      },
+          Array.isArray(serviceToAdd.additionalFields) &&
+          serviceToAdd.additionalFields.length > 0
+            ? addInstances
+            : [],
+        created_at: "",
+        requestId: 0,
+        serviceId: serviceToAdd.id ?? 0,
+      } as UISelectedService,
     ]);
     handleCloseAddService();
   };
 
-  // Renderiza campos adicionales para cada muestra en el modal
-  const renderAddInstanceFields = (instance: ServiceInstance, idx: number) => (
-    <Box key={instance.instanceId || idx} mb={2}>
-      {serviceToAdd.additionalFields.map((field: any) => {
-        const val = instance.additionalValues.find((v) =>
-          v.fieldName.endsWith(`_${field.id}`)
-        );
-        return renderAdditionalField(
-          field,
-          val?.fieldValue || "",
-          (newValue) => {
-            setAddInstances((prev) =>
-              prev.map((inst, j) =>
-                j === idx
-                  ? {
-                      ...inst,
-                      additionalValues: inst.additionalValues.map((v) =>
-                        v.fieldName.endsWith(`_${field.id}`)
-                          ? { ...v, fieldValue: newValue }
-                          : v
-                      ),
-                    }
-                  : inst
+  // Mover buildPayload fuera del handler para evitar redefiniciones
+  function buildPayload(
+    mainData: Omit<EditableServiceRequest, "selectedServices">,
+    selectedServices: UISelectedService[]
+  ) {
+    return {
+      ...mainData,
+      selectedServices: selectedServices.map((s: UISelectedService) => ({
+        serviceId: s.service?.id || s.serviceId,
+        quantity: s.quantity,
+        additionalValues:
+          Array.isArray(s.serviceInstances) && s.serviceInstances.length > 0
+            ? s.serviceInstances.flatMap((inst: ServiceInstance) =>
+                Array.isArray(inst.additionalValues)
+                  ? inst.additionalValues.map((v: AdditionalValue) => ({
+                      fieldName: v.fieldName,
+                      fieldValue: v.fieldValue,
+                    }))
+                  : []
               )
-            );
-          }
-        );
-      })}
-    </Box>
-  );
+            : Array.isArray(s.additionalValues)
+            ? s.additionalValues.map((v: AdditionalValue) => ({
+                fieldName: v.fieldName,
+                fieldValue: v.fieldValue,
+              }))
+            : [],
+      })),
+    };
+  }
 
   if (loadingRequest) {
     return (
@@ -686,11 +643,13 @@ const ServiceRequestDetailPage: React.FC = () => {
   // Optimización: handlers eficientes para servicios
   const handleServiceChange = (
     idx: number,
-    key: keyof SelectedService,
+    key: keyof UISelectedService,
     value: unknown
   ) => {
-    setSelectedServices((prev) =>
-      prev.map((s, i) => (i === idx ? { ...s, [key]: value } : s))
+    setSelectedServices((prev: UISelectedService[]) =>
+      prev.map((s: UISelectedService, i: number) =>
+        i === idx ? { ...s, [key]: value } : s
+      )
     );
   };
 
@@ -701,32 +660,37 @@ const ServiceRequestDetailPage: React.FC = () => {
     fieldId: number,
     value: string
   ) => {
-    setSelectedServices((prev) =>
-      prev.map((s, i) => {
+    setSelectedServices((prev: UISelectedService[]) =>
+      prev.map((s: UISelectedService, i: number) => {
         if (i !== idx) return s;
         // Determinar si hay instancias
         let newInstances: ServiceInstance[] = [];
         if (s.serviceInstances && s.serviceInstances.length > 0) {
-          newInstances = s.serviceInstances.map((inst, j) => {
-            if (j !== instanceIdx) return inst;
-            // Actualizar el campo en la instancia correspondiente
-            const fieldName = `instance_${instanceIdx + 1}_field_${fieldId}`;
-            let newAdditionalValues = Array.isArray(inst.additionalValues)
-              ? [...inst.additionalValues]
-              : [];
-            const index = newAdditionalValues.findIndex(
-              (v) => v.fieldName === fieldName
-            );
-            if (index >= 0) {
-              newAdditionalValues[index] = {
-                ...newAdditionalValues[index],
-                fieldValue: value,
-              };
-            } else {
-              newAdditionalValues.push({ fieldName, fieldValue: value });
+          newInstances = s.serviceInstances.map(
+            (inst: ServiceInstance, j: number) => {
+              if (j !== instanceIdx) return inst;
+              // Actualizar el campo en la instancia correspondiente
+              const fieldName = `instance_${instanceIdx + 1}_field_${fieldId}`;
+              let newAdditionalValues = Array.isArray(inst.additionalValues)
+                ? [...inst.additionalValues]
+                : [];
+              const index = newAdditionalValues.findIndex(
+                (v: AdditionalValue) => v.fieldName === fieldName
+              );
+              if (index >= 0) {
+                newAdditionalValues[index] = {
+                  ...newAdditionalValues[index],
+                  fieldValue: value,
+                };
+              } else {
+                newAdditionalValues.push({
+                  fieldName,
+                  fieldValue: value,
+                } as AdditionalValue);
+              }
+              return { ...inst, additionalValues: newAdditionalValues };
             }
-            return { ...inst, additionalValues: newAdditionalValues };
-          });
+          );
           return { ...s, serviceInstances: newInstances };
         } else {
           // Si no hay instancias, usar additionalValues plano (solo una muestra)
@@ -735,7 +699,7 @@ const ServiceRequestDetailPage: React.FC = () => {
             ? [...s.additionalValues]
             : [];
           const index = newAdditionalValues.findIndex(
-            (v) => v.fieldName === fieldName
+            (v: AdditionalValue) => v.fieldName === fieldName
           );
           if (index >= 0) {
             newAdditionalValues[index] = {
@@ -743,7 +707,10 @@ const ServiceRequestDetailPage: React.FC = () => {
               fieldValue: value,
             };
           } else {
-            newAdditionalValues.push({ fieldName, fieldValue: value });
+            newAdditionalValues.push({
+              fieldName,
+              fieldValue: value,
+            } as AdditionalValue);
           }
           return { ...s, additionalValues: newAdditionalValues };
         }
@@ -905,61 +872,6 @@ const ServiceRequestDetailPage: React.FC = () => {
     );
   };
 
-  // Handler para guardar, recibe el estado más reciente como argumento
-  const saveWithLatestServices = async (latestServices: SelectedService[]) => {
-    if (!mainData) return;
-    try {
-      const {
-        id: _id,
-        created_at: _created_at,
-        updated_at: _updated_at,
-        updatedAt: _updatedAt, // <-- quitar updatedAt
-        status: _status, // quitar status
-        ...mainFields
-      } = mainData;
-      const cleanedServices = latestServices.map((sel) => {
-        const serviceId = sel.service?.id;
-        if (!serviceId) {
-          throw new Error(
-            "Falta el serviceId real en uno de los servicios seleccionados"
-          );
-        }
-        let additionalValues: AdditionalValue[] = [];
-        if (
-          Array.isArray(sel.serviceInstances) &&
-          sel.serviceInstances.length > 0
-        ) {
-          additionalValues = sel.serviceInstances.flatMap((inst) =>
-            Array.isArray(inst.additionalValues)
-              ? inst.additionalValues.map((v) => ({
-                  fieldName: v.fieldName,
-                  fieldValue: v.fieldValue,
-                }))
-              : []
-          );
-        } else if (Array.isArray(sel.additionalValues)) {
-          additionalValues = sel.additionalValues.map((v) => ({
-            fieldName: v.fieldName,
-            fieldValue: v.fieldValue,
-          }));
-        }
-        return {
-          serviceId,
-          quantity: sel.quantity,
-          additionalValues,
-        };
-      });
-      const dataToSave = {
-        ...mainFields,
-        selectedServices: cleanedServices,
-      };
-      await updateMutation.mutateAsync({ id: mainData.id, data: dataToSave });
-      setSuccess(true);
-    } catch (_error) {
-      // El error se maneja en el hook
-    }
-  };
-
   // Handler para eliminar un servicio completo
   const handleRemoveService = (serviceIdx: number) => {
     setSelectedServices((prev) => prev.filter((_, i) => i !== serviceIdx));
@@ -1069,45 +981,40 @@ const ServiceRequestDetailPage: React.FC = () => {
               variant="contained"
               color="primary"
               onClick={() => {
-                // Adaptar el payload a la nueva API antes de guardar
-                const buildPayload = (mainData, selectedServices) => {
-                  return {
-                    ...mainData,
-                    selectedServices: selectedServices.map((s) => ({
-                      serviceId: s.service?.id || s.serviceId,
-                      quantity: s.quantity,
-                      additionalValues:
-                        Array.isArray(s.serviceInstances) &&
-                        s.serviceInstances.length > 0
-                          ? s.serviceInstances.flatMap((inst) =>
-                              Array.isArray(inst.additionalValues)
-                                ? inst.additionalValues.map((v) => ({
-                                    fieldName: v.fieldName,
-                                    fieldValue: v.fieldValue,
-                                  }))
-                                : []
-                            )
-                          : Array.isArray(s.additionalValues)
-                          ? s.additionalValues.map((v) => ({
-                              fieldName: v.fieldName,
-                              fieldValue: v.fieldValue,
-                            }))
-                          : [],
-                    })),
-                  };
-                };
                 if (!mainData) return;
+                // Eliminar los campos prohibidos del payload
                 const {
                   id: _id,
+                  status: _status,
                   created_at: _created_at,
-                  updated_at: _updated_at,
-                  updatedAt: _updatedAt, // quitar updatedAt
-                  status: _status, // quitar status
+                  updatedAt: _updatedAt,
                   ...mainFields
                 } = mainData;
-                const payload = buildPayload(mainFields, selectedServices);
+                // Para el tipado, creamos un objeto dummy pero eliminamos los campos antes de enviar
+                const mainFieldsWithFake: Omit<
+                  EditableServiceRequest,
+                  "selectedServices"
+                > = {
+                  id: 0,
+                  status: "pendiente",
+                  created_at: "",
+                  updatedAt: "",
+                  ...mainFields,
+                };
+                let payload = buildPayload(
+                  mainFieldsWithFake,
+                  selectedServices
+                );
+                // Eliminar los campos prohibidos del payload antes de enviarlo
+                const {
+                  id: __id,
+                  status: __status,
+                  created_at: __created_at,
+                  updatedAt: __updatedAt,
+                  ...payloadToSend
+                } = payload;
                 updateMutation
-                  .mutateAsync({ id: mainData.id, data: payload })
+                  .mutateAsync({ id: mainData.id, data: payloadToSend })
                   .then(() => setSuccess(true));
               }}
               disabled={updateMutation.isPending}
@@ -1149,9 +1056,11 @@ const ServiceRequestDetailPage: React.FC = () => {
               <Stack spacing={2}>
                 <Autocomplete
                   options={allServices || []}
-                  getOptionLabel={(option: any) =>
-                    `${option.name} (${option.code})`
-                  }
+                  getOptionLabel={(
+                    option: UISelectedService["service"] & {
+                      additionalFields?: AdditionalField[];
+                    }
+                  ) => `${option.name} (${option.code})`}
                   value={serviceToAdd}
                   onChange={(_, value) => handleSelectService(value)}
                   renderInput={(params) => (
@@ -1159,7 +1068,9 @@ const ServiceRequestDetailPage: React.FC = () => {
                   )}
                   isOptionEqualToValue={(opt, val) => opt.id === val?.id}
                 />
-                {serviceToAdd && serviceToAdd.additionalFields?.length > 0 ? (
+                {serviceToAdd &&
+                Array.isArray(serviceToAdd.additionalFields) &&
+                serviceToAdd.additionalFields.length > 0 ? (
                   <>
                     <Typography variant="subtitle2" fontWeight="bold">
                       Muestras
@@ -1172,7 +1083,41 @@ const ServiceRequestDetailPage: React.FC = () => {
                         <Typography variant="caption">
                           Muestra #{idx + 1}
                         </Typography>
-                        {renderAddInstanceFields(instance, idx)}
+                        <Box mb={2}>
+                          {Array.isArray(serviceToAdd.additionalFields)
+                            ? serviceToAdd.additionalFields.map((field) => {
+                                const val = instance.additionalValues.find(
+                                  (v) => v.fieldName.endsWith(`_${field.id}`)
+                                );
+                                return renderAdditionalField(
+                                  field,
+                                  val?.fieldValue || "",
+                                  (newValue) => {
+                                    setAddInstances((prev) =>
+                                      prev.map((inst, j) =>
+                                        j === idx
+                                          ? {
+                                              ...inst,
+                                              additionalValues:
+                                                inst.additionalValues.map((v) =>
+                                                  v.fieldName.endsWith(
+                                                    `_${field.id}`
+                                                  )
+                                                    ? {
+                                                        ...v,
+                                                        fieldValue: newValue,
+                                                      }
+                                                    : v
+                                                ),
+                                            }
+                                          : inst
+                                      )
+                                    );
+                                  }
+                                );
+                              })
+                            : null}
+                        </Box>
                       </Paper>
                     ))}
                     <Box display="flex" gap={1}>
@@ -1183,13 +1128,16 @@ const ServiceRequestDetailPage: React.FC = () => {
                             ...prev,
                             {
                               instanceId: `${Date.now()}_${Math.random()}`,
-                              additionalValues:
-                                serviceToAdd.additionalFields.map((f: any) => ({
-                                  fieldName: `instance_${
-                                    addInstances.length + 1
-                                  }_field_${f.id}`,
-                                  fieldValue: "",
-                                })),
+                              additionalValues: Array.isArray(
+                                serviceToAdd.additionalFields
+                              )
+                                ? serviceToAdd.additionalFields.map((f) => ({
+                                    fieldName: `instance_${
+                                      addInstances.length + 1
+                                    }_field_${f.id}`,
+                                    fieldValue: "",
+                                  }))
+                                : [],
                             },
                           ])
                         }
@@ -1228,7 +1176,8 @@ const ServiceRequestDetailPage: React.FC = () => {
               variant="contained"
               disabled={
                 !serviceToAdd ||
-                (serviceToAdd.additionalFields?.length > 0 &&
+                (Array.isArray(serviceToAdd.additionalFields) &&
+                  serviceToAdd.additionalFields.length > 0 &&
                   addInstances.length === 0)
               }
             >

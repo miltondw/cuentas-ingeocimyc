@@ -191,13 +191,14 @@ const DataTablePagination: React.FC<DataTablePaginationProps> = ({
   }
 
   // Renderizar paginación completa para escritorio
+  const safePage = Math.max(0, Math.min(Math.max(0, totalPages - 1), currentPage - 1));
   return (
     <TablePagination
       rowsPerPageOptions={showRowsPerPage ? rowsPerPageOptions : []}
       component="div"
       count={totalItems}
       rowsPerPage={itemsPerPage}
-      page={currentPage - 1} // Convertir de 1-indexed a 0-indexed para MUI
+      page={safePage} // Clamp para evitar valores fuera de rango
       onPageChange={handleChangePage}
       onRowsPerPageChange={handleChangeRowsPerPage}
       labelRowsPerPage={showRowsPerPage ? labelRowsPerPage : ""}

@@ -69,8 +69,8 @@ import type {
   AdminServiceRequestFilters,
   ServiceRequestStatus,
   AdminServiceRequest,
-  AdminAdditionalValue,
-  APIServiceAdditionalField,
+  AdditionalField,
+  AdditionalValue,
 } from "@/types/serviceRequests";
 import ConfirmDeleteDialog from "../components/ConfirmDeleteDialog";
 import { ROUTES } from "@/utils/routes";
@@ -247,9 +247,12 @@ const ServiceRequestsManagementPage: React.FC = () => {
    * Función para formatear campos adicionales con nombres descriptivos
    */
   const formatAdditionalValue = (
-    value: AdminAdditionalValue,
-    additionalFields: APIServiceAdditionalField[]
+    value: AdditionalValue,
+    additionalFields: AdditionalField[]
   ) => {
+    console.info("[formatAdditionalValue] fieldName:", value.fieldName);
+    console.info("[formatAdditionalValue] additionalFields:", additionalFields);
+    console.info("[formatAdditionalValue] value:", value);
     // Extraer el ID del campo del fieldName (formato: instance_X_field_Y)
     const fieldIdMatch = value.fieldName.match(/field_(\d+)$/);
     if (!fieldIdMatch) {
@@ -280,7 +283,7 @@ const ServiceRequestsManagementPage: React.FC = () => {
     }
 
     return {
-      label: field.label || field.name,
+      label: field.label || field.fieldName,
       value: value.fieldValue,
       formattedValue,
       type: field.type,
@@ -291,8 +294,8 @@ const ServiceRequestsManagementPage: React.FC = () => {
    * Función para agrupar campos adicionales por instancia
    */
   const groupAdditionalValuesByInstance = (
-    additionalValues: AdminAdditionalValue[],
-    additionalFields: APIServiceAdditionalField[]
+    additionalValues: AdditionalValue[],
+    additionalFields: AdditionalField[]
   ) => {
     const instances = new Map<
       string,
@@ -325,6 +328,7 @@ const ServiceRequestsManagementPage: React.FC = () => {
     return instances;
   };
   const theme = useTheme();
+
   return (
     <Container
       maxWidth="xl"
@@ -1153,7 +1157,7 @@ const ServiceRequestsManagementPage: React.FC = () => {
                           NOMBRE COMPLETO
                         </Typography>
                         <Typography variant="body1" fontWeight="500">
-                          {selectedRequest.name}
+                          {selectedRequest?.name}
                         </Typography>
                       </Box>
                       <Box>
@@ -1357,14 +1361,14 @@ const ServiceRequestsManagementPage: React.FC = () => {
                               fontWeight="600"
                               gutterBottom
                             >
-                              {service.service.code} - {service.service.name}
+                              {service.service.code} - {service.service?.name}
                             </Typography>
                             <Typography
                               variant="body2"
                               color="text.secondary"
                               gutterBottom
                             >
-                              Categoría: {service.service.category.name}
+                              Categoría: {service.service.category?.name}
                             </Typography>
                             <Typography variant="body1">
                               Cantidad: <strong>{service.quantity}</strong>

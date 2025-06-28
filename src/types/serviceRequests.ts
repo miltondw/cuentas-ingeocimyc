@@ -23,33 +23,116 @@ export interface ServiceRequest {
   description: string;
   status: ServiceRequestStatus;
   created_at: string;
-  updated_at: string;
+  updatedAt: string;
+  selectedServices: SelectedService[];
 }
 
 // =============== INTERFACES DE SERVICIO SELECCIONADO ===============
-export interface ServiceAdditionalFieldValue {
-  fieldId: string;
-  value: string | number | boolean;
-}
-
-export interface ServiceInstance {
-  instanceId: string; // UUID generado
-  quantity: number;
-  additionalData?: ServiceAdditionalFieldValue[];
-  notes?: string;
-}
-
-// Para la UI interna
 export interface SelectedService {
-  serviceId: string;
-  serviceName: string;
-  serviceDescription: string;
-  basePrice?: number;
-  instances: ServiceInstance[];
-  totalQuantity: number; // Suma de todas las cantidades de instancias
+  id: number;
+  requestId: number;
+  serviceId: number;
+  quantity: number;
+  created_at: string;
+  service: ServiceInfo;
+  additionalValues: AdditionalValue[];
 }
 
-// Para enviar al backend
+export interface ServiceInfo {
+  id: number;
+  categoryId: number;
+  code: string;
+  name: string;
+  created_at: string;
+  updatedAt: string;
+  // Agregado para la UI:
+  additionalFields?: AdditionalField[];
+  category?: {
+    id?: number;
+    code?: string;
+    name?: string;
+    created_at?: string;
+    updatedAt?: string;
+  };
+}
+
+// Campo adicional para formularios dinámicos en la UI
+export interface AdditionalField {
+  id: number;
+  label: string;
+  fieldName: string;
+  type?: string;
+  options?: string[];
+  required?: boolean;
+  dependsOnField?: string | null;
+  dependsOnValue?: string | null;
+  displayOrder?: number;
+}
+
+// --- Utilidad para valores adicionales planos (sin id, selectedServiceId, created_at) ---
+export type PlainAdditionalValue = Pick<
+  AdditionalValue,
+  "fieldName" | "fieldValue"
+>;
+
+// --- Ajuste de AdditionalValue para la UI (campos opcionales) ---
+export interface AdditionalValue {
+  id?: number;
+  selectedServiceId?: number;
+  fieldName: string;
+  fieldValue: string;
+  created_at?: string;
+}
+
+// --- ServiceInstance solo acepta AdditionalValue[] ---
+export interface ServiceInstance {
+  instanceId?: string;
+  additionalValues: AdditionalValue[];
+}
+
+/**
+ * UISelectedService
+ * Extiende SelectedService y permite campos extendidos para la UI (serviceInstances, additionalValues, service flexible)
+ * Usar este tipo en la UI para manipular servicios seleccionados.
+ */
+export interface UISelectedService
+  extends Omit<SelectedService, "service" | "additionalValues"> {
+  service: ServiceInfo & { [key: string]: unknown };
+  additionalValues?: AdditionalValue[];
+  serviceInstances?: ServiceInstance[];
+}
+
+/**
+ * EditableServiceRequest
+ * Para formularios de edición en la UI (sin selectedServices)
+ */
+export type EditableServiceRequest = Omit<ServiceRequest, "selectedServices">;
+
+/**
+ * ServiceItemProps
+ * Props para el componente ServiceItem en la UI
+ */
+export interface ServiceItemProps {
+  sel: UISelectedService;
+  idx: number;
+  onServiceChange: (
+    idx: number,
+    key: keyof UISelectedService,
+    value: unknown
+  ) => void;
+  onAdditionalValueChange: (
+    idx: number,
+    instanceIdx: number,
+    fieldId: number,
+    value: string
+  ) => void;
+  onAddInstance: (serviceIdx: number) => void;
+  onRemoveInstance: (serviceIdx: number, instanceIdx: number) => void;
+  onDuplicateInstance: (serviceIdx: number, instanceIdx: number) => void;
+  onRemoveService: (serviceIdx: number) => void;
+}
+
+// --- Para enviar al backend: solo los campos permitidos ---
 export interface BackendServiceRequest {
   serviceId: number;
   quantity: number;
@@ -68,19 +151,6 @@ export interface CreateServiceRequestRequest {
   email: string;
   description: string;
   selectedServices: BackendServiceRequest[];
-}
-
-// Para la UI interna (mantenemos la estructura anterior para compatibilidad)
-export interface InternalServiceRequestData {
-  nombre: string;
-  email: string;
-  telefono: string;
-  empresa: string;
-  nameProject: string;
-  identification: string;
-  selectedServices: SelectedService[];
-  descripcion: string;
-  ubicacionProyecto: string;
 }
 
 export interface UpdateServiceRequestRequest {
@@ -262,16 +332,24 @@ export interface APIServiceCategory {
   updatedAt: string;
 }
 
+/**
+ * APIServiceAdditionalField
+ * Unificada y compatible con AdditionalField y la API real.
+ * - options?: string[] | null; // Permite ambos casos (API y UI)
+ * - name: nombre de campo en la API (equivale a fieldName en la UI)
+ * - label: etiqueta visible
+ * - Otros campos para dependencias y orden
+ */
 export interface APIServiceAdditionalField {
   id: number;
   serviceId: number;
-  name: string; // Cambiado de fieldName a name para coincidir con la API real
+  name: string; // Nombre de campo en la API (equivale a fieldName en la UI)
+  label: string;
   type: "text" | "number" | "date" | "select" | "checkbox";
   required: boolean;
   options?: string[] | null;
   dependsOnField?: string | null;
   dependsOnValue?: string | null;
-  label: string;
   displayOrder?: number;
   created_at: string;
   updatedAt: string;
@@ -325,9 +403,19 @@ export type ServiceCategory = APIServiceCategory;
 // =============== INTERFACES PARA ADMINISTRACIÓN ===============
 
 // Interface completa de solicitud de servicio con servicios seleccionados
-export interface AdminServiceRequest extends ServiceRequest {
-  selectedServices: AdminSelectedService[];
+export interface AdminServiceRequest {
+  id: number;
+  name: string;
+  nameProject: string;
+  location: string;
+  identification: string;
+  phone: string;
+  email: string;
+  description: string;
+  status: ServiceRequestStatus;
+  created_at: string;
   updatedAt: string;
+  selectedServices: AdminSelectedService[];
 }
 
 // Interface para servicio seleccionado en administración
@@ -351,19 +439,10 @@ export interface AdminSelectedService {
       created_at: string;
       updatedAt: string;
     };
-    additionalFields: APIServiceAdditionalField[];
+    additionalFields: AdditionalField[];
   };
-  serviceInstances: unknown[]; // Para futuras extensiones
-  additionalValues: AdminAdditionalValue[];
-}
-
-// Interface para valores adicionales en administración
-export interface AdminAdditionalValue {
-  id: number;
-  selectedServiceId: number;
-  fieldName: string;
-  fieldValue: string;
-  created_at: string;
+  serviceInstances: ServiceInstance[];
+  additionalValues: AdditionalValue[];
 }
 
 // Interface para respuesta de lista de solicitudes en administración
