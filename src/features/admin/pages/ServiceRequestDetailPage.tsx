@@ -1015,7 +1015,10 @@ const ServiceRequestDetailPage: React.FC = () => {
                 } = payload;
                 updateMutation
                   .mutateAsync({ id: mainData.id, data: payloadToSend })
-                  .then(() => setSuccess(true));
+                  .then(() => {
+                    setSuccess(true);
+                    navigate("/admin/service-requests");
+                  });
               }}
               disabled={updateMutation.isPending}
             >
