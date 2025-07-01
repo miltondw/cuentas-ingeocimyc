@@ -188,8 +188,9 @@ export const ClientServiceRequestForm: React.FC<
       const transformedServices: BackendServiceRequest[] =
         data.selectedServices.map((service) => {
           // Calcular la cantidad total del servicio
-          const totalQuantity = service.instances.reduce(
-            (sum, instance) => sum + instance.quantity,
+          const totalQuantity = service.instances?.reduce(
+            (sum, instance) =>
+              sum + (instance?.quantity ? instance?.quantity : 0),
             0
           );
 
@@ -198,7 +199,7 @@ export const ClientServiceRequestForm: React.FC<
             fieldName: string;
             fieldValue: string;
           }> = [];
-          service.instances.forEach((instance, instanceIndex) => {
+          service.instances?.forEach((instance, instanceIndex) => {
             if (instance.additionalData && instance.additionalData.length > 0) {
               instance.additionalData.forEach((data) => {
                 // Solo agregar si el valor no está vacío
@@ -226,21 +227,21 @@ export const ClientServiceRequestForm: React.FC<
           });
 
           return {
-            serviceId: parseInt(service.serviceId),
-            quantity: totalQuantity,
+            serviceId: Number(service?.serviceId) || 0,
+            quantity: typeof totalQuantity === "number" ? totalQuantity : 0,
             additionalValues:
               allAdditionalValues.length > 0 ? allAdditionalValues : undefined,
           };
         });
 
       return {
-        name: data.nombre,
-        nameProject: data.nameProject,
-        location: data.ubicacionProyecto,
-        identification: data.identification,
-        phone: data.telefono,
-        email: data.email,
-        description: data.descripcion,
+        name: data?.nombre || "",
+        nameProject: data?.nameProject || "",
+        location: data?.ubicacionProyecto || "",
+        identification: data?.identification || "",
+        phone: data?.telefono || "",
+        email: data?.email || "",
+        description: data?.descripcion || "",
         selectedServices: transformedServices,
       };
     },
@@ -280,27 +281,27 @@ export const ClientServiceRequestForm: React.FC<
     switch (activeStep) {
       case 0: {
         // Cliente info - validaciones básicas
-        if (!formData.nombre.trim()) {
+        if (!formData?.nombre?.trim()) {
           stepErrors.nombre = "El nombre es requerido";
           stepIsValid = false;
         }
-        if (!formData.email.trim()) {
+        if (!formData?.email?.trim()) {
           stepErrors.email = "El email es requerido";
           stepIsValid = false;
         }
-        if (!formData.telefono.trim()) {
+        if (!formData?.telefono?.trim()) {
           stepErrors.telefono = "El teléfono es requerido";
           stepIsValid = false;
         }
-        if (!formData.empresa.trim()) {
+        if (!formData?.empresa?.trim()) {
           stepErrors.empresa = "La empresa es requerida";
           stepIsValid = false;
         }
-        if (!formData.identification.trim()) {
+        if (!formData?.identification?.trim()) {
           stepErrors.identification = "La identificación es requerida";
           stepIsValid = false;
         }
-        if (!formData.nameProject.trim()) {
+        if (!formData?.nameProject?.trim()) {
           stepErrors.nameProject = "El nombre del proyecto es requerido";
           stepIsValid = false;
         }
@@ -321,11 +322,11 @@ export const ClientServiceRequestForm: React.FC<
 
       case 2: {
         // Proyecto
-        if (!formData.descripcion.trim()) {
+        if (!formData?.descripcion?.trim()) {
           stepErrors.descripcion = "La descripción es requerida";
           stepIsValid = false;
         }
-        if (!formData.ubicacionProyecto.trim()) {
+        if (!formData?.ubicacionProyecto?.trim()) {
           stepErrors.ubicacionProyecto =
             "La ubicación del proyecto es requerida";
           stepIsValid = false;

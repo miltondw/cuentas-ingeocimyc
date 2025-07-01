@@ -36,6 +36,10 @@ export interface SelectedService {
   created_at: string;
   service: ServiceInfo;
   additionalValues: AdditionalValue[];
+  serviceName?: string;
+  serviceDescription?: string;
+  instances?: ServiceInstance[];
+  totalQuantity?: number;
 }
 
 export interface ServiceInfo {

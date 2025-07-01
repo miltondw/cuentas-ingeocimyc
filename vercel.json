@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "http://localhost:5051/api/$1"
+      "destination": "https://api-cuentas-zlut.onrender.com/api/$1"
     },
     {
       "source": "/dev-dist/sw.js",

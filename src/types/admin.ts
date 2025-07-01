@@ -30,7 +30,8 @@ export interface Service {
   name: string;
   code: string;
   categoryId: number;
-  additionalFields?: unknown[];
+  category?: ServiceCategory;
+  additionalFields?: ServiceAdditionalFieldFormData[];
   created_at: string;
   updated_at: string;
 }
@@ -159,6 +160,7 @@ export interface ServiceFormData {
 }
 
 export interface ServiceAdditionalFieldFormData {
+  id?: number;
   fieldName: string;
   type: ServiceFieldType;
   required: boolean;

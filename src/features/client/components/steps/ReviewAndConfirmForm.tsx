@@ -94,7 +94,7 @@ export const ReviewAndConfirmForm: React.FC<ReviewAndConfirmFormProps> = ({
 
     return data.selectedServices.reduce((acc, service) => {
       // Extraer la categoría del servicio (asumiendo que viene en el nombre)
-      const categoryName = service.serviceName.split(" - ")[0] || "General";
+      const categoryName = service?.serviceName?.split(" - ")[0] || "General";
 
       if (!acc[categoryName]) {
         acc[categoryName] = [];
@@ -416,7 +416,7 @@ export const ReviewAndConfirmForm: React.FC<ReviewAndConfirmFormProps> = ({
                     />
                     <Chip
                       label={`${data.selectedServices.reduce(
-                        (sum, s) => sum + s.totalQuantity,
+                        (sum, s) => sum + (s?.totalQuantity || 0),
                         0
                       )} unidades total`}
                       color="secondary"
@@ -447,7 +447,7 @@ export const ReviewAndConfirmForm: React.FC<ReviewAndConfirmFormProps> = ({
                           />
                           {/* Detalles de instancias con información adicional */}
                           {services.some((s) =>
-                            s.instances.some(
+                            s?.instances?.some(
                               (inst) => (inst.additionalData?.length || 0) > 0
                             )
                           ) && (
@@ -462,15 +462,16 @@ export const ReviewAndConfirmForm: React.FC<ReviewAndConfirmFormProps> = ({
 
                               {services.map((service) => {
                                 const instancesWithData =
-                                  service.instances.filter(
+                                  service?.instances?.filter(
                                     (inst) =>
                                       (inst.additionalData?.length || 0) > 0
                                   );
 
-                                if (instancesWithData.length === 0) return null; // Obtener todos los campos únicos para las columnas
+                                if (instancesWithData?.length === 0)
+                                  return null; // Obtener todos los campos únicos para las columnas
                                 const allFieldIds = new Set<string>();
 
-                                instancesWithData.forEach((instance) => {
+                                instancesWithData?.forEach((instance) => {
                                   instance.additionalData?.forEach((data) => {
                                     allFieldIds.add(data.fieldId);
                                   });
@@ -520,7 +521,7 @@ export const ReviewAndConfirmForm: React.FC<ReviewAndConfirmFormProps> = ({
                                                 }}
                                               >
                                                 {getFieldLabel(
-                                                  service.serviceId,
+                                                  String(service?.serviceId),
                                                   fieldId
                                                 )}
                                               </TableCell>
@@ -536,7 +537,7 @@ export const ReviewAndConfirmForm: React.FC<ReviewAndConfirmFormProps> = ({
                                           </TableRow>
                                         </TableHead>
                                         <TableBody>
-                                          {instancesWithData.map(
+                                          {instancesWithData?.map(
                                             (instance, instIndex) => (
                                               <TableRow
                                                 key={instance.instanceId}

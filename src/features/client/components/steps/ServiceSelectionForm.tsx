@@ -159,8 +159,10 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
 
       if (!service || service.hasAdditionalFields) return;
 
-      const newSelectedService: SelectedService = {
-        serviceId: service.id,
+      // Use a UI type or let TypeScript infer the type (remove explicit SelectedService)
+      const newSelectedService = {
+        serviceId:
+          typeof service.id === "string" ? Number(service.id) : service.id,
         serviceName: service.name,
         serviceDescription:
           service.description || `${service.code} - ${service.name}`,
@@ -218,9 +220,10 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
       const updatedServices =
         (data.selectedServices
           ?.map((selectedService) => {
-            if (selectedService.serviceId === serviceId) {
-              const newInstances = selectedService.instances.filter(
-                (inst) => inst.instanceId !== instanceId
+            // Asegura que ambos sean string para comparar
+            if (String(selectedService.serviceId) === String(serviceId)) {
+              const newInstances = (selectedService.instances ?? []).filter(
+                (inst) => String(inst.instanceId) !== String(instanceId)
               );
 
               // Si no quedan instancias, remover el servicio completamente
@@ -255,19 +258,21 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
 
       const updatedServices =
         data.selectedServices?.map((selectedService) => {
-          if (selectedService.serviceId === serviceId) {
-            const newInstances = selectedService.instances.map((inst) => {
-              if (inst.instanceId === instanceId) {
-                return { ...inst, quantity: Math.max(1, quantity) };
+          if (selectedService.serviceId === Number(serviceId)) {
+            const newInstances = (selectedService.instances ?? []).map(
+              (inst) => {
+                if (inst.instanceId === instanceId) {
+                  return { ...inst, quantity: Math.max(1, quantity) };
+                }
+                return inst;
               }
-              return inst;
-            });
+            );
 
             return {
               ...selectedService,
               instances: newInstances,
               totalQuantity: newInstances.reduce(
-                (sum, inst) => sum + inst.quantity,
+                (sum, inst) => sum + (inst.quantity ?? 1),
                 0
               ),
             };
@@ -290,7 +295,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
       const updatedServices =
         data.selectedServices?.map((selectedService) => {
           if (selectedService.serviceId === serviceId) {
-            const newInstances = selectedService.instances.map((inst) => {
+            const newInstances = selectedService?.instances?.map((inst) => {
               if (inst.instanceId === instanceId) {
                 const existingData = inst.additionalData || [];
                 const updatedData = existingData.filter(
@@ -353,8 +358,11 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
         const selectedService = data.selectedServices?.find(
           (s) => s.serviceId === originalService.id.toString()
         );
-        if (selectedService && selectedService.instances[instanceIndex]) {
-          const instance = selectedService.instances[instanceIndex];
+        if (
+          selectedService &&
+          (selectedService.instances ?? [])[instanceIndex]
+        ) {
+          const instance = (selectedService.instances ?? [])[instanceIndex];
           setConfigInstances([{ ...instance }]);
         }
       } else if (selectedServiceId) {
@@ -365,7 +373,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
         if (selectedService) {
           // Cargar todas las instancias existentes para editar
           setConfigInstances(
-            selectedService.instances.map((inst) => ({ ...inst }))
+            (selectedService.instances ?? []).map((inst) => ({ ...inst }))
           );
           setConfigService({
             service: originalService,
@@ -466,8 +474,8 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
       // Editando una instancia existente
       const updatedServices =
         data.selectedServices?.map((selectedService) => {
-          if (selectedService.serviceId === service.id.toString()) {
-            const updatedInstances = [...selectedService.instances];
+          if (selectedService.serviceId === Number(service.id)) {
+            const updatedInstances = [...(selectedService.instances ?? [])];
             updatedInstances[instanceIndex] = configInstances[0];
 
             return {
@@ -486,7 +494,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
         data.selectedServices?.map((selectedService) => {
           if (selectedService.serviceId === selectedServiceId) {
             const newInstances = [
-              ...selectedService.instances,
+              ...(selectedService?.instances ?? []),
               ...configInstances,
             ];
             return {
@@ -500,12 +508,12 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
       onChange({ selectedServices: updatedServices });
     } else {
       // Agregando nuevo servicio
-      const newSelectedService: SelectedService = {
-        serviceId: service.id.toString(),
+      const newSelectedService = {
+        serviceId: Number(service.id),
         serviceName: service.name,
         serviceDescription: `${service.code} - ${service.name}`,
         instances: configInstances,
-        totalQuantity: configInstances.length, // Para servicios con info adicional = número de muestras
+        totalQuantity: configInstances?.length || 0,
       };
 
       const updatedServices = [
@@ -843,8 +851,8 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                           sx={{ fontSize: { xs: "0.7rem", md: "0.75rem" } }}
                         >
                           {service?.hasAdditionalFields
-                            ? `${selectedService.totalQuantity} muestra(s) • ${selectedService.instances.length} instancia(s)`
-                            : `Total: ${selectedService.totalQuantity} unidades • ${selectedService.instances.length} instancia(s)`}
+                            ? `${selectedService.totalQuantity} muestra(s) • ${selectedService.instances?.length} instancia(s)`
+                            : `Total: ${selectedService.totalQuantity} unidades • ${selectedService.instances?.length} instancia(s)`}
                         </Typography>
                       </Box>
                       <IconButton
@@ -852,7 +860,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                         color="error"
                         onClick={(e) => {
                           e.stopPropagation();
-                          removeService(selectedService.serviceId);
+                          removeService(String(selectedService.serviceId));
                         }}
                         sx={{
                           "&:hover": {
@@ -866,7 +874,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                   </AccordionSummary>
                   <AccordionDetails>
                     <Grid2 container spacing={2}>
-                      {selectedService.instances.map((instance, index) => (
+                      {selectedService?.instances?.map((instance, index) => (
                         <Grid2 size={{ xs: 12 }} key={instance.instanceId}>
                           <Paper variant="outlined" sx={{ p: 2 }}>
                             <Box
@@ -900,8 +908,8 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                                     value={instance.quantity}
                                     onChange={(e) =>
                                       updateInstanceQuantity(
-                                        selectedService.serviceId,
-                                        instance.instanceId,
+                                        String(selectedService.serviceId),
+                                        String(instance.instanceId),
                                         Number(e.target.value)
                                       )
                                     }
@@ -940,8 +948,8 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                                     color="error"
                                     onClick={() =>
                                       removeInstance(
-                                        selectedService.serviceId,
-                                        instance.instanceId
+                                        String(selectedService.serviceId),
+                                        String(instance.instanceId)
                                       )
                                     }
                                   >
@@ -978,7 +986,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                                 service as unknown as APIService,
                                 1,
                                 undefined,
-                                selectedService.serviceId // Pasar el serviceId del seleccionado
+                                String(selectedService.serviceId) // Asegura string
                               )
                             }
                             fullWidth
@@ -1355,7 +1363,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                           size="small"
                           color="primary"
                           onClick={() =>
-                            duplicateInstanceInModal(instance.instanceId)
+                            duplicateInstanceInModal(instance?.instanceId || "")
                           }
                         >
                           <ContentCopyIcon fontSize="small" />
@@ -1367,7 +1375,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                           size="small"
                           color="error"
                           onClick={() =>
-                            removeInstanceInModal(instance.instanceId)
+                            removeInstanceInModal(instance?.instanceId || "")
                           }
                         >
                           <DeleteOutlined />
@@ -1383,20 +1391,26 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                       .sort(
                         (a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)
                       )
-                      .map((field) => {
+                      .map((field, fieldIndex) => {
                         const currentValue = instance.additionalData?.find(
                           (data) => data.fieldId === field.id.toString()
                         )?.value;
 
-                        if (!shouldShowField(field, instance.instanceId)) {
+                        // Asegurar que instance.instanceId es string
+                        const safeInstanceId = instance.instanceId ?? "";
+
+                        if (!shouldShowField(field, safeInstanceId)) {
                           return null;
                         }
 
                         return (
-                          <Grid2 size={{ xs: 12, sm: 6 }} key={field.id}>
+                          <Grid2
+                            size={{ xs: 12, sm: 6 }}
+                            key={`${field.id}-${fieldIndex}`}
+                          >
                             {renderModalField(
                               field,
-                              instance.instanceId,
+                              safeInstanceId,
                               currentValue
                             )}
                           </Grid2>
@@ -1411,7 +1425,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                         label="Notas adicionales (opcional)"
                         value={instance.notes || ""}
                         onChange={(e) =>
-                          updateInstanceInModal(instance.instanceId, {
+                          updateInstanceInModal(instance.instanceId ?? "", {
                             notes: e.target.value,
                           })
                         }
@@ -1424,7 +1438,7 @@ export const ServiceSelectionForm: React.FC<ServiceSelectionFormProps> = ({
                     variant="outlined"
                     startIcon={<AddOutlined />}
                     onClick={() =>
-                      duplicateInstanceInModal(instance.instanceId)
+                      duplicateInstanceInModal(instance?.instanceId || "")
                     }
                     size={isExtraSmallScreen ? "medium" : "large"}
                     sx={{ margin: "1rem auto", display: "flex", gap: 1 }}

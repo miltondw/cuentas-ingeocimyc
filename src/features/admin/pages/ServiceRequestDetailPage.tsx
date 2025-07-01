@@ -852,7 +852,7 @@ const ServiceRequestDetailPage: React.FC = () => {
         const duplicated = {
           ...instanceToCopy,
           instanceId: `${Date.now()}_${Math.random()}`,
-          additionalValues: instanceToCopy.additionalValues.map((v) => ({
+          additionalValues: instanceToCopy?.additionalValues?.map((v) => ({
             ...v,
             // El fieldName se renumerará después
           })),
@@ -1086,7 +1086,7 @@ const ServiceRequestDetailPage: React.FC = () => {
                         <Box mb={2}>
                           {Array.isArray(serviceToAdd.additionalFields)
                             ? serviceToAdd.additionalFields.map((field) => {
-                                const val = instance.additionalValues.find(
+                                const val = instance?.additionalValues?.find(
                                   (v) => v.fieldName.endsWith(`_${field.id}`)
                                 );
                                 return renderAdditionalField(
@@ -1099,15 +1099,16 @@ const ServiceRequestDetailPage: React.FC = () => {
                                           ? {
                                               ...inst,
                                               additionalValues:
-                                                inst.additionalValues.map((v) =>
-                                                  v.fieldName.endsWith(
-                                                    `_${field.id}`
-                                                  )
-                                                    ? {
-                                                        ...v,
-                                                        fieldValue: newValue,
-                                                      }
-                                                    : v
+                                                inst?.additionalValues?.map(
+                                                  (v) =>
+                                                    v.fieldName.endsWith(
+                                                      `_${field.id}`
+                                                    )
+                                                      ? {
+                                                          ...v,
+                                                          fieldValue: newValue,
+                                                        }
+                                                      : v
                                                 ),
                                             }
                                           : inst

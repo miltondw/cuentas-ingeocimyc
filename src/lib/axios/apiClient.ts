@@ -6,7 +6,8 @@ import axios, {
 import { saveRequest } from "@/utils/offlineStorage";
 import { tokenStorage } from "@/services/storage/tokenStorage";
 
-const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5051/api";
+const apiBaseUrl =
+  import.meta.env.VITE_API_URL || "https://api-cuentas-zlut.onrender.com/api";
 
 // Definir interfaces para las respuestas de error
 export interface ErrorResponseData {
@@ -54,7 +55,9 @@ export interface BaseFilters {
 
 // Configuración del entorno
 const getBaseURL = (): string => {
-  return import.meta.env.VITE_API_URL || "http://localhost:5051/api";
+  return (
+    import.meta.env.VITE_API_URL || "https://api-cuentas-zlut.onrender.com/api"
+  );
 };
 
 // Variable para evitar múltiples intentos de refresh simultáneos

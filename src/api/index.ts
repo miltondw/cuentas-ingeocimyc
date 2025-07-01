@@ -53,7 +53,7 @@ export interface BaseFilters {
 const getBaseURL = (): string => {
   // Si estamos en desarrollo, usar el servidor externo
   if (import.meta.env.DEV) {
-    return "http://localhost:5051/api";
+    return "https://api-cuentas-zlut.onrender.com/api";
   }
   // En producción, usar la ruta relativa
   return "/api";
