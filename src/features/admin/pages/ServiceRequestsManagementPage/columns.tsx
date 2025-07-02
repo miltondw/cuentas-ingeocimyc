@@ -10,7 +10,9 @@ import {
   Stack,
   Tooltip,
   IconButton,
+  CircularProgress,
 } from "@mui/material";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import {
   Visibility as ViewIcon,
   Edit as EditIcon,
@@ -28,6 +30,8 @@ export interface ServiceRequestTableHandlers {
   onRegeneratePDF: (id: number) => void;
   isGeneratingPDF: (id: number) => boolean;
   isRegeneratingPDF: (id: number) => boolean;
+  onCreateClientUser: (request: AdminServiceRequest) => void;
+  isCreatingClientUser: (id: number) => boolean;
 }
 
 export interface StatusInfo {
@@ -170,6 +174,22 @@ export function getServiceRequestColumns(
             >
               <RefreshIcon fontSize="small" />
             </IconButton>
+          </Tooltip>
+          <Tooltip title="Crear usuario cliente">
+            <span>
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={() => handlers.onCreateClientUser(request)}
+                disabled={handlers.isCreatingClientUser(request.id)}
+              >
+                {handlers.isCreatingClientUser(request.id) ? (
+                  <CircularProgress size={20} />
+                ) : (
+                  <PersonAddIcon fontSize="small" />
+                )}
+              </IconButton>
+            </span>
           </Tooltip>
           <Tooltip title="Eliminar">
             <IconButton

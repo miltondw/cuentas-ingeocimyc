@@ -1,4 +1,9 @@
 import React, { useMemo, useState } from "react";
+import { useNotifications } from "@/hooks/useNotifications";
+import { authService } from "@/features/auth/services/authService";
+import type { RegisterDto } from "@/types/auth";
+import { useNavigate } from "react-router-dom";
+import { ROUTES } from "@/utils/routes";
 import { Container } from "@mui/material";
 import {
   ServiceRequestsHeader,
@@ -65,11 +70,16 @@ const ServiceRequestsManagementPage: React.FC = () => {
   // Modales y selección
   const [selectedRequest, setSelectedRequest] =
     useState<AdminServiceRequest | null>(null);
+  const navigate = useNavigate();
   const [editStatusRequest, setEditStatusRequest] =
     useState<AdminServiceRequest | null>(null);
   const [newStatus, setNewStatus] = useState<ServiceRequestStatus>("pendiente");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  // Estado para creación de usuario cliente por fila
+  const [creatingClientUserId, setCreatingClientUserId] = useState<
+    number | null
+  >(null);
 
   // Data hooks
   const { data: requestsResponse, isLoading } = useAdminServiceRequests({
@@ -87,7 +97,7 @@ const ServiceRequestsManagementPage: React.FC = () => {
 
   const requests = requestsResponse?.data || [];
   const total = requestsResponse?.total || 0;
-  const categories = categoriesResponse?.data || [];
+  const categories = categoriesResponse || [];
   const stats = statsResponse;
 
   // Memoized stats
@@ -95,6 +105,38 @@ const ServiceRequestsManagementPage: React.FC = () => {
     if (!stats) return {};
     return stats.byStatus;
   }, [stats]);
+
+  // Notificaciones
+  const { showSuccess, showError } = useNotifications();
+
+  // Handler para crear usuario cliente
+  const handleCreateClientUser = async (request: AdminServiceRequest) => {
+    setCreatingClientUserId(request.id);
+    const password = `${request.identification}.Ing$`;
+    const registerDto: RegisterDto = {
+      email: request.email,
+      password,
+      confirmPassword: password,
+      name: request.name,
+      role: "client",
+    };
+    try {
+      await authService.register(registerDto);
+      showSuccess("Usuario cliente creado exitosamente");
+    } catch (error) {
+      const err = error as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      showError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Error al crear usuario cliente"
+      );
+    } finally {
+      setCreatingClientUserId(null);
+    }
+  };
 
   // Handlers para la tabla
   const handlers: ServiceRequestTableHandlers = {
@@ -108,6 +150,8 @@ const ServiceRequestsManagementPage: React.FC = () => {
     onRegeneratePDF: (id) => handleRegeneratePDF(id),
     isGeneratingPDF: (_id) => generatePDFMutation.isPending,
     isRegeneratingPDF: (_id) => regeneratePDFMutation.isPending,
+    onCreateClientUser: handleCreateClientUser,
+    isCreatingClientUser: (id) => creatingClientUserId === id,
   };
 
   const getStatusInfo: GetStatusInfo = (status) => {
@@ -232,6 +276,12 @@ const ServiceRequestsManagementPage: React.FC = () => {
         open={!!selectedRequest}
         onClose={() => setSelectedRequest(null)}
         request={selectedRequest}
+        onEdit={(id) => {
+          setSelectedRequest(null);
+          navigate(
+            ROUTES.ADMIN.SERVICE_REQUEST_EDIT.replace(":id", String(id))
+          );
+        }}
       />
       <ServiceRequestStatusEditModal
         open={!!editStatusRequest}
