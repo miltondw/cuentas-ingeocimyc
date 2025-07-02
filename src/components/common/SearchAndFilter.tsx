@@ -24,6 +24,7 @@ import {
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
 } from "@mui/icons-material";
+import { FilterValue } from "@/types/labFilters";
 
 export interface FilterOption {
   value: string | number;
@@ -32,7 +33,7 @@ export interface FilterOption {
 }
 
 export interface FilterField {
-  key: string;
+  key: "category" | "hasAdditionalFields" | "createdDateRange";
   label: string;
   type: "select" | "multiselect" | "text" | "number" | "date" | "daterange";
   options?: FilterOption[];
@@ -48,8 +49,13 @@ export interface SearchAndFilterProps {
 
   // Filters
   filters: FilterField[];
-  filterValues: Record<string, unknown>;
-  onFilterChange: (key: string, value: unknown) => void;
+  filterValues: Partial<
+    Record<"category" | "hasAdditionalFields" | "createdDateRange", FilterValue>
+  >;
+  onFilterChange: (
+    key: "category" | "hasAdditionalFields" | "createdDateRange",
+    value: FilterValue
+  ) => void;
 
   // Advanced options
   showFilterCount?: boolean;
@@ -84,6 +90,8 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   onApplyFilters,
   debounceMs = 300,
 }) => {
+  // Ensure filterValues is typed correctly
+
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -106,12 +114,14 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
 
   // Get active filter count
   const getActiveFilterCount = () => {
-    return Object.entries(filterValues).filter(([, value]) => {
-      if (Array.isArray(value)) {
-        return value.length > 0;
+    return Object.entries(filterValues as Record<string, unknown>).filter(
+      ([, value]) => {
+        if (Array.isArray(value)) {
+          return value.length > 0;
+        }
+        return value !== null && value !== undefined && value !== "";
       }
-      return value !== null && value !== undefined && value !== "";
-    }).length;
+    ).length;
   };
 
   // Clear all filters
@@ -121,17 +131,23 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
 
     // Clear all filters
     filters.forEach((filter) => {
-      if (filter.multiple || filter.type === "multiselect") {
-        onFilterChange(filter.key, []);
-      } else {
-        onFilterChange(filter.key, "");
+      // Only call onFilterChange for allowed keys
+      if (
+        filter.key === "category" ||
+        filter.key === "hasAdditionalFields" ||
+        filter.key === "createdDateRange"
+      ) {
+        if (filter.multiple || filter.type === "multiselect") {
+          onFilterChange(filter.key, []);
+        } else {
+          onFilterChange(filter.key, "");
+        }
       }
     });
 
     onClear?.();
   };
 
-  // Render filter field
   const renderFilterField = (filter: FilterField) => {
     const value = filterValues[filter.key] || (filter.multiple ? [] : "");
 

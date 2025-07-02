@@ -31,6 +31,7 @@ import { SearchAndFilter, FilterField } from "./SearchAndFilter";
 import DataTablePagination, {
   type PaginationData,
 } from "./DataTablePagination";
+import { Service } from "@/types/admin";
 
 export interface ColumnConfig<T = unknown> {
   key: keyof T | string;
@@ -41,7 +42,7 @@ export interface ColumnConfig<T = unknown> {
   render?: (value: unknown, row: T) => React.ReactNode;
 }
 
-export interface RowAction<T = unknown> {
+export interface RowAction<T = unknown | Service> {
   key: string;
   label: string;
   icon?: React.ReactNode;
@@ -68,7 +69,7 @@ export interface DataTableProps<T = unknown> {
   onSelectionChange?: (selectedIds: Set<string | number>) => void;
 
   // Actions
-  rowActions?: RowAction<T>[];
+  rowActions?: RowAction<unknown>[];
 
   // Callbacks
   onRowClick?: (row: T) => void;

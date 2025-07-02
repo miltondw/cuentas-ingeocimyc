@@ -86,7 +86,10 @@ interface DataTableProps<T> {
   onSearchChange?: (value: string) => void;
   filters?: FilterField[];
   filterValues?: Record<string, unknown>;
-  onFilterChange?: (key: string, value: unknown) => void;
+  onFilterChange?: (
+    key: "category" | "hasAdditionalFields" | "createdDateRange",
+    value: FilterValue
+  ) => void;
 
   // Selección
   selectable?: boolean;
