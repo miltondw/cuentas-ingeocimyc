@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { FC, ChangeEvent, useMemo, useState } from "react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { authService } from "@/features/auth/services/authService";
 import type { RegisterDto } from "@/types/auth";
@@ -55,7 +55,7 @@ const SERVICE_REQUEST_STATUSES: Array<{
   { value: "cancelado", label: "Cancelado", color: "error" },
 ];
 
-const ServiceRequestsManagementPage: React.FC = () => {
+const ServiceRequestsManagementPage: FC = () => {
   // Filtros y búsqueda
   const [filters, setFilters] = useState<AdminServiceRequestFilters>({
     page: 1,
@@ -169,9 +169,7 @@ const ServiceRequestsManagementPage: React.FC = () => {
     setFilters((prev) => ({ ...prev, page: newPage + 1 }));
     setSelectedIds(new Set());
   };
-  const handleRowsPerPageChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleRowsPerPageChange = (event: ChangeEvent<HTMLInputElement>) => {
     setFilters((prev) => ({
       ...prev,
       limit: parseInt(event.target.value, 10),
@@ -266,7 +264,7 @@ const ServiceRequestsManagementPage: React.FC = () => {
         onRowsPerPageChange={(rowsPerPage) =>
           handleRowsPerPageChange({
             target: { value: rowsPerPage.toString() },
-          } as React.ChangeEvent<HTMLInputElement>)
+          } as ChangeEvent<HTMLInputElement>)
         }
         selectable={true}
         selectedRows={selectedIds}

@@ -1,4 +1,4 @@
-import React from "react";
+import { FC, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   useAdminServices,
@@ -22,18 +22,16 @@ import {
 import { getColumns } from "./components/Columns";
 import { getRowActions } from "./components/RowActions";
 
-const ServicesManagementPage: React.FC = () => {
+const ServicesManagementPage: FC = () => {
   const navigate = useNavigate();
-  const [deletingService, setDeletingService] = React.useState<Service | null>(
-    null
-  );
+  const [deletingService, setDeletingService] = useState<Service | null>(null);
 
   // Data hooks
   const { data: servicesResponse, isLoading } = useAdminServices();
   const { data: categoriesResponse } = useAdminCategories();
   const deleteMutation = useDeleteService();
 
-  const services = React.useMemo(
+  const services = useMemo(
     () =>
       Array.isArray(servicesResponse)
         ? servicesResponse
@@ -42,7 +40,7 @@ const ServicesManagementPage: React.FC = () => {
         : [],
     [servicesResponse]
   );
-  const categories = React.useMemo(
+  const categories = useMemo(
     () =>
       Array.isArray(categoriesResponse)
         ? categoriesResponse
@@ -66,8 +64,8 @@ const ServicesManagementPage: React.FC = () => {
     goToFirstPage,
   } = useServiceFilters(services);
 
-  const columns = React.useMemo(() => getColumns(categories), [categories]);
-  const rowActions = React.useMemo(
+  const columns = useMemo(() => getColumns(categories), [categories]);
+  const rowActions = useMemo(
     () => getRowActions(navigate, setDeletingService),
     [navigate, setDeletingService]
   );

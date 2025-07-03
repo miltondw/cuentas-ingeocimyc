@@ -37,7 +37,10 @@ const AdminDashboardPage = lazy(
   () => import("@/features/admin/pages/AdminDashboardPage")
 );
 const CategoriesManagementPage = lazy(
-  () => import("@/features/admin/pages/CategoriesManagementPage")
+  () =>
+    import(
+      "@/features/admin/pages/CategoriesManagementPage/CategoriesManagementPage"
+    )
 );
 const ServicesManagementPage = lazy(
   () => import("@/features/admin/pages/ServicesManagementPage")
