@@ -26,7 +26,12 @@ export const ROUTES = {
   REGISTER: "/register",
   UNAUTHORIZED: "/unauthorized",
   PROFILE: "/profile",
-  CLIENT: "/cliente",
+  CLIENT: {
+    SOLICITUD: "/cliente",
+    HOME: "/client",
+    REQUEST_ME: "/client/requests",
+    EDIT_REQUEST: "/client/requests/:id/edit",
+  },
   ADMIN: {
     // Rutas existentes
     PROJECTS: "/proyectos",

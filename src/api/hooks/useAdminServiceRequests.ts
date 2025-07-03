@@ -1,4 +1,13 @@
 /**
+ * Hook para obtener las solicitudes del usuario autenticado (cliente)
+ */
+export function useMyServiceRequests() {
+  return useQuery({
+    queryKey: ["client", "serviceRequests", "mine"],
+    queryFn: () => adminServiceRequestsService.getMyServiceRequests(),
+  });
+}
+/**
  * Hooks para administración de solicitudes de servicio
  * @file useAdminServiceRequests.ts
  */

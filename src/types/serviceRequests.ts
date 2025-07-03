@@ -355,6 +355,7 @@ export interface APIServiceAdditionalField {
   id: number;
   serviceId: number;
   name: string; // Nombre de campo en la API (equivale a fieldName en la UI)
+  fieldName?: string;
   label: string;
   type: "text" | "number" | "date" | "select" | "checkbox";
   required: boolean;

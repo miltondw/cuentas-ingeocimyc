@@ -6,12 +6,18 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+
 .todo
+# Dependency directories
 node_modules
+
+# Build directories
 dist
 dist-ssr
+dev-dist/
+# Build output
 *.local
- dev-dist/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -23,12 +29,9 @@ dist-ssr
 *.sln
 *.sw?
 certs
+
 .env
 .env.*
 .env.local
 .env.development.local
 
-dev-dist/sw.js
-dev-dist/sw.js.map
-dev-dist/sw.js
-dev-dist/sw.js.map

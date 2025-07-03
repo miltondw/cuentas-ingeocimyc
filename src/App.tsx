@@ -5,7 +5,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import theme from "./theme";
-import AppRoutes from "./routes";
+import AppRoutes from "./routes/index";
 import { AuthProvider } from "@/features/auth/providers/AuthProvider";
 import { syncPendingRequests } from "@/utils/sync";
 import { usePWAInstall } from "@/hooks/usePWAInstall";

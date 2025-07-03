@@ -1,4 +1,46 @@
 /**
+ * Hook para actualizar una solicitud de servicio (cliente)
+ */
+import type { UpdateServiceRequestRequest } from "@/types/serviceRequests";
+export const useUpdateServiceRequest = () => {
+  const { showNotification } = useNotifications();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: UpdateServiceRequestRequest;
+    }) => {
+      return await serviceRequestsService.updateServiceRequest(id, data);
+    },
+    onSuccess: (updatedRequest) => {
+      queryClient.invalidateQueries({
+        queryKey: SERVICE_REQUEST_KEYS.details(),
+      });
+      queryClient.setQueryData(
+        SERVICE_REQUEST_KEYS.detail(updatedRequest.id),
+        updatedRequest
+      );
+      showNotification({
+        severity: "success",
+        message: "Solicitud de servicio actualizada exitosamente",
+      });
+    },
+    onError: (error: unknown) => {
+      const err = error as APIError;
+      showNotification({
+        severity: "error",
+        message:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Error al actualizar la solicitud de servicio",
+      });
+    },
+  });
+};
+/**
  * Hook para manejar solicitudes de servicio
  * @file useServiceRequests.ts
  */

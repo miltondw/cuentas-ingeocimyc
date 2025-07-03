@@ -11,10 +11,9 @@ import {
   Alert,
   MenuItem,
 } from "@mui/material";
-import {
-  useAdminServiceRequest,
-  useUpdateServiceRequest,
-} from "@/api/hooks/useAdminServiceRequests";
+// Usar hooks públicos para cliente
+import { useServiceRequest } from "@/features/client/hooks/useServiceRequests";
+import { useUpdateServiceRequest } from "@/features/client/hooks/useServiceRequests";
 import {
   ServiceRequest,
   AdditionalValue,
@@ -23,8 +22,10 @@ import {
   AdditionalField,
   EditableServiceRequest,
   ServiceItemProps,
+  ServiceInfo,
 } from "@/types/serviceRequests";
-import { useAdminServices } from "@/api/hooks/useAdminServices";
+// IMPORTANTE: Usar hooks públicos para cliente
+import { useServices } from "@/features/client/hooks/useServiceRequests";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -421,10 +422,35 @@ function buildServiceInstancesFromAdditionalValues(
 const ServiceRequestDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: serviceRequest, isLoading: loadingRequest } =
-    useAdminServiceRequest(Number(id));
+  // Usar hook público para obtener la solicitud de servicio
+  const { data: serviceRequest, isLoading: loadingRequest } = useServiceRequest(
+    Number(id)
+  );
+  // Usar hook público para actualizar la solicitud
   const updateMutation = useUpdateServiceRequest();
-  const { data: allServices, isLoading: loadingServices } = useAdminServices();
+  // Usar hook público para servicios
+  // Adaptar los servicios públicos a la estructura esperada por la UI
+  const { data: rawServices, isLoading: loadingServices } = useServices();
+  // Mapear APIService[] a ServiceInfo[] (adaptar additionalFields)
+  // Para cumplir con el tipado de Autocomplete (ServiceInfo & { [key: string]: unknown } & { additionalFields?: AdditionalField[] })[]
+  const allServices = (rawServices || []).map((s) => ({
+    ...s,
+    additionalFields: (s.additionalFields || []).map((f) => ({
+      id: f.id,
+      label: f.label,
+      fieldName: f.name, // APIServiceAdditionalField.name -> fieldName
+      type: f.type,
+      options: f.options ?? undefined,
+      required: f.required,
+      dependsOnField: f.dependsOnField ?? undefined,
+      dependsOnValue: f.dependsOnValue ?? undefined,
+      displayOrder: f.displayOrder,
+    })),
+    // Forzar index signature para TypeScript
+    ...(Object.create(null) as { [key: string]: unknown }),
+  })) as (ServiceInfo & { [key: string]: unknown } & {
+    additionalFields?: AdditionalField[];
+  })[];
   const [addServiceOpen, setAddServiceOpen] = useState(false);
   const [serviceToAdd, setServiceToAdd] = useState<
     | (UISelectedService["service"] & { additionalFields?: AdditionalField[] })

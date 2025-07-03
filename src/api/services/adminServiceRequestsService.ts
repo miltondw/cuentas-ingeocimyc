@@ -1,8 +1,3 @@
-/**
- * Servicio para administración de solicitudes de servicio
- * @file adminServiceRequestsService.ts
- */
-
 import api from "../index";
 import type {
   AdminServiceRequestsListResponse,
@@ -12,6 +7,32 @@ import type {
 } from "@/types/serviceRequests";
 
 export class AdminServiceRequestsService {
+  /**
+   * Obtener solicitudes del usuario autenticado (cliente)
+   */
+  async getMyServiceRequests(): Promise<AdminServiceRequestsListResponse> {
+    const response = await api.get("/service-requests/mine");
+    if (Array.isArray(response.data?.data)) {
+      return {
+        data: response.data.data,
+        total: response.data.total,
+        page: response.data.page,
+        limit: response.data.limit,
+      };
+    } else if (
+      response.data?.data?.data &&
+      Array.isArray(response.data.data.data)
+    ) {
+      return {
+        data: response.data.data.data,
+        total: response.data.data.total,
+        page: response.data.data.page,
+        limit: response.data.data.limit,
+      };
+    } else {
+      return { data: [], total: 0, page: 1, limit: 10 };
+    }
+  }
   /**
    * Obtener lista de solicitudes de servicio para administración
    */
