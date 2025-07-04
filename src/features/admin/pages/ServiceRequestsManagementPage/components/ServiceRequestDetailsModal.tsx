@@ -224,6 +224,27 @@ const ServiceRequestDetailsModal: React.FC<ServiceRequestDetailsModalProps> = ({
                     </Typography>
                     <Typography variant="body1">{request.phone}</Typography>
                   </Box>
+                  <Box>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      fontWeight="600"
+                    ></Typography>
+                    <Typography variant="body1">
+                      <a
+                        href={request.projectLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          textDecoration: "underline",
+                          color: "#008380",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        ARCHIVOS ADJUNTOS
+                      </a>
+                    </Typography>
+                  </Box>
                 </Stack>
               </Paper>
             </Grid2>

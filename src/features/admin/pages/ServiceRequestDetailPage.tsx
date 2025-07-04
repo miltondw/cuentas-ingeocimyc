@@ -471,56 +471,55 @@ const ServiceRequestDetailPage: React.FC = () => {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (serviceRequest && allServices) {
-      // Separa los datos principales y los servicios
-      const { selectedServices: ss, ...main } =
-        serviceRequest as ServiceRequest;
-      setMainData(main);
-      setSelectedServices(
-        ss
-          ? ss.map((sel) => {
-              // Buscar el servicio completo en el catálogo para obtener los additionalFields
-              const fullService = allServices.find(
-                (s: { id: number }) =>
-                  s.id === (sel.service?.id || sel.serviceId)
-              );
-              // Si el servicio tiene additionalValues, reconstruir serviceInstances
-              let serviceInstances: ServiceInstance[] = [];
-              if (
-                Array.isArray(sel.additionalValues) &&
-                sel.additionalValues.length > 0
-              ) {
-                serviceInstances = buildServiceInstancesFromAdditionalValues({
-                  ...sel,
-                  service: {
-                    ...sel.service,
-                    ...(fullService
-                      ? { additionalFields: fullService.additionalFields }
-                      : {}),
-                  },
-                } as UISelectedService);
-              }
-              // Retornar un UISelectedService robusto
-              return {
-                id: sel.id,
-                quantity: sel.quantity,
+    if (!serviceRequest || !allServices) return;
+    // Solo inicializar si mainData aún no está seteado o si cambia el id
+    if (mainData && mainData.id === serviceRequest.id) return;
+    // Separa los datos principales y los servicios
+    const { selectedServices: ss, ...main } = serviceRequest as ServiceRequest;
+    setMainData(main);
+    setSelectedServices(
+      ss
+        ? ss.map((sel) => {
+            // Buscar el servicio completo en el catálogo para obtener los additionalFields
+            const fullService = allServices.find(
+              (s: { id: number }) => s.id === (sel.service?.id || sel.serviceId)
+            );
+            // Si el servicio tiene additionalValues, reconstruir serviceInstances
+            let serviceInstances: ServiceInstance[] = [];
+            if (
+              Array.isArray(sel.additionalValues) &&
+              sel.additionalValues.length > 0
+            ) {
+              serviceInstances = buildServiceInstancesFromAdditionalValues({
+                ...sel,
                 service: {
                   ...sel.service,
                   ...(fullService
                     ? { additionalFields: fullService.additionalFields }
                     : {}),
                 },
-                additionalValues: sel.additionalValues,
-                serviceInstances,
-                created_at: sel.created_at ?? "",
-                requestId: sel.requestId ?? 0,
-                serviceId: sel.serviceId ?? sel.service?.id ?? 0,
-              } as UISelectedService;
-            })
-          : []
-      );
-    }
-  }, [serviceRequest, allServices]);
+              } as UISelectedService);
+            }
+            // Retornar un UISelectedService robusto
+            return {
+              id: sel.id,
+              quantity: sel.quantity,
+              service: {
+                ...sel.service,
+                ...(fullService
+                  ? { additionalFields: fullService.additionalFields }
+                  : {}),
+              },
+              additionalValues: sel.additionalValues,
+              serviceInstances,
+              created_at: sel.created_at ?? "",
+              requestId: sel.requestId ?? 0,
+              serviceId: sel.serviceId ?? sel.service?.id ?? 0,
+            } as UISelectedService;
+          })
+        : []
+    );
+  }, [serviceRequest, allServices, mainData]);
 
   useEffect(() => {
     selectedServicesRef.current = selectedServices;
@@ -964,6 +963,15 @@ const ServiceRequestDetailPage: React.FC = () => {
             label="Descripción"
             name="description"
             value={mainData.description || ""}
+            onChange={handleMainChange}
+            fullWidth
+            multiline
+            minRows={2}
+          />
+          <TextField
+            label="Link del Proyecto"
+            name="projectLink"
+            value={mainData.projectLink || ""}
             onChange={handleMainChange}
             fullWidth
             multiline

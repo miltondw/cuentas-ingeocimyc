@@ -19,6 +19,7 @@ export interface ServiceRequest {
   location: string;
   identification: string;
   phone: string;
+  projectLink?: string;
   email: string;
   description: string;
   status: ServiceRequestStatus;
@@ -158,6 +159,7 @@ export interface CreateServiceRequestRequest {
   nameProject: string;
   location: string;
   identification: string;
+  projectLink?: string;
   phone: string;
   email: string;
   description: string;
@@ -169,6 +171,7 @@ export interface UpdateServiceRequestRequest {
   nameProject?: string;
   location?: string;
   identification?: string;
+  projectLink?: string;
   phone?: string;
   email?: string;
   description?: string;
@@ -421,6 +424,7 @@ export interface AdminServiceRequest {
   nameProject: string;
   location: string;
   identification: string;
+  projectLink?: string;
   phone: string;
   email: string;
   description: string;
@@ -484,6 +488,7 @@ export interface AdminServiceRequestFilters {
   nameProject?: string;
   nameProjectContains?: string;
   identification?: string;
+  projectLink?: string;
   email?: string;
   emailContains?: string;
   phone?: string;
@@ -535,6 +540,7 @@ export interface InternalServiceRequestData {
   ubicacionProyecto?: string;
   location?: string;
   identification?: string;
+  projectLink?: string;
   telefono?: string;
   phone?: string;
   email?: string;
