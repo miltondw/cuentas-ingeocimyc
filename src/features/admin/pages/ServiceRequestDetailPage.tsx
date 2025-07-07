@@ -111,12 +111,12 @@ const ServiceItem: React.FC<ServiceItemProps> = memo(
           size="small"
           color="error"
           variant="outlined"
-          sx={{ position: "absolute", top: 8, right: 8 }}
+          sx={{ position: "relative", top: 8, right: 8, m: 1 }}
           onClick={() => onRemoveService(idx)}
         >
           Eliminar servicio
         </Button>
-        <Box display="flex" alignItems="center" gap={2}>
+        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
           <Typography variant="subtitle1" fontWeight="bold">
             {sel.service?.name || "Servicio"}
           </Typography>
@@ -908,57 +908,84 @@ const ServiceRequestDetailPage: React.FC = () => {
       justifyContent="center"
       alignItems="center"
       minHeight="60vh"
+      sx={{ px: { xs: 1, sm: 2 } }}
     >
-      <Paper sx={{ p: 4, minWidth: 400 }}>
-        <Typography variant="h5" fontWeight="bold" gutterBottom>
+      <Paper
+        sx={{
+          p: { xs: 1, sm: 3, md: 4 },
+          minWidth: { xs: "100%", sm: 400 },
+          width: { xs: "100%", sm: 600, md: 800 },
+          maxWidth: "100vw",
+          boxSizing: "border-box",
+        }}
+      >
+        <Typography
+          variant="h5"
+          fontWeight="bold"
+          gutterBottom
+          sx={{ fontSize: { xs: "1.2rem", sm: "1.5rem" } }}
+        >
           Detalles de la Solicitud de Servicio
         </Typography>
         <Box
           component="form"
-          sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            width: "100%",
+          }}
         >
-          <TextField
-            label="Nombre"
-            name="name"
-            value={mainData.name || ""}
-            onChange={handleMainChange}
-            fullWidth
-          />
-          <TextField
-            label="Proyecto"
-            name="nameProject"
-            value={mainData.nameProject || ""}
-            onChange={handleMainChange}
-            fullWidth
-          />
-          <TextField
-            label="Ubicación"
-            name="location"
-            value={mainData.location || ""}
-            onChange={handleMainChange}
-            fullWidth
-          />
-          <TextField
-            label="Identificación"
-            name="identification"
-            value={mainData.identification || ""}
-            onChange={handleMainChange}
-            fullWidth
-          />
-          <TextField
-            label="Teléfono"
-            name="phone"
-            value={mainData.phone || ""}
-            onChange={handleMainChange}
-            fullWidth
-          />
-          <TextField
-            label="Email"
-            name="email"
-            value={mainData.email || ""}
-            onChange={handleMainChange}
-            fullWidth
-          />
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              gap: 2,
+            }}
+          >
+            <TextField
+              label="Nombre"
+              name="name"
+              value={mainData.name || ""}
+              onChange={handleMainChange}
+              fullWidth
+            />
+            <TextField
+              label="Proyecto"
+              name="nameProject"
+              value={mainData.nameProject || ""}
+              onChange={handleMainChange}
+              fullWidth
+            />
+            <TextField
+              label="Ubicación"
+              name="location"
+              value={mainData.location || ""}
+              onChange={handleMainChange}
+              fullWidth
+            />
+            <TextField
+              label="Identificación"
+              name="identification"
+              value={mainData.identification || ""}
+              onChange={handleMainChange}
+              fullWidth
+            />
+            <TextField
+              label="Teléfono"
+              name="phone"
+              value={mainData.phone || ""}
+              onChange={handleMainChange}
+              fullWidth
+            />
+            <TextField
+              label="Email"
+              name="email"
+              value={mainData.email || ""}
+              onChange={handleMainChange}
+              fullWidth
+            />
+          </Box>
           <TextField
             label="Descripción"
             name="description"
@@ -967,6 +994,7 @@ const ServiceRequestDetailPage: React.FC = () => {
             fullWidth
             multiline
             minRows={2}
+            sx={{ mt: 2 }}
           />
           <TextField
             label="Link del Proyecto"
@@ -1010,13 +1038,24 @@ const ServiceRequestDetailPage: React.FC = () => {
               Añadir servicio
             </Button>
           </Box>
-          <Box display="flex" gap={2} mt={2}>
+          <Box
+            display="flex"
+            gap={2}
+            mt={2}
+            flexWrap="wrap"
+            sx={{
+              flexDirection: { xs: "column", sm: "row" },
+              alignItems: { xs: "stretch", sm: "center" },
+            }}
+          >
             <Button
               variant="contained"
               color="primary"
+              fullWidth={true}
+              sx={{ maxWidth: { xs: "100%", sm: 220 } }}
               onClick={() => {
                 if (!mainData) return;
-                // Eliminar los campos prohibidos del payload
+                // ...existing code...
                 const {
                   id: _id,
                   status: _status,
@@ -1024,7 +1063,7 @@ const ServiceRequestDetailPage: React.FC = () => {
                   updatedAt: _updatedAt,
                   ...mainFields
                 } = mainData;
-                // Para el tipado, creamos un objeto dummy pero eliminamos los campos antes de enviar
+                // ...existing code...
                 const mainFieldsWithFake: Omit<
                   EditableServiceRequest,
                   "selectedServices"
@@ -1039,7 +1078,7 @@ const ServiceRequestDetailPage: React.FC = () => {
                   mainFieldsWithFake,
                   selectedServices
                 );
-                // Eliminar los campos prohibidos del payload antes de enviarlo
+                // ...existing code...
                 const {
                   id: __id,
                   status: __status,
@@ -1058,7 +1097,12 @@ const ServiceRequestDetailPage: React.FC = () => {
             >
               {updateMutation.isPending ? "Guardando..." : "Guardar Cambios"}
             </Button>
-            <Button variant="outlined" onClick={() => navigate(-1)}>
+            <Button
+              variant="outlined"
+              onClick={() => navigate(-1)}
+              fullWidth={true}
+              sx={{ maxWidth: { xs: "100%", sm: 220 } }}
+            >
               Cancelar
             </Button>
           </Box>
@@ -1158,7 +1202,15 @@ const ServiceRequestDetailPage: React.FC = () => {
                         </Box>
                       </Paper>
                     ))}
-                    <Box display="flex" gap={1}>
+                    <Box
+                      display="flex"
+                      gap={1}
+                      flexWrap="wrap"
+                      sx={{
+                        flexDirection: { xs: "column", sm: "row" },
+                        alignItems: { xs: "stretch", sm: "center" },
+                      }}
+                    >
                       <Button
                         size="small"
                         onClick={() =>
@@ -1179,6 +1231,8 @@ const ServiceRequestDetailPage: React.FC = () => {
                             },
                           ])
                         }
+                        fullWidth={true}
+                        sx={{ maxWidth: { xs: "100%", sm: 180 } }}
                       >
                         Agregar muestra
                       </Button>
@@ -1189,6 +1243,8 @@ const ServiceRequestDetailPage: React.FC = () => {
                         onClick={() =>
                           setAddInstances((prev) => prev.slice(0, -1))
                         }
+                        fullWidth={true}
+                        sx={{ maxWidth: { xs: "100%", sm: 180 } }}
                       >
                         Eliminar última
                       </Button>

@@ -231,18 +231,24 @@ const ServiceRequestDetailsModal: React.FC<ServiceRequestDetailsModalProps> = ({
                       fontWeight="600"
                     ></Typography>
                     <Typography variant="body1">
-                      <a
-                        href={request.projectLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          textDecoration: "underline",
-                          color: "#008380",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        ARCHIVOS ADJUNTOS
-                      </a>
+                      <>
+                        <Button
+                          component="a"
+                          href={request.projectLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          color="primary"
+                          variant="contained"
+                          sx={{
+                            textDecoration: "underline",
+                            fontWeight: "bold",
+                            p: 1,
+                            minWidth: 0,
+                          }}
+                        >
+                          ARCHIVOS ADJUNTOS
+                        </Button>
+                      </>
                     </Typography>
                   </Box>
                 </Stack>

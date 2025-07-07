@@ -87,6 +87,7 @@ const MainLayout = () => {
           mb: 4,
           flexGrow: 1,
           position: "relative",
+          mt: { xs: 10, sm: 3 },
         }}
       >
         {isLoading && <PageLoadingFallback message="Cargando ..." />}
