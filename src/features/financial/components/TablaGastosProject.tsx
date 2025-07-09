@@ -41,6 +41,8 @@ import {
   ProjectFilters,
   DEFAULT_PROJECT_FILTERS,
 } from "@/types/projects";
+// Importar el tipo ProjectFinance para tipar correctamente si se usa directamente
+import type { ProjectFinance } from "@/types/typesProject/projectTypes";
 import { formatNumber, parseNumber } from "@/utils/formatNumber";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useUrlFilters } from "@/hooks/useUrlFilters";
@@ -202,9 +204,23 @@ const createTableColumns = (
     sortable: true,
     width: 200,
     render: (value) => (
-      <Typography variant="body2" sx={{ fontWeight: "medium" }}>
-        {value as string}
-      </Typography>
+      <Box
+        sx={{
+          maxHeight: 100, // 3 líneas aprox
+          width: 200,
+          overflow: "auto",
+          whiteSpace: "pre-line",
+          wordBreak: "break-word",
+          pr: 1,
+        }}
+      >
+        <Typography
+          variant="body2"
+          sx={{ fontWeight: "medium", lineHeight: 1.3 }}
+        >
+          {value as string}
+        </Typography>
+      </Box>
     ),
   },
   {
@@ -494,15 +510,30 @@ const fetchProjects = async (filters: ProjectFilters) => {
   // Acceder correctamente a la estructura anidada
   const paginated = response.data.data;
 
-  // Procesar los datos para agregar campos calculados
+  // Procesar los datos para aplanar los campos de finanzas[0] al nivel del proyecto
   const processedData =
-    paginated.data?.map((p: Project) => ({
-      ...p,
-      valor_re: p.valorRetencion
-        ? (Number(p.valorRetencion) / 100) * Number(p.costoServicio)
-        : 0,
-      valor_iva: Number(p.costoServicio) ? 0.19 * Number(p.costoServicio) : 0,
-    })) || [];
+    paginated.data?.map((p: Project) => {
+      // Si la API retorna 'finanzas', aplanar el primer objeto de ese array
+      const fin = (
+        p.finanzas && p.finanzas.length > 0 ? p.finanzas[0] : null
+      ) as ProjectFinance | null;
+      return {
+        ...p,
+        costoServicio: fin ? fin.costoServicio : "",
+        abono: fin ? fin.abono : "",
+        factura: fin ? fin.factura : "",
+        valorRetencion: fin ? fin.valorRetencion : "",
+        obrero: fin ? fin.obrero : "",
+        metodoDePago: fin ? fin.metodoDePago : "",
+        estado: fin ? fin.estado : "",
+        valor_re:
+          fin && fin.valorRetencion && fin.costoServicio
+            ? (Number(fin.valorRetencion) / 100) * Number(fin.costoServicio)
+            : 0,
+        valor_iva:
+          fin && fin.costoServicio ? 0.19 * Number(fin.costoServicio) : 0,
+      };
+    }) || [];
 
   return {
     data: processedData,

@@ -7,16 +7,16 @@ const ProjectsDashboard = lazy(
   () => import("@/features/lab/pages/ProjectsDashboard")
 );
 const ProjectProfiles = lazy(
-  () => import("@/features/lab/pages/PerfilesPage/ProjectProfiles")
+  () => import("@/features/lab/pages/services/PerfilesPage/ProjectProfiles")
 );
 const ProjectApiques = lazy(
-  () => import("@/features/lab/pages/ApiquesPage/ProjectApiques")
+  () => import("@/features/lab/pages/services/ApiquesPage/ProjectApiques")
 );
 const PerfilDetallesPage = lazy(
-  () => import("@/features/lab/pages/PerfilesPage/PerfilDetallesPage")
+  () => import("@/features/lab/pages/services/PerfilesPage/PerfilDetallesPage")
 );
 const ApiqueDetallesPage = lazy(
-  () => import("@/features/lab/pages/ApiquesPage/ApiqueDeatil")
+  () => import("@/features/lab/pages/services/ApiquesPage/ApiqueDeatil")
 );
 
 const LabRoutes = () => {

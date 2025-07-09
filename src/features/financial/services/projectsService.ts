@@ -1,7 +1,6 @@
 import { apiClient } from "@/lib/axios/apiClient";
-import type { ApiResponse } from "@/types/api";
+import type { ApiResponse, Project } from "@/types/api";
 import type {
-  Project,
   CreateProjectDto,
   UpdateProjectDto,
   ProjectWithExpenses,
@@ -42,7 +41,7 @@ export const projectsService = {
    */
   async getProject(id: number): Promise<ProjectWithExpenses> {
     const response = await apiClient.get(`${BASE_URL}/${id}`);
-    return response.data;
+    return response.data.data;
   },
 
   /**

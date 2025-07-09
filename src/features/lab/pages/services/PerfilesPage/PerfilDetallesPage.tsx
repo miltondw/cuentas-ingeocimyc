@@ -1,4 +1,4 @@
-import PerfilDeSuelos from "../../components/perfiles/PerfilDeSuelos";
+import PerfilDeSuelos from "@/features/lab/components/perfiles/PerfilDeSuelos";
 
 /**
  * Página de detalle de perfil

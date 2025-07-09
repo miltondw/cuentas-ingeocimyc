@@ -27,8 +27,9 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { LoadingOverlay } from "@/components/common/LoadingOverlay";
 import { DataTable, ColumnConfig } from "@/components/common/DataTable";
 import { formatNumber } from "@/utils/formatNumber";
-import type { Project } from "@/types/typesProject/projectTypes";
+import type { Project } from "@/types/projects";
 import api from "@/api";
+import { ProjectFinance } from "@/types/typesProject/projectTypes";
 
 // Tipos para el resumen financiero adaptados a la nueva estructura
 interface MonthlyData {
@@ -127,7 +128,7 @@ const TablaUtilidades: React.FC = () => {
       });
 
       // Procesar proyectos con nueva estructura
-      proyectos.forEach((proyecto) => {
+      proyectos.forEach((proyecto: Project) => {
         const mes = formatDate(proyecto.fecha);
         if (!monthlyData[mes]) {
           monthlyData[mes] = {
@@ -143,8 +144,14 @@ const TablaUtilidades: React.FC = () => {
           };
         }
 
-        const costoServicio = Number(proyecto.costoServicio || 0);
-        const valorRetencion = Number(proyecto.valorRetencion || 0);
+        // Usar la nueva estructura: extraer datos de finanzas[0] si existe
+        const fin: ProjectFinance | null =
+          proyecto.finanzas && proyecto.finanzas.length > 0
+            ? proyecto.finanzas[0]
+            : null;
+
+        const costoServicio = fin ? Number(fin.costoServicio || 0) : 0;
+        const valorRetencion = fin ? Number(fin.valorRetencion || 0) : 0;
 
         monthlyData[mes].Ingresos += costoServicio;
         monthlyData[mes].CostoServicio += costoServicio;
@@ -154,17 +161,20 @@ const TablaUtilidades: React.FC = () => {
 
         // Procesar gastos del proyecto (nueva estructura)
         if (proyecto.expenses && proyecto.expenses.length > 0) {
+          // Importa el tipo ProjectExpense desde src/types/projects.ts
+          type ProjectExpense = import("@/types/projects").ProjectExpense;
           proyecto.expenses.forEach((expense) => {
+            const e = expense as ProjectExpense;
             const gastoProyecto =
-              Number(expense.camioneta || 0) +
-              Number(expense.campo || 0) +
-              Number(expense.obreros || 0) +
-              Number(expense.comidas || 0) +
-              Number(expense.otros || 0) +
-              Number(expense.peajes || 0) +
-              Number(expense.combustible || 0) +
-              Number(expense.hospedaje || 0) +
-              sumOtrosCampos(expense.otrosCampos);
+              Number(e.camioneta || 0) +
+              Number(e.campo || 0) +
+              Number(e.obreros || 0) +
+              Number(e.comidas || 0) +
+              Number(e.otros || 0) +
+              Number(e.peajes || 0) +
+              Number(e.combustible || 0) +
+              Number(e.hospedaje || 0) +
+              sumOtrosCampos(e.otrosCampos);
 
             monthlyData[mes].GastosProyectos += gastoProyecto;
           });

@@ -6,11 +6,11 @@ import type { BaseFilters } from "@/lib/axios/apiClient";
 
 // =============== FILTROS PARA PROYECTOS DE LABORATORIO ===============
 export interface LabProjectFilters extends BaseFilters {
-  // Filtros de búsqueda
-  search?: string; // Búsqueda global en nombre_proyecto, solicitante y obrero
-  nombreProyecto?: string;
-  solicitante?: string;
-  obrero?: string;
+  // Filtros de búsqueda y texto flexible
+  search?: string; // Búsqueda global (nombre de proyecto, solicitante, obrero)
+  nombreProyecto?: string; // Buscar por nombre de proyecto (LIKE)
+  solicitante?: string; // Buscar por nombre del solicitante (LIKE)
+  obrero?: string; // Buscar por nombre del obrero (LIKE)
 
   // Filtros de estado
   estado?: "todos" | "activo" | "completado" | "cancelado" | "pausado";
@@ -27,6 +27,12 @@ export interface LabProjectFilters extends BaseFilters {
   minProfiles?: number; // Mínimo número de perfiles
   maxProfiles?: number; // Máximo número de perfiles
 
+  // Filtros de ensayos y categorías
+  assayName?: string; // Buscar por nombre de ensayo (LIKE)
+  assayCode?: string; // Buscar por código de ensayo (LIKE)
+  categoryName?: string; // Buscar por nombre de categoría de ensayo (LIKE)
+  categoryCode?: string; // Buscar por código de categoría de ensayo (LIKE)
+
   // Paginación y ordenamiento
   page?: number; // Página actual (default: 1)
   limit?: number; // Elementos por página (default: 10)
@@ -34,6 +40,7 @@ export interface LabProjectFilters extends BaseFilters {
     | "proyecto_id"
     | "nombre_proyecto"
     | "solicitante"
+    | "obrero"
     | "fecha"
     | "estado"
     | "total_apiques"

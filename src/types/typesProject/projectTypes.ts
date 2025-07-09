@@ -4,18 +4,25 @@
  */
 
 // Tipos base de la tabla proyectos
-export interface Project {
-  id: number;
-  fecha: string; // date
-  solicitante: string;
-  nombreProyecto: string;
+// DEPRECATED: Usar el tipo Project de '@/types/projects' en todo el frontend
+// export interface Project {
+//   id: number;
+//   fecha: string; // date
+//   solicitante: string;
+//   nombreProyecto: string;
+//   finanzas: ProjectFinance[];
+//   expenses: CreateProjectExpensesDto[];
+// }
+
+// Nuevo tipo para finanzas
+export interface ProjectFinance {
   obrero: string;
-  costoServicio: number; // decimal(15,2)
-  abono?: number; // decimal(15,2), default 0.00
-  factura?: string;
-  valorRetencion?: number; // decimal(10,2), default 0.00
-  metodoDePago?: "efectivo" | "transferencia" | "cheque" | "credito";
-  expenses: CreateProjectExpensesDto[];
+  costoServicio: number;
+  abono: number;
+  factura: string;
+  valorRetencion: number;
+  metodoDePago: "efectivo" | "transferencia" | "cheque" | "credito";
+  estado: string;
 }
 
 // Tipos para gastos de proyectos (tabla separada)
@@ -38,12 +45,7 @@ export interface CreateProjectDto {
   fecha: string;
   solicitante: string;
   nombreProyecto: string;
-  obrero: string;
-  costoServicio: number;
-  abono?: number;
-  factura?: string;
-  valorRetencion?: number;
-  metodoDePago?: "efectivo" | "transferencia" | "cheque" | "credito";
+  finances: ProjectFinance[];
   expenses: CreateProjectExpensesDto[];
 }
 
@@ -67,7 +69,8 @@ export interface CreateProjectExpensesDto {
 }
 
 // Respuesta completa del proyecto con gastos
-export interface ProjectWithExpenses extends Project {
+import type { Project as MainProject } from "@/types/projects";
+export interface ProjectWithExpenses extends MainProject {
   gastos: ProjectExpenses;
 }
 

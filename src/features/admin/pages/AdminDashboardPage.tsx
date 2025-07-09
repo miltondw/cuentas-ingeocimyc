@@ -3,7 +3,7 @@ import {
   Container,
   Typography,
   Box,
-  Grid,
+  Grid2,
   Card,
   CardContent,
   CardActions,
@@ -77,9 +77,9 @@ const AdminDashboardPage: React.FC = () => {
       </Box>
 
       {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid2 container spacing={3} sx={{ mb: 4 }}>
         {statsCards.map((card, index) => (
-          <Grid item xs={12} sm={6} md={4} key={index}>
+          <Grid2 size={{ xs: 12, sm: 6, md: 4 }} key={index}>
             <Card
               sx={{
                 height: "100%",
@@ -133,9 +133,9 @@ const AdminDashboardPage: React.FC = () => {
                 </Button>
               </CardActions>
             </Card>
-          </Grid>
+          </Grid2>
         ))}
-      </Grid>
+      </Grid2>
 
       {/* Quick Actions */}
       <Card sx={{ mb: 4 }}>

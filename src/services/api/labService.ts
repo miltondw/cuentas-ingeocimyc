@@ -3,6 +3,12 @@
  */
 import { apiClient } from "@/lib/axios/apiClient";
 import type { LabProjectFilters, ProfilesFilters } from "@/types/labFilters";
+import type {
+  LabProject,
+  AssayInfo,
+  Assay,
+  LabProjectsResponse,
+} from "@/features/lab/pages/ProjectsDashboard/types/ProjectsDashboard.types";
 
 // Interfaces basadas en las respuestas reales de la API
 export interface ApiqueProject {
@@ -16,35 +22,7 @@ export interface ApiqueProject {
   apiques: ApiqueData[];
 }
 
-// Nueva interface para el endpoint /api/lab/projects
-export interface LabProject {
-  proyecto_id: number;
-  nombre_proyecto: string;
-  solicitante: string;
-  obrero: string;
-  fecha: string;
-  estado: string;
-  total_apiques: number;
-  total_profiles: number;
-  created_at: string;
-}
-
-export interface LabProjectsResponse {
-  data: LabProject[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  summary: {
-    totalProjects: number;
-    activeProjects: number;
-    completedProjects: number;
-    totalApiques: number;
-    totalProfiles: number;
-    projectsWithApiques: number;
-    projectsWithProfiles: number;
-  };
-}
+// Tipos importados desde types/ProjectsDashboard.types.ts
 
 export interface ApiqueData {
   apique_id: number;
@@ -561,32 +539,39 @@ export const labService = {
    */ async getProjects(
     filters?: LabProjectFilters
   ): Promise<LabProjectsResponse> {
-    console.info("🔄 Llamando a /lab/projects con filtros:", filters);
-    console.info(
-      "🔍 Tipos de filtros:",
-      Object.entries(filters || {}).map(([key, value]) => ({
-        key,
-        value,
-        type: typeof value,
-      }))
-    );
-
-    // Debug: Verificar si hasApiques está en la URL pero no en filters
-    const currentUrl = window.location.search;
-    console.info("🌐 URL actual completa:", currentUrl);
-
+    // Adaptado para consumir el nuevo endpoint /api/lab/projects/with-samples
     try {
-      let url = "/lab/projects";
+      let url = "/lab/projects/with-samples";
       if (filters) {
         const params = buildQueryParams(filters);
         url += `?${params.toString()}`;
       }
       const response = await apiClient.get<{ data: LabProjectsResponse }>(url);
-      console.info("✅ Respuesta de /lab/projects:", response.data);
-      // La data real está en response.data.data
-      return response.data.data;
+      // Asegura que todos los proyectos tengan los campos requeridos
+      const data = response.data.data;
+      if (Array.isArray(data.data)) {
+        data.data = data.data.map((proj: LabProject) => ({
+          ...proj,
+          assigned_assays: Array.isArray(proj.assigned_assays)
+            ? proj.assigned_assays.map((ensayo: AssayInfo) => ({
+                ...ensayo,
+                assay: {
+                  ...ensayo.assay,
+                  category:
+                    Array.isArray(ensayo.assay.categories) &&
+                    ensayo.assay.categories.length > 0
+                      ? ensayo.assay.categories[0]
+                      : null,
+                } as Assay,
+              }))
+            : [],
+          apique_ids: proj.apique_ids || [],
+          profile_ids: proj.profile_ids || [],
+        }));
+      }
+      return data;
     } catch (error) {
-      console.error("❌ Error en /lab/projects:", error);
+      console.error("❌ Error en /api/lab/projects/with-samples:", error);
       throw error;
     }
   },

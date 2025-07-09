@@ -21,9 +21,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import { projectsService } from "../services/projectsService";
 import { formatNumber, parseNumber } from "@/utils/formatNumber";
 import type {
+  ProjectFinanceForm,
+  ProjectExpenseForm,
+} from "@/features/financial/types/projectTypes";
+import type {
   CreateProjectDto,
-  PaymentMethod,
   CreateProjectExpensesDto,
+  PaymentMethod,
 } from "@/types/typesProject/projectTypes";
 
 // Interface para campos extras
@@ -51,18 +55,40 @@ export const ProjectFormCreate: React.FC = () => {
   const { showSuccess, showError } = useNotifications();
   const isEditing = Boolean(id);
 
-  // Estados para el proyecto principal
-  const [project, setProject] = useState<CreateProjectDto>({
+  // Estado para el proyecto principal (estructura alineada a la nueva API)
+  const [project, setProject] = useState<{
+    fecha: string;
+    solicitante: string;
+    nombreProyecto: string;
+    // Si en el futuro la API agrega más campos directos, agrégalos aquí
+  }>({
     fecha: new Date().toISOString().split("T")[0],
     solicitante: "",
     nombreProyecto: "",
+  });
+
+  // Estado para finanzas (un solo objeto)
+  const [finances, setFinances] = useState<ProjectFinanceForm>({
     obrero: "",
     costoServicio: 0,
     abono: 0,
     factura: "",
     valorRetencion: 0,
     metodoDePago: "efectivo",
-    expenses: [],
+    estado: "activo",
+  });
+
+  // Estado para gastos (un solo objeto)
+  const [expenses, setExpenses] = useState<ProjectExpenseForm>({
+    camioneta: 0,
+    campo: 0,
+    obreros: 0,
+    comidas: 0,
+    otros: 0,
+    peajes: 0,
+    combustible: 0,
+    hospedaje: 0,
+    otrosCampos: {},
   });
 
   type ExpenseFieldsType = keyof Omit<
@@ -80,20 +106,7 @@ export const ProjectFormCreate: React.FC = () => {
     "hospedaje",
   ];
 
-  // Estados para gastos del proyecto
-  const [expenses, setExpenses] = useState<
-    Omit<CreateProjectExpensesDto, "id" | "project_id">
-  >({
-    camioneta: 0,
-    campo: 0,
-    obreros: 0,
-    comidas: 0,
-    otros: 0,
-    peajes: 0,
-    combustible: 0,
-    hospedaje: 0,
-    otrosCampos: {},
-  });
+  // Eliminar estado duplicado de gastos del proyecto (ya está arriba)
 
   // Estado para campos extras dinámicos
   const [extraFields, setExtraFields] = useState<ExtraField[]>([]); // Estados de la UI
@@ -106,45 +119,65 @@ export const ProjectFormCreate: React.FC = () => {
         const response = await projectsService.getProject(projectId);
 
         if (response) {
-          // Cargar datos del proyecto
           setProject({
             fecha: response?.fecha,
             solicitante: response?.solicitante,
             nombreProyecto: response?.nombreProyecto,
-            obrero: response?.obrero,
-            costoServicio: response?.costoServicio,
-            abono: response?.abono || 0,
-            factura: response?.factura || "",
-            valorRetencion: response?.valorRetencion || 0,
-            metodoDePago: response?.metodoDePago || "efectivo",
-            expenses: [],
+            // Si la API agrega más campos directos, agrégalos aquí
           });
-
-          // Cargar gastos si existen
-          if (response?.expenses?.[0]) {
-            setExpenses({
-              camioneta: response?.expenses[0].camioneta || 0,
-              campo: response?.expenses[0].campo || 0,
-              obreros: response?.expenses[0].obreros || 0,
-              comidas: response?.expenses[0].comidas || 0,
-              otros: response?.expenses[0].otros || 0,
-              peajes: response?.expenses[0].peajes || 0,
-              combustible: response?.expenses[0].combustible || 0,
-              hospedaje: response?.expenses[0].hospedaje || 0,
-              otrosCampos: response?.expenses[0].otrosCampos || {},
+          // Cargar finanzas si existen (un solo objeto)
+          if (response?.finanzas?.[0]) {
+            const fin = response.finanzas[0];
+            setFinances({
+              obrero: fin.obrero || "",
+              costoServicio: Number(fin.costoServicio ?? 0),
+              abono: Number(fin.abono ?? 0),
+              factura: fin.factura || "",
+              valorRetencion: Number(fin.valorRetencion ?? 0),
+              metodoDePago: (fin.metodoDePago as PaymentMethod) || "efectivo",
+              estado: fin.estado || "activo",
             });
-
+          }
+          // Cargar gastos si existen (un solo objeto)
+          if (response?.expenses?.[0]) {
+            const exp = response.expenses[0];
+            setExpenses({
+              camioneta: Number(exp.camioneta ?? 0),
+              campo: Number(exp.campo ?? 0),
+              obreros: Number(exp.obreros ?? 0),
+              comidas: Number(exp.comidas ?? 0),
+              otros: Number(exp.otros ?? 0),
+              peajes: Number(exp.peajes ?? 0),
+              combustible: Number(exp.combustible ?? 0),
+              hospedaje: Number(exp.hospedaje ?? 0),
+              otrosCampos: exp.otrosCampos || {},
+            });
             // Cargar campos extras desde otrosCampos
-            if (response?.expenses[0].otrosCampos) {
-              const extraFieldsFromData = Object.entries(
-                response?.expenses[0].otrosCampos
-              ).map(([key, value], index) => ({
-                id: `existing_${index}`,
-                description: key.replace(/_/g, " "),
-                value: typeof value === "number" ? value : 0,
-              }));
+            if (exp.otrosCampos && typeof exp.otrosCampos === "object") {
+              const extraFieldsFromData = Object.entries(exp.otrosCampos).map(
+                ([key, value], index) => ({
+                  id: `existing_${index}`,
+                  description: key.replace(/_/g, " "),
+                  value: typeof value === "number" ? value : Number(value) || 0,
+                })
+              );
               setExtraFields(extraFieldsFromData);
+            } else {
+              setExtraFields([]);
             }
+          } else {
+            setExpenses({
+              camioneta: 0,
+              campo: 0,
+              obreros: 0,
+              comidas: 0,
+              otros: 0,
+              peajes: 0,
+              combustible: 0,
+              hospedaje: 0,
+              otrosCampos: {},
+            });
+            setExtraFields([]);
           }
         }
       } catch (err) {
@@ -165,7 +198,7 @@ export const ProjectFormCreate: React.FC = () => {
   }, [id, isEditing, loadProject]);
 
   const handleProjectChange = useCallback(
-    (field: keyof CreateProjectDto, value: string | number) => {
+    (field: keyof typeof project, value: string | number) => {
       setProject((prev) => ({
         ...prev,
         [field]: value,
@@ -175,11 +208,9 @@ export const ProjectFormCreate: React.FC = () => {
   );
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
       setLoading(true);
-
-      // Construir otrosCampos desde extraFields
+      // Construir otrosCampos desde extraFields para el primer expense (puedes adaptar para varios)
       const otrosCampos: Record<string, number> = {};
       extraFields.forEach((field) => {
         if (field.description.trim() && field.value > 0) {
@@ -187,24 +218,20 @@ export const ProjectFormCreate: React.FC = () => {
           otrosCampos[key] = field.value;
         }
       });
-      const expensesData = {
-        ...expenses,
-        otrosCampos,
+      // Asignar otrosCampos al único expense
+      const expensesWithExtras = [{ ...expenses, otrosCampos }];
+      const payload: CreateProjectDto = {
+        ...project,
+        finances: [finances],
+        expenses: expensesWithExtras,
       };
-
       if (isEditing && id) {
-        // Actualizar proyecto existente - usar función de transformación
-        const transformedData = transformDataForAPI(project, expensesData);
-        await projectsService.updateProject(parseInt(id), transformedData);
+        await projectsService.updateProject(parseInt(id), payload);
         showSuccess("Proyecto actualizado exitosamente");
       } else {
-        // Crear nuevo proyecto - usar función de transformación
-        const transformedData = transformDataForAPI(project, expensesData);
-        await projectsService.createProject(transformedData);
+        await projectsService.createProject(payload);
         showSuccess("Proyecto creado exitosamente");
       }
-
-      // Redirigir después de 2 segundos
       setTimeout(() => {
         navigate("/proyectos");
       }, 2000);
@@ -253,39 +280,7 @@ export const ProjectFormCreate: React.FC = () => {
       })
     );
   };
-  // Función para transformar data para envío a la API
-  const transformDataForAPI = (
-    projectData: CreateProjectDto,
-    expensesData: Omit<CreateProjectExpensesDto, "id" | "project_id">
-  ) => {
-    // Transformar proyecto principal - convertir strings a números
-    const transformedProject = {
-      fecha: projectData.fecha,
-      solicitante: projectData.solicitante,
-      nombreProyecto: projectData.nombreProyecto,
-      obrero: projectData.obrero,
-      costoServicio: Number(projectData.costoServicio) || 0,
-      abono: Number(projectData.abono) || 0,
-      factura: projectData.factura,
-      valorRetencion: Number(projectData.valorRetencion) || 0,
-      metodoDePago: projectData.metodoDePago,
-      expenses: [
-        {
-          camioneta: Number(expensesData.camioneta) || 0,
-          campo: Number(expensesData.campo) || 0,
-          obreros: Number(expensesData.obreros) || 0,
-          comidas: Number(expensesData.comidas) || 0,
-          otros: Number(expensesData.otros) || 0,
-          peajes: Number(expensesData.peajes) || 0,
-          combustible: Number(expensesData.combustible) || 0,
-          hospedaje: Number(expensesData.hospedaje) || 0,
-          otrosCampos: expensesData.otrosCampos,
-        },
-      ],
-    }; // Para updates, NO incluir el ID en el body
-    console.info("Datos transformados para la API:", transformedProject);
-    return transformedProject;
-  };
+  // (Función transformDataForAPI eliminada porque ya no es necesaria)
 
   if (loading && isEditing) {
     return (
@@ -334,8 +329,10 @@ export const ProjectFormCreate: React.FC = () => {
             <TextField
               fullWidth
               label="Obrero Asignado"
-              value={project.obrero}
-              onChange={(e) => handleProjectChange("obrero", e.target.value)}
+              value={finances.obrero}
+              onChange={(e) =>
+                setFinances((prev) => ({ ...prev, obrero: e.target.value }))
+              }
               required
             />
           </Grid2>
@@ -359,14 +356,18 @@ export const ProjectFormCreate: React.FC = () => {
           </Grid2>
 
           {/* Campos financieros con formateo en tiempo real */}
+          {/* Información financiera: ahora se mapea directamente a finances */}
           <Grid2 size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               label="Costo del Servicio"
-              value={formatNumber(project.costoServicio)}
+              value={formatNumber(finances.costoServicio)}
               onChange={(e) => {
                 const numericValue = parseNumber(e.target.value);
-                handleProjectChange("costoServicio", Number(numericValue) || 0);
+                setFinances((prev) => ({
+                  ...prev,
+                  costoServicio: Number(numericValue) || 0,
+                }));
               }}
               required
               placeholder="0"
@@ -377,10 +378,13 @@ export const ProjectFormCreate: React.FC = () => {
             <TextField
               fullWidth
               label="Abono"
-              value={formatNumber(project.abono)}
+              value={formatNumber(finances.abono)}
               onChange={(e) => {
                 const numericValue = parseNumber(e.target.value);
-                handleProjectChange("abono", Number(numericValue) || 0);
+                setFinances((prev) => ({
+                  ...prev,
+                  abono: Number(numericValue) || 0,
+                }));
               }}
               placeholder="0"
               helperText="Formato colombiano (ej: 500,000)"
@@ -390,13 +394,13 @@ export const ProjectFormCreate: React.FC = () => {
             <TextField
               fullWidth
               label="Valor Retención (%)"
-              value={formatNumber(project.valorRetencion)}
+              value={formatNumber(finances.valorRetencion)}
               onChange={(e) => {
                 const numericValue = parseNumber(e.target.value);
-                handleProjectChange(
-                  "valorRetencion",
-                  Number(numericValue) || 0
-                );
+                setFinances((prev) => ({
+                  ...prev,
+                  valorRetencion: Number(numericValue) || 0,
+                }));
               }}
               placeholder="0"
               helperText="Porcentaje de retención (ej: 4)"
@@ -406,13 +410,13 @@ export const ProjectFormCreate: React.FC = () => {
             <FormControl fullWidth>
               <InputLabel>Método de Pago</InputLabel>
               <Select
-                value={project.metodoDePago}
+                value={finances.metodoDePago}
                 label="Método de Pago"
                 onChange={(e) =>
-                  handleProjectChange(
-                    "metodoDePago",
-                    e.target.value as PaymentMethod
-                  )
+                  setFinances((prev) => ({
+                    ...prev,
+                    metodoDePago: e.target.value as PaymentMethod,
+                  }))
                 }
               >
                 {paymentMethods.map((method) => (
@@ -427,8 +431,10 @@ export const ProjectFormCreate: React.FC = () => {
             <TextField
               fullWidth
               label="Número de Factura"
-              value={project.factura}
-              onChange={(e) => handleProjectChange("factura", e.target.value)}
+              value={finances.factura}
+              onChange={(e) =>
+                setFinances((prev) => ({ ...prev, factura: e.target.value }))
+              }
             />
           </Grid2>
 
@@ -441,16 +447,26 @@ export const ProjectFormCreate: React.FC = () => {
 
           {/* Campos de gastos con formateo en tiempo real */}
           {fieldsGastos.map((field) => (
-            <Grid2 size={{ xs: 12, md: 6, lg: 4 }} key={field}>
+            <Grid2 size={{ xs: 12, md: 6, lg: 4 }} key={String(field)}>
               <TextField
                 fullWidth
-                label={field.charAt(0).toUpperCase() + field.slice(1)}
-                value={formatNumber(expenses[field])}
+                label={
+                  typeof field === "string"
+                    ? field.charAt(0).toUpperCase() + field.slice(1)
+                    : String(field)
+                }
+                value={formatNumber(
+                  typeof expenses[field as keyof ProjectExpenseForm] ===
+                    "number"
+                    ? (expenses[field as keyof ProjectExpenseForm] as number)
+                    : 0
+                )}
                 onChange={(e) => {
                   const numericValue = parseNumber(e.target.value);
                   setExpenses((prev) => ({
                     ...prev,
-                    [field]: Number(numericValue) || 0,
+                    [field as keyof ProjectExpenseForm]:
+                      Number(numericValue) || 0,
                   }));
                 }}
                 placeholder="0"

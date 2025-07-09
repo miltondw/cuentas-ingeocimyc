@@ -8,22 +8,25 @@
 export type ProjectStatus = "activo" | "completado" | "cancelado" | "pausado";
 
 // =============== PROYECTO INTERFACES ===============
+import type { ProjectFinance } from "./typesProject/projectTypes";
 export interface Project {
   id: number;
   fecha: string;
   solicitante: string;
   nombreProyecto: string;
-  obrero: string;
-  costoServicio: string;
-  abono: string;
-  factura: string; // Puede estar vacío "" pero siempre presente
-  valorRetencion: string; // Puede ser "0.00" pero siempre presente
-  valor_iva: number;
-  valor_re: number;
-  metodoDePago: string;
-  estado: ProjectStatus;
-  created_at: string;
+  finanzas: ProjectFinance[]; // <-- Añadido para reflejar la respuesta real de la API
   expenses?: ProjectExpense[];
+  // Los siguientes campos pueden ser agregados por aplanamiento en el frontend, pero no son obligatorios en la respuesta original:
+  obrero?: string;
+  costoServicio?: string | number;
+  abono?: string | number;
+  factura?: string;
+  valorRetencion?: string | number;
+  valor_iva?: number;
+  valor_re?: number;
+  metodoDePago?: string;
+  estado?: ProjectStatus | string;
+  created_at?: string;
 }
 
 export interface CreateProjectRequest {

@@ -1,4 +1,4 @@
-import ApiquesDeSuelos from "../../components/apiques/ApiquesDeSuelos";
+import ApiquesDeSuelos from "@/features/lab/components/apiques/ApiquesDeSuelos";
 
 const ApiqueDetallesPage = () => {
   return <ApiquesDeSuelos />;
