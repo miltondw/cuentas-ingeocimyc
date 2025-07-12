@@ -22,7 +22,7 @@ export interface ProjectFinance {
   factura: string;
   valorRetencion: number;
   metodoDePago: "efectivo" | "transferencia" | "cheque" | "credito";
-  estado: string;
+  // estado se ha movido al objeto Project principal
 }
 
 // Tipos para gastos de proyectos (tabla separada)
@@ -46,8 +46,10 @@ export interface CreateProjectDto {
   solicitante: string;
   nombreProyecto: string;
   identificacion: string;
+  estado?: ProjectStatus;
   finances: ProjectFinance[];
   expenses: CreateProjectExpensesDto[];
+  assignedAssays?: AssignedAssay[];
 }
 
 // DTO para actualizar proyecto
@@ -70,9 +72,34 @@ export interface CreateProjectExpensesDto {
 }
 
 // Respuesta completa del proyecto con gastos
-import type { Project as MainProject } from "@/types/projects";
+import type { Project as MainProject, ProjectStatus } from "@/types/projects";
 export interface ProjectWithExpenses extends MainProject {
   gastos: ProjectExpenses;
+  assignedAssays?: AssignedAssayDto[];
+}
+
+// DTO para los ensayos asignados que vienen del backend
+export interface AssignedAssayDto {
+  id: number;
+  assignedAt: Date;
+  status: ProjectAssayStatus; // Estado del ensayo asignado
+  assay: {
+    id: number;
+    code: string;
+    name: string;
+    categories: {
+      id: number;
+      name: string;
+    }[];
+  };
+}
+
+// Estado del ensayo asignado (diferente del estado del proyecto)
+export enum ProjectAssayStatus {
+  PENDIENTE = "pendiente",
+  EN_PROCESO = "en_proceso",
+  COMPLETADO = "completado",
+  CANCELADO = "cancelado",
 }
 
 // Tipos para filtros y paginación
@@ -91,6 +118,11 @@ export interface ProjectFilters {
 
 // Tipos de métodos de pago
 export type PaymentMethod = "efectivo" | "transferencia" | "cheque" | "credito";
+
+// Interfaz para ensayos asignados en el DTO de creación/actualización de proyecto
+export interface AssignedAssay {
+  assayId: number;
+}
 
 // Para compatibilidad temporal con el componente existente
 export interface ExtraExpense {

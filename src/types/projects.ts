@@ -5,7 +5,12 @@
  */
 
 // =============== TIPOS BASE ===============
-export type ProjectStatus = "activo" | "completado" | "cancelado" | "pausado";
+export enum ProjectStatus {
+  ACTIVO = "activo",
+  COMPLETADO = "completado",
+  CANCELADO = "cancelado",
+  PAUSADO = "pausado",
+}
 
 // =============== PROYECTO INTERFACES ===============
 import type { ProjectFinance } from "./typesProject/projectTypes";

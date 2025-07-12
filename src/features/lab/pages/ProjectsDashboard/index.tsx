@@ -46,7 +46,11 @@ const ProjectsDashboard = () => {
     useFilterGetters(searchParams);
   const filters: LabProjectFilters = useMemo(() => {
     const assignedAssayStatus = getFilter("assignedAssayStatus", "todos");
-    const baseFilters = {
+    const estado = getFilter("estado", "todos");
+    const identificacion = getFilter("identificacion");
+
+    // Construir los filtros base
+    const baseFilters: LabProjectFilters = {
       page: getNumberFilter("page") || 1,
       limit: getNumberFilter("limit") || 10,
       sortBy: getFilter("sortBy", "fecha") as LabProjectFilters["sortBy"],
@@ -65,23 +69,33 @@ const ProjectsDashboard = () => {
       maxApiques: getNumberFilter("maxApiques"),
       minProfiles: getNumberFilter("minProfiles"),
       maxProfiles: getNumberFilter("maxProfiles"),
+
+      // Añadir filtros condicionales
+      ...(estado !== "todos" && {
+        estado: estado as LabProjectFilters["estado"],
+      }),
+      ...(assignedAssayStatus !== "todos" && {
+        assignedAssayStatus:
+          assignedAssayStatus as LabProjectFilters["assignedAssayStatus"],
+      }),
+      ...(identificacion && { identificacion }),
     };
-    return assignedAssayStatus && assignedAssayStatus !== "todos"
-      ? {
-          ...baseFilters,
-          assignedAssayStatus:
-            assignedAssayStatus as LabProjectFilters["assignedAssayStatus"],
-        }
-      : baseFilters;
+
+    return baseFilters;
   }, [getFilter, getBooleanFilter, getNumberFilter]);
 
   // Actualizar filtros en la URL
   const updateUrlFilters = useCallback(
     (newFilters: Partial<LabProjectFilters>) => {
       const newParams = new URLSearchParams(searchParams);
+
+      // Lista de filtros que no deben aparecer en la URL con valor "todos"
+      const skipWithTodosValue = ["assignedAssayStatus", "estado"];
+
       Object.entries(newFilters).forEach(([key, value]) => {
+        // Si hay valor y no es un caso especial de 'todos', añadirlo a los parámetros
         if (value !== undefined && value !== null && value !== "") {
-          if (key === "assignedAssayStatus" && value === "todos") {
+          if (skipWithTodosValue.includes(key) && value === "todos") {
             newParams.delete(key);
           } else {
             newParams.set(key, String(value));
@@ -90,6 +104,7 @@ const ProjectsDashboard = () => {
           newParams.delete(key);
         }
       });
+
       setSearchParams(newParams);
     },
     [searchParams, setSearchParams]
@@ -178,30 +193,24 @@ const ProjectsDashboard = () => {
       limit: Number(result.limit || filters.limit || 10),
     };
   };
+
+  // Utiliza una única instancia de useQuery para evitar múltiples consultas innecesarias
+  const projectsQuery = useQuery({
+    queryKey: ["lab-projects", filters],
+    queryFn: () => fetchLabProjects(filters),
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+  });
+
   const {
     data: projects,
     isLoading: dataLoading,
     paginationData,
     error: dataError,
   } = useServerPagination({
-    apiResponse: useQuery({
-      queryKey: ["lab-projects", filters],
-      queryFn: () => fetchLabProjects(filters),
-      staleTime: 2 * 60 * 1000,
-      gcTime: 5 * 60 * 1000,
-    }).data,
-    isLoading: useQuery({
-      queryKey: ["lab-projects", filters],
-      queryFn: () => fetchLabProjects(filters),
-      staleTime: 2 * 60 * 1000,
-      gcTime: 5 * 60 * 1000,
-    }).isLoading,
-    error: useQuery({
-      queryKey: ["lab-projects", filters],
-      queryFn: () => fetchLabProjects(filters),
-      staleTime: 2 * 60 * 1000,
-      gcTime: 5 * 60 * 1000,
-    }).error,
+    apiResponse: projectsQuery.data,
+    isLoading: projectsQuery.isLoading,
+    error: projectsQuery.error,
   });
 
   // Resumen total para estadísticas
@@ -212,12 +221,8 @@ const ProjectsDashboard = () => {
   });
 
   // Renderizado de acciones en la tabla (modularizado)
-  // Refetch de proyectos tras cambio de estado
-  const { refetch: refetchProjects } = useQuery({
-    queryKey: ["lab-projects", filters],
-    queryFn: () => fetchLabProjects(filters),
-    enabled: false, // solo manual
-  });
+  // Refetch de proyectos tras cambio de estado - utilizamos la misma instancia para evitar crear múltiples queries
+  const { refetch: refetchProjects } = projectsQuery;
 
   const renderActionCell = useCallback(
     (proyecto: LabProject) => (

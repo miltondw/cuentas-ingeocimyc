@@ -1,11 +1,11 @@
-import { ProjectFormCreate } from "../components";
+import { CreateProject } from "../components/CreateProject";
 
 /**
  * Página para crear o editar proyectos
- * Usa el componente ProjectForm migrado desde components/cuentas/forms
+ * Usa el componente CreateProject que integra todos los componentes modulares
  */
 const CreateProjectPage = () => {
-  return <ProjectFormCreate />;
+  return <CreateProject />;
 };
 
 export default CreateProjectPage;

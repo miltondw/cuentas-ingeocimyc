@@ -3,6 +3,7 @@
  */
 
 import type { BaseFilters } from "@/lib/axios/apiClient";
+import { ProjectStatus, ProjectAssayStatus } from "@/types/system";
 
 // =============== FILTROS PARA PROYECTOS DE LABORATORIO ===============
 export interface LabProjectFilters extends BaseFilters {
@@ -12,8 +13,14 @@ export interface LabProjectFilters extends BaseFilters {
   solicitante?: string; // Buscar por nombre del solicitante (LIKE)
   obrero?: string; // Buscar por nombre del obrero (LIKE)
 
-  // Filtro de estado de los ensayos asignados (nuevo)
-  assignedAssayStatus?: "todos" | "pendiente" | "en_proceso" | "completado";
+  // Filtro de estado del proyecto (global)
+  estado?: ProjectStatus | "todos";
+
+  // Filtro para identificación (nuevo campo)
+  identificacion?: string;
+
+  // Filtro de estado de los ensayos asignados
+  assignedAssayStatus?: "todos" | ProjectAssayStatus;
 
   // Filtros de fecha
   startDate?: string; // Formato: YYYY-MM-DD

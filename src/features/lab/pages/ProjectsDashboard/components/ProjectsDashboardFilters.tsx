@@ -28,6 +28,7 @@ import {
   LocalSearchInputs,
   LabProjectFilters,
 } from "../types/ProjectsDashboard.types";
+import { ProjectStatus, ProjectAssayStatus } from "@/types/system";
 
 interface ProjectsDashboardFiltersProps {
   localSearchInputs: LocalSearchInputs;
@@ -101,18 +102,43 @@ export const ProjectsDashboardFilters: React.FC<
         </Grid2>
         <Grid2 size={{ xs: 12, md: 2 }}>
           <FormControl size="small" fullWidth>
-            <InputLabel>Estado Servicio</InputLabel>
+            <InputLabel>Estado Proyecto</InputLabel>
+            <Select
+              value={filters.estado || "todos"}
+              label="Estado Proyecto"
+              onChange={(e) => updateFilter("estado", e.target.value)}
+            >
+              <MenuItem value="todos">Todos</MenuItem>
+              <MenuItem value={ProjectStatus.ACTIVO}>Activo</MenuItem>
+              <MenuItem value={ProjectStatus.COMPLETADO}>Completado</MenuItem>
+              <MenuItem value={ProjectStatus.PAUSADO}>Pausado</MenuItem>
+              <MenuItem value={ProjectStatus.CANCELADO}>Cancelado</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid2>
+        <Grid2 size={{ xs: 12, md: 2 }}>
+          <FormControl size="small" fullWidth>
+            <InputLabel>Estado Servicios</InputLabel>
             <Select
               value={filters.assignedAssayStatus || "todos"}
-              label="Estado Servicio"
+              label="Estado Servicios"
               onChange={(e) =>
                 updateFilter("assignedAssayStatus", e.target.value)
               }
             >
               <MenuItem value="todos">Todos</MenuItem>
-              <MenuItem value="pendiente">Pendiente</MenuItem>
-              <MenuItem value="en_proceso">En Proceso</MenuItem>
-              <MenuItem value="completado">Completado</MenuItem>
+              <MenuItem value={ProjectAssayStatus.PENDIENTE}>
+                Pendiente
+              </MenuItem>
+              <MenuItem value={ProjectAssayStatus.EN_PROCESO}>
+                En Proceso
+              </MenuItem>
+              <MenuItem value={ProjectAssayStatus.COMPLETADO}>
+                Completado
+              </MenuItem>
+              <MenuItem value={ProjectAssayStatus.CANCELADO}>
+                Cancelado
+              </MenuItem>
             </Select>
           </FormControl>
         </Grid2>
@@ -199,6 +225,24 @@ export const ProjectsDashboardFilters: React.FC<
                     ? "Escribiendo... (Enter para buscar)"
                     : "Solo nombre del proyecto"
                 }
+              />
+            </Grid2>
+            <Grid2 size={{ xs: 12, md: 3 }}>
+              <TextField
+                fullWidth
+                label="Identificación"
+                variant="outlined"
+                size="small"
+                value={filters.identificacion || ""}
+                onChange={(e) => updateFilter("identificacion", e.target.value)}
+                placeholder="Buscar por identificación..."
+                InputProps={{
+                  endAdornment:
+                    filtersLoading && filters.identificacion ? (
+                      <CircularProgress size={20} sx={{ mr: 1 }} />
+                    ) : null,
+                }}
+                helperText="Número o código de identificación"
               />
             </Grid2>
             <Grid2 size={{ xs: 12, md: 3 }}>

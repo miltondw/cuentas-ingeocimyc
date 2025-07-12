@@ -1,4 +1,5 @@
 // Respuesta paginada de proyectos de laboratorio
+import { ProjectAssayStatus, ProjectStatus } from "@/types/system";
 export interface LabProjectsResponse {
   data: LabProject[];
   total: number;
@@ -75,12 +76,11 @@ export interface Assay {
   category?: AssayCategory | null;
 }
 
-                        
 // Info de asignación de ensayo a un proyecto
 export interface AssayInfo {
   id: number;
   assignedAt?: string;
-  status?: string;
+  status?: ProjectAssayStatus;
   name?: string; // Para compatibilidad con SimpleAssay
   code?: string;
   assay?: Assay;
@@ -94,6 +94,8 @@ export interface LabProject {
   total_apiques: number;
   total_profiles: number;
   created_at: string;
+  estado: ProjectStatus; // Campo global del proyecto
+  identificacion?: string; // Nuevo campo agregado
   assigned_assays: AssayInfo[];
   apique_ids: number[];
   profile_ids: number[];

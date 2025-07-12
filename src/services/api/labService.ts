@@ -14,6 +14,18 @@ export async function updateProjectAssayStatus(
     { status }
   );
 }
+
+/**
+ * Actualizar el estado global de un proyecto
+ * @param projectId ID del proyecto
+ * @param estado Nuevo estado: "activo" | "completado" | "cancelado" | "pausado"
+ */
+export async function updateProjectStatus(
+  projectId: number,
+  estado: "activo" | "completado" | "cancelado" | "pausado"
+): Promise<void> {
+  await apiClient.patch(`/projects/${projectId}/estado`, { estado });
+}
 // Obtener ensayos por categoría
 
 import { apiClient } from "@/lib/axios/apiClient";

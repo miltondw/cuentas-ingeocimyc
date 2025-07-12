@@ -221,10 +221,17 @@ export enum UserRole {
 }
 
 export enum ProjectStatus {
-  ACTIVE = "activo",
-  COMPLETED = "completado",
-  CANCELLED = "cancelado",
-  PAUSED = "pausado",
+  ACTIVO = "activo",
+  COMPLETADO = "completado",
+  CANCELADO = "cancelado",
+  PAUSADO = "pausado",
+}
+
+export enum ProjectAssayStatus {
+  PENDIENTE = "pendiente",
+  EN_PROCESO = "en_proceso",
+  COMPLETADO = "completado",
+  CANCELADO = "cancelado",
 }
 
 export enum ServiceRequestStatus {

@@ -1,5 +1,8 @@
-import { updateProjectAssayStatus } from "@/services/api/labService";
-import React, { useState, useMemo } from "react";
+import {
+  updateProjectAssayStatus,
+  updateProjectStatus,
+} from "@/services/api/labService";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Stack,
   Chip,
@@ -8,6 +11,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
   Button,
   Typography,
   Divider,
@@ -15,13 +19,19 @@ import {
   FormControl,
   Select,
   MenuItem,
+  CircularProgress,
 } from "@mui/material";
-import { Visibility as VisibilityIcon } from "@mui/icons-material";
+import {
+  Visibility as VisibilityIcon,
+  Edit as EditIcon,
+} from "@mui/icons-material";
 import type {
   LabProject,
   AssayInfo,
   AssayCategory,
 } from "../types/ProjectsDashboard.types";
+import { ProjectStatus, ProjectAssayStatus } from "@/types/system";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 // import { ENSAYOS_BY_CATEGORY } from "../ensayosByCategory"; // Si se quiere usar para iconos o labels custom
 
 interface ProjectActionsCellProps {
@@ -55,15 +65,22 @@ export const ProjectActionsCell: React.FC<ProjectActionsCellProps> = ({
   onViewProfiles,
   onStatusChanged,
 }) => {
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole("admin");
+
   const [open, setOpen] = useState(false);
+  const [openProjectStatus, setOpenProjectStatus] = useState(false);
   const [statusLoading, setStatusLoading] = useState<number | null>(null);
+  const [projectStatusLoading, setProjectStatusLoading] = useState(false);
   // Estado local para los ensayos asignados (para reflejar el cambio sin recargar)
   const [localAssays, setLocalAssays] = useState(proyecto.assigned_assays);
+  const [localProjectStatus, setLocalProjectStatus] = useState(proyecto.estado);
 
-  // Actualiza localAssays si cambia el prop (por ejemplo, al refrescar el proyecto)
-  React.useEffect(() => {
+  // Actualiza localAssays y localProjectStatus si cambia el prop
+  useEffect(() => {
     setLocalAssays(proyecto.assigned_assays);
-  }, [proyecto.assigned_assays]);
+    setLocalProjectStatus(proyecto.estado);
+  }, [proyecto.assigned_assays, proyecto.estado]);
 
   // Agrupa los ensayos asignados por categoría dinámica de la API
   const assaysByCategory = useMemo(() => {
@@ -110,7 +127,9 @@ export const ProjectActionsCell: React.FC<ProjectActionsCellProps> = ({
       // Actualiza el estado localmente para reflejar el cambio sin recargar
       setLocalAssays((prev) =>
         prev.map((a) =>
-          a.id === assayAssignmentId ? { ...a, status: newStatus } : a
+          a.id === assayAssignmentId
+            ? { ...a, status: newStatus as ProjectAssayStatus }
+            : a
         )
       );
       // Notifica al padre para que recargue los datos del proyecto
@@ -120,6 +139,23 @@ export const ProjectActionsCell: React.FC<ProjectActionsCellProps> = ({
       console.error(e);
     } finally {
       setStatusLoading(null);
+    }
+  };
+
+  // Maneja el cambio de estado global del proyecto
+  const handleProjectStatusChange = async (newStatus: ProjectStatus) => {
+    setProjectStatusLoading(true);
+    try {
+      await updateProjectStatus(proyecto.proyecto_id, newStatus);
+      // Actualiza el estado localmente
+      setLocalProjectStatus(newStatus);
+      // Notifica al padre para que recargue los datos del proyecto
+      if (onStatusChanged) onStatusChanged();
+      setOpenProjectStatus(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setProjectStatusLoading(false);
     }
   };
 
@@ -140,6 +176,17 @@ export const ProjectActionsCell: React.FC<ProjectActionsCellProps> = ({
             <VisibilityIcon />
           </IconButton>
         </Tooltip>
+        {isAdmin && (
+          <Tooltip title="Cambiar Estado del Proyecto">
+            <IconButton
+              size="small"
+              color="info"
+              onClick={() => setOpenProjectStatus(true)}
+            >
+              <EditIcon />
+            </IconButton>
+          </Tooltip>
+        )}
       </Stack>
       <Dialog
         open={open}
@@ -242,6 +289,68 @@ export const ProjectActionsCell: React.FC<ProjectActionsCellProps> = ({
             </Box>
           ))}
         </DialogContent>
+      </Dialog>
+
+      {/* Diálogo para cambiar el estado del proyecto */}
+      <Dialog
+        open={openProjectStatus}
+        onClose={() => setOpenProjectStatus(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Cambiar estado del proyecto</DialogTitle>
+        <DialogContent>
+          <Box sx={{ py: 2 }}>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              Estado actual:{" "}
+              <Chip
+                label={proyecto.estado}
+                color={
+                  proyecto.estado === ProjectStatus.ACTIVO
+                    ? "success"
+                    : proyecto.estado === ProjectStatus.PAUSADO
+                    ? "warning"
+                    : "default"
+                }
+                size="small"
+              />
+            </Typography>
+
+            <FormControl fullWidth>
+              <Select
+                value={localProjectStatus}
+                onChange={(e) =>
+                  setLocalProjectStatus(e.target.value as ProjectStatus)
+                }
+                disabled={projectStatusLoading}
+              >
+                <MenuItem value={ProjectStatus.ACTIVO}>Activo</MenuItem>
+                <MenuItem value={ProjectStatus.PAUSADO}>Pausado</MenuItem>
+                <MenuItem value={ProjectStatus.COMPLETADO}>Completado</MenuItem>
+                <MenuItem value={ProjectStatus.CANCELADO}>Cancelado</MenuItem>
+              </Select>
+            </FormControl>
+
+            {projectStatusLoading && (
+              <Box display="flex" justifyContent="center" sx={{ mt: 2 }}>
+                <CircularProgress size={24} />
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenProjectStatus(false)}>Cancelar</Button>
+          <Button
+            onClick={() => handleProjectStatusChange(localProjectStatus)}
+            variant="contained"
+            color="primary"
+            disabled={
+              projectStatusLoading || localProjectStatus === proyecto.estado
+            }
+          >
+            Guardar
+          </Button>
+        </DialogActions>
       </Dialog>
     </>
   );
