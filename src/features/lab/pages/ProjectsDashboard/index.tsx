@@ -10,6 +10,7 @@ import DataTablePagination from "@/components/common/DataTablePagination";
 import { ProjectsDashboardTable } from "./components/ProjectsDashboardTable";
 import { ProjectsDashboardFilters } from "./components/ProjectsDashboardFilters";
 import { ProjectActionsCell } from "./components/ProjectActionsCell";
+
 import { Terrain as TerrainIcon } from "@mui/icons-material";
 import {
   useProjectNavigation,
@@ -32,7 +33,6 @@ const ProjectsDashboard = () => {
       solicitante: "",
     }
   );
-
   // Navigation handlers
   const {
     handleCreateApique,
@@ -44,8 +44,9 @@ const ProjectsDashboard = () => {
   // Filtros desde URL
   const { getFilter, getBooleanFilter, getNumberFilter } =
     useFilterGetters(searchParams);
-  const filters: LabProjectFilters = useMemo(
-    () => ({
+  const filters: LabProjectFilters = useMemo(() => {
+    const assignedAssayStatus = getFilter("assignedAssayStatus", "todos");
+    const baseFilters = {
       page: getNumberFilter("page") || 1,
       limit: getNumberFilter("limit") || 10,
       sortBy: getFilter("sortBy", "fecha") as LabProjectFilters["sortBy"],
@@ -53,7 +54,6 @@ const ProjectsDashboard = () => {
         "sortOrder",
         "DESC"
       ) as LabProjectFilters["sortOrder"],
-      estado: getFilter("estado", "todos") as LabProjectFilters["estado"],
       search: getFilter("search"),
       nombreProyecto: getFilter("nombreProyecto"),
       solicitante: getFilter("solicitante"),
@@ -65,9 +65,15 @@ const ProjectsDashboard = () => {
       maxApiques: getNumberFilter("maxApiques"),
       minProfiles: getNumberFilter("minProfiles"),
       maxProfiles: getNumberFilter("maxProfiles"),
-    }),
-    [getFilter, getBooleanFilter, getNumberFilter]
-  );
+    };
+    return assignedAssayStatus && assignedAssayStatus !== "todos"
+      ? {
+          ...baseFilters,
+          assignedAssayStatus:
+            assignedAssayStatus as LabProjectFilters["assignedAssayStatus"],
+        }
+      : baseFilters;
+  }, [getFilter, getBooleanFilter, getNumberFilter]);
 
   // Actualizar filtros en la URL
   const updateUrlFilters = useCallback(
@@ -75,7 +81,7 @@ const ProjectsDashboard = () => {
       const newParams = new URLSearchParams(searchParams);
       Object.entries(newFilters).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== "") {
-          if (key === "estado" && value === "todos") {
+          if (key === "assignedAssayStatus" && value === "todos") {
             newParams.delete(key);
           } else {
             newParams.set(key, String(value));
@@ -168,8 +174,8 @@ const ProjectsDashboard = () => {
     return {
       data: result.data || [],
       total: result.total || 0,
-      page: result.page || filters.page || 1,
-      limit: result.limit || filters.limit || 10,
+      page: Number(result.page || filters.page || 1),
+      limit: Number(result.limit || filters.limit || 10),
     };
   };
   const {
@@ -206,6 +212,13 @@ const ProjectsDashboard = () => {
   });
 
   // Renderizado de acciones en la tabla (modularizado)
+  // Refetch de proyectos tras cambio de estado
+  const { refetch: refetchProjects } = useQuery({
+    queryKey: ["lab-projects", filters],
+    queryFn: () => fetchLabProjects(filters),
+    enabled: false, // solo manual
+  });
+
   const renderActionCell = useCallback(
     (proyecto: LabProject) => (
       <ProjectActionsCell
@@ -214,6 +227,7 @@ const ProjectsDashboard = () => {
         onViewApiques={handleViewApiques}
         onCreateProfile={handleCreateProfile}
         onViewProfiles={handleViewProfiles}
+        onStatusChanged={() => refetchProjects()}
       />
     ),
     [
@@ -221,6 +235,7 @@ const ProjectsDashboard = () => {
       handleViewApiques,
       handleCreateProfile,
       handleViewProfiles,
+      refetchProjects,
     ]
   );
 

@@ -21,7 +21,6 @@ import {
   ExpandLess as ExpandLessIcon,
 } from "@mui/icons-material";
 import {
-  ESTADO_OPTIONS,
   BOOLEAN_FILTER_OPTIONS,
   NUMERIC_FILTER_FIELDS,
 } from "../types/ProjectsDashboard.constants";
@@ -102,17 +101,18 @@ export const ProjectsDashboardFilters: React.FC<
         </Grid2>
         <Grid2 size={{ xs: 12, md: 2 }}>
           <FormControl size="small" fullWidth>
-            <InputLabel>Estado</InputLabel>
+            <InputLabel>Estado Servicio</InputLabel>
             <Select
-              value={filters.estado || "todos"}
-              label="Estado"
-              onChange={(e) => updateFilter("estado", e.target.value)}
+              value={filters.assignedAssayStatus || "todos"}
+              label="Estado Servicio"
+              onChange={(e) =>
+                updateFilter("assignedAssayStatus", e.target.value)
+              }
             >
-              {ESTADO_OPTIONS.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
+              <MenuItem value="todos">Todos</MenuItem>
+              <MenuItem value="pendiente">Pendiente</MenuItem>
+              <MenuItem value="en_proceso">En Proceso</MenuItem>
+              <MenuItem value="completado">Completado</MenuItem>
             </Select>
           </FormControl>
         </Grid2>

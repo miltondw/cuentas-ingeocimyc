@@ -9,6 +9,7 @@ export interface Project {
   fecha: string; // date
   solicitante: string;
   nombreProyecto: string;
+  identificacion: string; // Identificación del solicitante
   obrero: string;
   costoServicio: number; // decimal(15,2)
   abono?: number; // decimal(15,2), default 0.00
@@ -37,6 +38,7 @@ export interface CreateProjectDto {
   fecha: string;
   solicitante: string;
   nombreProyecto: string;
+  identificacion: string;
   obrero: string;
   costoServicio: number;
   abono?: number;
@@ -71,6 +73,7 @@ export interface ProjectWithExpenses extends Project {
 export interface ProjectFilters {
   solicitante?: string;
   nombreProyecto?: string;
+  identificacion: string;
   obrero?: string;
   metodoDePago?: "efectivo" | "transferencia" | "cheque" | "credito";
   startDate?: string;

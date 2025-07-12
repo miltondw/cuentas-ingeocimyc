@@ -45,6 +45,7 @@ export interface CreateProjectDto {
   fecha: string;
   solicitante: string;
   nombreProyecto: string;
+  identificacion: string;
   finances: ProjectFinance[];
   expenses: CreateProjectExpensesDto[];
 }

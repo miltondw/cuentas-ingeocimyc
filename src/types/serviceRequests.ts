@@ -7,7 +7,7 @@
 // =============== TIPOS BASE ===============
 export type ServiceRequestStatus =
   | "pendiente"
-  | "en proceso"
+  | "en_proceso"
   | "completado"
   | "cancelado";
 

@@ -46,19 +46,44 @@ export interface AssayCategory {
   name: string;
 }
 
+// Ensayo simple (como lo retorna /lab/assays/by-category)
+export interface SimpleAssay {
+  id: number;
+  code: string;
+  name: string;
+}
+
+// Categoría de ensayo (como lo retorna /lab/assays/by-category)
+export interface AssayCategoryApi {
+  id: number;
+  code: string;
+  name: string;
+}
+
+// Respuesta de /lab/assays/by-category
+export interface AssaysByCategoryApi {
+  category: AssayCategoryApi;
+  ensayos: SimpleAssay[];
+}
+
+// Ensayo completo (usado en proyectos, con categorías)
 export interface Assay {
   id: number;
   code: string;
   name: string;
-  categories: AssayCategory[];
-  category?: AssayCategory | null; // Para compatibilidad con la UI
+  categories?: AssayCategory[];
+  category?: AssayCategory | null;
 }
 
+                        
+// Info de asignación de ensayo a un proyecto
 export interface AssayInfo {
   id: number;
-  assignedAt: string;
-  status: string;
-  assay: Assay;
+  assignedAt?: string;
+  status?: string;
+  name?: string; // Para compatibilidad con SimpleAssay
+  code?: string;
+  assay?: Assay;
 }
 
 export interface LabProject {

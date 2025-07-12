@@ -1,3 +1,4 @@
+import { updateProjectAssayStatus } from "@/services/api/labService";
 import React, { useState, useMemo } from "react";
 import {
   Stack,
@@ -11,6 +12,9 @@ import {
   Typography,
   Divider,
   Box,
+  FormControl,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import { Visibility as VisibilityIcon } from "@mui/icons-material";
 import type {
@@ -26,7 +30,22 @@ interface ProjectActionsCellProps {
   onViewApiques: (id: number) => void;
   onCreateProfile: (id: number) => void;
   onViewProfiles: (id: number) => void;
+  onStatusChanged?: () => void; // Nuevo callback opcional
 }
+
+// Utilidad para mostrar el label amigable del estado
+const STATUS_LABELS: Record<string, string> = {
+  pendiente: "Pendiente",
+  en_proceso: "En Proceso",
+  completado: "Completado",
+};
+
+// Utilidad para color del Chip según estado
+const STATUS_COLORS: Record<string, "warning" | "info" | "success"> = {
+  pendiente: "warning",
+  en_proceso: "info",
+  completado: "success",
+};
 
 export const ProjectActionsCell: React.FC<ProjectActionsCellProps> = ({
   proyecto,
@@ -34,8 +53,17 @@ export const ProjectActionsCell: React.FC<ProjectActionsCellProps> = ({
   onViewApiques,
   onCreateProfile,
   onViewProfiles,
+  onStatusChanged,
 }) => {
   const [open, setOpen] = useState(false);
+  const [statusLoading, setStatusLoading] = useState<number | null>(null);
+  // Estado local para los ensayos asignados (para reflejar el cambio sin recargar)
+  const [localAssays, setLocalAssays] = useState(proyecto.assigned_assays);
+
+  // Actualiza localAssays si cambia el prop (por ejemplo, al refrescar el proyecto)
+  React.useEffect(() => {
+    setLocalAssays(proyecto.assigned_assays);
+  }, [proyecto.assigned_assays]);
 
   // Agrupa los ensayos asignados por categoría dinámica de la API
   const assaysByCategory = useMemo(() => {
@@ -43,11 +71,10 @@ export const ProjectActionsCell: React.FC<ProjectActionsCellProps> = ({
       string,
       { category: AssayCategory | null; ensayos: AssayInfo[] }
     >();
-    for (const ensayo of proyecto.assigned_assays) {
-      // Usar la categoría real de la API (primer elemento de categories)
+    for (const ensayo of localAssays) {
       const category =
-        ensayo.assay.category ||
-        (ensayo.assay.categories && ensayo.assay.categories[0]) ||
+        ensayo?.assay?.category ||
+        (ensayo?.assay?.categories && ensayo?.assay?.categories[0]) ||
         null;
       const catKey = category?.id?.toString() || "sin-categoria";
       if (!map.has(catKey)) {
@@ -62,11 +89,38 @@ export const ProjectActionsCell: React.FC<ProjectActionsCellProps> = ({
       }
     }
     return Array.from(map.values());
-  }, [proyecto.assigned_assays]);
+  }, [localAssays]);
 
   const handleCreateItem = (type: "apiques" | "perfiles") => {
     if (type === "apiques") onCreateApique(proyecto.proyecto_id);
     if (type === "perfiles") onCreateProfile(proyecto.proyecto_id);
+  };
+
+  const handleStatusChange = async (
+    assayAssignmentId: number,
+    newStatus: "pendiente" | "en_proceso" | "completado"
+  ) => {
+    setStatusLoading(assayAssignmentId);
+    try {
+      await updateProjectAssayStatus(
+        proyecto.proyecto_id,
+        assayAssignmentId,
+        newStatus
+      );
+      // Actualiza el estado localmente para reflejar el cambio sin recargar
+      setLocalAssays((prev) =>
+        prev.map((a) =>
+          a.id === assayAssignmentId ? { ...a, status: newStatus } : a
+        )
+      );
+      // Notifica al padre para que recargue los datos del proyecto
+      if (onStatusChanged) onStatusChanged();
+    } catch (e) {
+      // Manejo de error (puedes mostrar notificación)
+      console.error(e);
+    } finally {
+      setStatusLoading(null);
+    }
   };
 
   return (
@@ -95,7 +149,7 @@ export const ProjectActionsCell: React.FC<ProjectActionsCellProps> = ({
       >
         <DialogTitle>Ensayos asignados</DialogTitle>
         <DialogContent>
-          {proyecto.assigned_assays.length === 0 && (
+          {localAssays.length === 0 && (
             <Typography variant="body2">No hay ensayos asignados.</Typography>
           )}
           {assaysByCategory.map(({ category, ensayos }, idx) => (
@@ -106,8 +160,8 @@ export const ProjectActionsCell: React.FC<ProjectActionsCellProps> = ({
                 </Typography>
               )}
               {ensayos.map((ensayo) => {
-                const isApique = ensayo.assay.code === "apiques";
-                const isPerfil = ensayo.assay.code === "perfiles";
+                const isApique = ensayo?.assay?.code === "apiques";
+                const isPerfil = ensayo?.assay?.code === "perfiles";
                 const hasItems = isApique
                   ? proyecto.apique_ids.length > 0
                   : isPerfil
@@ -122,15 +176,41 @@ export const ProjectActionsCell: React.FC<ProjectActionsCellProps> = ({
                     sx={{ mb: 1 }}
                   >
                     <Typography variant="body2" sx={{ minWidth: 100 }}>
-                      {ensayo.assay.name}
+                      {ensayo?.assay?.name}
                     </Typography>
                     <Chip
-                      label={ensayo.status}
+                      label={
+                        STATUS_LABELS[ensayo.status ?? "pendiente"] ||
+                        ensayo.status ||
+                        "pendiente"
+                      }
                       color={
-                        ensayo.status !== "pendiente" ? "success" : "warning"
+                        STATUS_COLORS[ensayo.status ?? "pendiente"] || "warning"
                       }
                       size="small"
                     />
+                    <FormControl size="small" sx={{ minWidth: 120 }}>
+                      <Select
+                        value={ensayo.status || "pendiente"}
+                        onChange={(e) =>
+                          handleStatusChange(
+                            ensayo.id,
+                            e.target.value as
+                              | "pendiente"
+                              | "en_proceso"
+                              | "completado"
+                          )
+                        }
+                        disabled={statusLoading === ensayo.id}
+                        renderValue={(value) =>
+                          STATUS_LABELS[value as string] || value
+                        }
+                      >
+                        <MenuItem value="pendiente">Pendiente</MenuItem>
+                        <MenuItem value="en_proceso">En Proceso</MenuItem>
+                        <MenuItem value="completado">Completado</MenuItem>
+                      </Select>
+                    </FormControl>
                     {hasItems ? (
                       <Button
                         size="small"
@@ -152,7 +232,7 @@ export const ProjectActionsCell: React.FC<ProjectActionsCellProps> = ({
                           setOpen(false);
                         }}
                       >
-                        Crear {ensayo.assay.name}
+                        Crear {ensayo?.assay?.name}
                       </Button>
                     )}
                   </Stack>

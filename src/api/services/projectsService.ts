@@ -257,10 +257,6 @@ export class ProjectsService {
       errors.push("El nombre del proyecto es requerido");
     }
 
-    if ("obrero" in data && !data.obrero?.trim()) {
-      errors.push("El obrero es requerido");
-    }
-
     if ("costoServicio" in data && !data.costoServicio?.trim()) {
       errors.push("El costo del servicio es requerido");
     }
@@ -349,8 +345,8 @@ export class ProjectsService {
    * Calcular saldo pendiente de un proyecto
    */
   calculatePendingBalance(project: Project): number {
-    const costoServicio = parseFloat(project.costoServicio) || 0;
-    const abono = parseFloat(project.abono) || 0;
+    const costoServicio = parseFloat(String(project.costoServicio ?? 0)) || 0;
+    const abono = parseFloat(String(project.abono ?? 0)) || 0;
     return costoServicio - abono;
   }
 
@@ -358,8 +354,8 @@ export class ProjectsService {
    * Determinar estado de pago de un proyecto
    */
   getPaymentStatus(project: Project): "pendiente" | "parcial" | "completo" {
-    const costoServicio = parseFloat(project.costoServicio) || 0;
-    const abono = parseFloat(project.abono) || 0;
+    const costoServicio = parseFloat(String(project.costoServicio ?? 0)) || 0;
+    const abono = parseFloat(String(project.abono ?? 0)) || 0;
 
     if (abono === 0) return "pendiente";
     if (abono >= costoServicio) return "completo";
@@ -370,8 +366,8 @@ export class ProjectsService {
    * Calcular porcentaje de avance de pago
    */
   calculatePaymentProgress(project: Project): number {
-    const costoServicio = parseFloat(project.costoServicio) || 0;
-    const abono = parseFloat(project.abono) || 0;
+    const costoServicio = parseFloat(String(project.costoServicio ?? 0)) || 0;
+    const abono = parseFloat(String(project.abono ?? 0)) || 0;
 
     if (costoServicio === 0) return 0;
     return Math.min((abono / costoServicio) * 100, 100);

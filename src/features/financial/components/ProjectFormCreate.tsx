@@ -60,11 +60,13 @@ export const ProjectFormCreate: React.FC = () => {
     fecha: string;
     solicitante: string;
     nombreProyecto: string;
+    identificacion: string;
     // Si en el futuro la API agrega más campos directos, agrégalos aquí
   }>({
     fecha: new Date().toISOString().split("T")[0],
     solicitante: "",
     nombreProyecto: "",
+    identificacion: "",
   });
 
   // Estado para finanzas (un solo objeto)
@@ -123,7 +125,7 @@ export const ProjectFormCreate: React.FC = () => {
             fecha: response?.fecha,
             solicitante: response?.solicitante,
             nombreProyecto: response?.nombreProyecto,
-            // Si la API agrega más campos directos, agrégalos aquí
+            identificacion: response?.identificacion,
           });
           // Cargar finanzas si existen (un solo objeto)
           if (response?.finanzas?.[0]) {
@@ -307,7 +309,7 @@ export const ProjectFormCreate: React.FC = () => {
             <TextField
               fullWidth
               label="Nombre del Proyecto"
-              value={project.nombreProyecto}
+              value={project.nombreProyecto ?? ""}
               onChange={(e) =>
                 handleProjectChange("nombreProyecto", e.target.value)
               }
@@ -318,9 +320,20 @@ export const ProjectFormCreate: React.FC = () => {
             <TextField
               fullWidth
               label="Solicitante/Cliente"
-              value={project.solicitante}
+              value={project.solicitante ?? ""}
               onChange={(e) =>
                 handleProjectChange("solicitante", e.target.value)
+              }
+              required
+            />
+          </Grid2>
+          <Grid2 size={{ xs: 12, md: 6 }}>
+            <TextField
+              fullWidth
+              label="Identificación"
+              value={project.identificacion ?? ""}
+              onChange={(e) =>
+                handleProjectChange("identificacion", e.target.value)
               }
               required
             />
@@ -333,7 +346,6 @@ export const ProjectFormCreate: React.FC = () => {
               onChange={(e) =>
                 setFinances((prev) => ({ ...prev, obrero: e.target.value }))
               }
-              required
             />
           </Grid2>
           <Grid2 size={{ xs: 12, md: 6 }}>
@@ -341,7 +353,7 @@ export const ProjectFormCreate: React.FC = () => {
               fullWidth
               type="date"
               label="Fecha del Proyecto"
-              value={project.fecha}
+              value={project.fecha ?? ""}
               onChange={(e) => handleProjectChange("fecha", e.target.value)}
               slotProps={{ inputLabel: { shrink: true } }}
               required

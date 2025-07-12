@@ -12,8 +12,8 @@ export interface LabProjectFilters extends BaseFilters {
   solicitante?: string; // Buscar por nombre del solicitante (LIKE)
   obrero?: string; // Buscar por nombre del obrero (LIKE)
 
-  // Filtros de estado
-  estado?: "todos" | "activo" | "completado" | "cancelado" | "pausado";
+  // Filtro de estado de los ensayos asignados (nuevo)
+  assignedAssayStatus?: "todos" | "pendiente" | "en_proceso" | "completado";
 
   // Filtros de fecha
   startDate?: string; // Formato: YYYY-MM-DD

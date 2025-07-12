@@ -43,13 +43,28 @@ export const ProjectsDashboardTable: React.FC<ProjectsDashboardTableProps> = ({
     {
       key: "estado",
       label: "Estado",
-      render: (value) => (
-        <Chip
-          label={String(value)}
-          color={value === "activo" ? "success" : "default"}
-          size="small"
-        />
-      ),
+      render: (_, row) => {
+        // Tomar el status del primer ensayo asignado, o mostrar "Sin estado"
+        const labProject = row as LabProject;
+        const status = labProject.assigned_assays?.[0]?.status ?? "pendiente";
+        const STATUS_LABELS: Record<string, string> = {
+          pendiente: "Pendiente",
+          en_proceso: "En Proceso",
+          completado: "Completado",
+        };
+        const STATUS_COLORS: Record<string, "warning" | "info" | "success"> = {
+          pendiente: "warning",
+          en_proceso: "info",
+          completado: "success",
+        };
+        return (
+          <Chip
+            label={STATUS_LABELS[status] || status}
+            color={STATUS_COLORS[status] || "warning"}
+            size="small"
+          />
+        );
+      },
     },
     {
       key: "ensayos",

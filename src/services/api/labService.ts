@@ -1,6 +1,21 @@
 /**
- * Servicio para las APIs de laboratorio con soporte completo de filtros
+ * Actualizar el estado de un ensayo asignado a un proyecto
+ * @param projectId ID del proyecto
+ * @param assayAssignmentId ID de la asignación (project_assays)
+ * @param status Nuevo estado: "pendiente" | "en_proceso" | "completado"
  */
+export async function updateProjectAssayStatus(
+  projectId: number,
+  assayAssignmentId: number,
+  status: "pendiente" | "en_proceso" | "completado"
+): Promise<void> {
+  await apiClient.patch(
+    `/projects/${projectId}/assays/${assayAssignmentId}/status`,
+    { status }
+  );
+}
+// Obtener ensayos por categoría
+
 import { apiClient } from "@/lib/axios/apiClient";
 import type { LabProjectFilters, ProfilesFilters } from "@/types/labFilters";
 import type {
@@ -9,6 +24,7 @@ import type {
   Assay,
   LabProjectsResponse,
 } from "@/features/lab/pages/ProjectsDashboard/types/ProjectsDashboard.types";
+import type { CreateProjectDto } from "@/types/typesProject/projectTypes";
 
 // Interfaces basadas en las respuestas reales de la API
 export interface ApiqueProject {
@@ -89,6 +105,12 @@ export interface ProfilesResponse {
   total: number;
   page: number;
   limit: number;
+}
+export interface CreateProjectPayload {
+  client: string;
+  identification: string;
+  assays: number[];
+  // Agrega aquí otros campos requeridos por el backend
 }
 
 // Función auxiliar para construir parámetros de consulta
@@ -558,9 +580,9 @@ export const labService = {
                 assay: {
                   ...ensayo.assay,
                   category:
-                    Array.isArray(ensayo.assay.categories) &&
-                    ensayo.assay.categories.length > 0
-                      ? ensayo.assay.categories[0]
+                    Array.isArray(ensayo?.assay?.categories) &&
+                    ensayo?.assay.categories.length > 0
+                      ? ensayo?.assay.categories[0]
                       : null,
                 } as Assay,
               }))
@@ -572,6 +594,66 @@ export const labService = {
       return data;
     } catch (error) {
       console.error("❌ Error en /api/lab/projects/with-samples:", error);
+      throw error;
+    }
+  },
+  /**
+   * Obtener ensayos por categoría (filtrando localmente del endpoint agrupado)
+   * @deprecated Ya no hace petición, solo filtra del array global
+   */
+  getAssaysByCategoryFromGroup(
+    allCategoryAssays: {
+      category: { id: number; code: string; name: string };
+      ensayos: { id: number; code: string; name: string }[];
+    }[],
+    categoryId: number
+  ) {
+    const found = allCategoryAssays.find((d) => d.category.id === categoryId);
+    return found && found.ensayos ? found.ensayos : [];
+  },
+
+  /**
+   * Crear un nuevo proyecto (financiero)
+   */
+  async createProject(
+    payload: CreateProjectDto & {
+      assignedAssays: { assayId: number }[];
+    }
+  ): Promise<{ id: number }> {
+    try {
+      const response = await apiClient.post<{ data: { id: number } }>(
+        "/projects",
+        payload
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error("❌ Error en createProject:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener ensayos agrupados por categoría (nuevo endpoint)
+   */
+  async getAssaysByCategoryGroup(): Promise<
+    {
+      category: { id: number; code: string; name: string };
+      ensayos: { id: number; code: string; name: string }[];
+    }[]
+  > {
+    try {
+      const response = await apiClient.get<{
+        data: {
+          data: {
+            category: { id: number; code: string; name: string };
+            ensayos: { id: number; code: string; name: string }[];
+          }[];
+        };
+      }>("/lab/assays/by-category");
+      // Retorna solo el array de categorías con sus ensayos
+      return response.data.data.data;
+    } catch (error) {
+      console.error("❌ Error en getAssaysByCategoryGroup:", error);
       throw error;
     }
   },

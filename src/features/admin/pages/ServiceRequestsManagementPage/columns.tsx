@@ -3,23 +3,9 @@ import type {
   ServiceRequestStatus,
 } from "@/types/serviceRequests";
 import React from "react";
-import {
-  Typography,
-  Box,
-  Chip,
-  Stack,
-  Tooltip,
-  IconButton,
-  CircularProgress,
-} from "@mui/material";
-import PersonAddIcon from "@mui/icons-material/PersonAdd";
-import {
-  Visibility as ViewIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Refresh as RefreshIcon,
-  PictureAsPdf as PdfIcon,
-} from "@mui/icons-material";
+import { Typography, Box, Chip } from "@mui/material";
+
+import ServiceRequestActionsButton from "./components/ServiceRequestActionsButton";
 
 // Tipos estrictos para handlers y status info
 export interface ServiceRequestTableHandlers {
@@ -32,6 +18,7 @@ export interface ServiceRequestTableHandlers {
   isRegeneratingPDF: (id: number) => boolean;
   onCreateClientUser: (request: AdminServiceRequest) => void;
   isCreatingClientUser: (id: number) => boolean;
+  onShowActions: (request: AdminServiceRequest) => void;
 }
 
 export interface StatusInfo {
@@ -143,64 +130,10 @@ export function getServiceRequestColumns(
       key: "actions",
       label: "Acciones",
       render: (_: unknown, request: AdminServiceRequest) => (
-        <Stack direction="row" spacing={1}>
-          <Tooltip title="Ver detalles">
-            <IconButton size="small" onClick={() => handlers.onView(request)}>
-              <ViewIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Cambiar estado">
-            <IconButton
-              size="small"
-              onClick={() => handlers.onEditStatus(request)}
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Generar PDF">
-            <IconButton
-              size="small"
-              onClick={() => handlers.onGeneratePDF(request.id)}
-              disabled={handlers.isGeneratingPDF(request.id)}
-            >
-              <PdfIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Regenerar PDF">
-            <IconButton
-              size="small"
-              onClick={() => handlers.onRegeneratePDF(request.id)}
-              disabled={handlers.isRegeneratingPDF(request.id)}
-            >
-              <RefreshIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Crear usuario cliente">
-            <span>
-              <IconButton
-                size="small"
-                color="primary"
-                onClick={() => handlers.onCreateClientUser(request)}
-                disabled={handlers.isCreatingClientUser(request.id)}
-              >
-                {handlers.isCreatingClientUser(request.id) ? (
-                  <CircularProgress size={20} />
-                ) : (
-                  <PersonAddIcon fontSize="small" />
-                )}
-              </IconButton>
-            </span>
-          </Tooltip>
-          <Tooltip title="Eliminar">
-            <IconButton
-              size="small"
-              color="error"
-              onClick={() => handlers.onDelete(request)}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
+        <ServiceRequestActionsButton
+          request={request}
+          onClick={handlers.onShowActions}
+        />
       ),
     },
   ];

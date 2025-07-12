@@ -14,6 +14,7 @@ export interface Project {
   fecha: string;
   solicitante: string;
   nombreProyecto: string;
+  identificacion: string;
   finanzas: ProjectFinance[]; // <-- Añadido para reflejar la respuesta real de la API
   expenses?: ProjectExpense[];
   // Los siguientes campos pueden ser agregados por aplanamiento en el frontend, pero no son obligatorios en la respuesta original:
@@ -33,6 +34,7 @@ export interface CreateProjectRequest {
   fecha: string;
   solicitante: string;
   nombreProyecto: string;
+  identificacion: string;
   obrero: string;
   costoServicio: string;
   abono: string;
@@ -48,6 +50,7 @@ export interface UpdateProjectRequest {
   fecha?: string;
   solicitante?: string;
   nombreProyecto?: string;
+  identificacion: string;
   obrero?: string;
   costoServicio?: string;
   abono?: string;
@@ -144,6 +147,7 @@ export interface ProjectFilters {
   search?: string; // Búsqueda general
   solicitante?: string;
   nombreProyecto?: string;
+  identificacion: string;
   obrero?: string;
 
   // Métodos de pago
@@ -222,6 +226,7 @@ export const DEFAULT_PROJECT_FILTERS: ProjectFilters = {
   search: undefined,
   solicitante: undefined,
   nombreProyecto: undefined,
+  identificacion: "",
   obrero: undefined,
   metodoDePago: undefined,
   minCostoServicio: undefined,
