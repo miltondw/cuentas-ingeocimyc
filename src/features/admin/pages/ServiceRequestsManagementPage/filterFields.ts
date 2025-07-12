@@ -14,7 +14,7 @@ export const SERVICE_REQUEST_STATUSES: Array<{
     | "warning";
 }> = [
   { value: "pendiente", label: "Pendiente", color: "warning" },
-  { value: "en proceso", label: "En Proceso", color: "info" },
+  { value: "en_proceso", label: "En Proceso", color: "info" },
   { value: "completado", label: "Completado", color: "success" },
   { value: "cancelado", label: "Cancelado", color: "error" },
 ];

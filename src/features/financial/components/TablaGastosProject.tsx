@@ -525,7 +525,7 @@ const fetchProjects = async (filters: ProjectFilters) => {
         valorRetencion: fin ? fin.valorRetencion : "",
         obrero: fin ? fin.obrero : "",
         metodoDePago: fin ? fin.metodoDePago : "",
-        estado: fin ? fin.estado : "",
+        // estado se ha movido al objeto Project principal, usar p.estado en su lugar
         valor_re:
           fin && fin.valorRetencion && fin.costoServicio
             ? (Number(fin.valorRetencion) / 100) * Number(fin.costoServicio)

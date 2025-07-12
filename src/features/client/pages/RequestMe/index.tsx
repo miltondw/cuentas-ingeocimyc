@@ -67,6 +67,7 @@ const RequestMe = () => {
       isRegeneratingPDF: () => false,
       onCreateClientUser: () => {},
       isCreatingClientUser: () => false,
+      onShowActions: () => {}, // Añadido para cumplir con el tipo
     }),
     [allServices]
   );
@@ -89,8 +90,8 @@ const RequestMe = () => {
             label: "Pendiente",
             color: "warning",
           },
-          "en proceso": {
-            value: "en proceso",
+          en_proceso: {
+            value: "en_proceso",
             label: "En Proceso",
             color: "info",
           },
